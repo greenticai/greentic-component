@@ -216,11 +216,11 @@ crate-type = ["cdylib", "rlib"]
 abi_version = "{abi_version}"
 
 [package.metadata.component]
-package = "greentic:component@0.6.0"
+package = "greentic:component"
 
 [package.metadata.component.target]
 path = "wit"
-world = "greentic:component/component-v0-v6-v0@0.6.0"
+world = "component-v0-v6-v0"
 
 [dependencies]
 greentic-types = "0.4"
