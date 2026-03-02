@@ -23,14 +23,17 @@ fn doctor_rejects_unbuilt_wizard_scaffold() {
     .unwrap();
 
     let args = WizardArgs {
-        legacy_command: None,
-        legacy_name: None,
-        legacy_out: None,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
+        validate: false,
+        apply: false,
         qa_answers: Some(answers_path),
+        answers: None,
         qa_answers_out: None,
+        emit_answers: None,
+        schema_version: None,
+        migrate: false,
         plan_out: None,
         project_root: temp.path().to_path_buf(),
         template: None,

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::{Context, Result, anyhow, bail};
-use clap::{Args, ValueEnum};
+use clap::{Args, Subcommand, ValueEnum};
 use greentic_qa_lib::{
     I18nConfig, QaLibError, ResolvedI18nMap, WizardDriver, WizardFrontend, WizardRunConfig,
 };
@@ -19,14 +19,40 @@ use crate::cmd::i18n;
 use crate::scaffold::validate::{ComponentName, normalize_version};
 use crate::wizard::{self, AnswersPayload, WizardPlanEnvelope, WizardPlanMetadata, WizardStep};
 
+const WIZARD_RUN_SCHEMA: &str = "component-wizard-run/v1";
+const ANSWER_DOC_WIZARD_ID: &str = "greentic-component.wizard.run";
+const ANSWER_DOC_SCHEMA_ID: &str = "greentic-component.wizard.run";
+const ANSWER_DOC_SCHEMA_VERSION: &str = "1.0.0";
+
+#[derive(Args, Debug, Clone)]
+pub struct WizardCliArgs {
+    #[command(subcommand)]
+    pub command: Option<WizardSubcommand>,
+    #[command(flatten)]
+    pub args: WizardArgs,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum WizardSubcommand {
+    Run(WizardArgs),
+    Validate(WizardArgs),
+    Apply(WizardArgs),
+    #[command(hide = true)]
+    New(WizardLegacyNewArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct WizardLegacyNewArgs {
+    #[arg(value_name = "LEGACY_NAME")]
+    pub name: Option<String>,
+    #[arg(long = "out", value_name = "PATH")]
+    pub out: Option<PathBuf>,
+    #[command(flatten)]
+    pub args: WizardArgs,
+}
+
 #[derive(Args, Debug, Clone)]
 pub struct WizardArgs {
-    #[arg(value_name = "LEGACY_COMMAND", hide = true)]
-    pub legacy_command: Option<String>,
-    #[arg(value_name = "LEGACY_NAME", hide = true)]
-    pub legacy_name: Option<String>,
-    #[arg(long = "out", value_name = "PATH", hide = true)]
-    pub legacy_out: Option<PathBuf>,
     #[arg(long, value_enum, default_value = "create")]
     pub mode: RunMode,
     #[arg(long, value_enum, default_value = "execute")]
@@ -37,10 +63,38 @@ pub struct WizardArgs {
         conflicts_with = "execution"
     )]
     pub dry_run: bool,
+    #[arg(
+        long = "validate",
+        default_value_t = false,
+        conflicts_with_all = ["execution", "dry_run", "apply"]
+    )]
+    pub validate: bool,
+    #[arg(
+        long = "apply",
+        default_value_t = false,
+        conflicts_with_all = ["execution", "dry_run", "validate"]
+    )]
+    pub apply: bool,
     #[arg(long = "qa-answers", value_name = "answers.json")]
     pub qa_answers: Option<PathBuf>,
+    #[arg(
+        long = "answers",
+        value_name = "answers.json",
+        conflicts_with = "qa_answers"
+    )]
+    pub answers: Option<PathBuf>,
     #[arg(long = "qa-answers-out", value_name = "answers.json")]
     pub qa_answers_out: Option<PathBuf>,
+    #[arg(
+        long = "emit-answers",
+        value_name = "answers.json",
+        conflicts_with = "qa_answers_out"
+    )]
+    pub emit_answers: Option<PathBuf>,
+    #[arg(long = "schema-version", value_name = "VER")]
+    pub schema_version: Option<String>,
+    #[arg(long = "migrate", default_value_t = false)]
+    pub migrate: bool,
     #[arg(long = "plan-out", value_name = "plan.json")]
     pub plan_out: Option<PathBuf>,
     #[arg(long = "project-root", value_name = "PATH", default_value = ".")]
@@ -70,12 +124,37 @@ pub enum ExecutionMode {
     Execute,
 }
 
+#[derive(Debug, Clone)]
+struct WizardLegacyNewCompat {
+    name: Option<String>,
+    out: Option<PathBuf>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct WizardRunAnswers {
     schema: String,
     mode: RunMode,
     #[serde(default)]
     fields: JsonMap<String, JsonValue>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AnswerDocument {
+    wizard_id: String,
+    schema_id: String,
+    schema_version: String,
+    #[serde(default)]
+    locale: Option<String>,
+    #[serde(default)]
+    answers: JsonMap<String, JsonValue>,
+    #[serde(default)]
+    locks: JsonMap<String, JsonValue>,
+}
+
+#[derive(Debug, Clone)]
+struct LoadedRunAnswers {
+    run_answers: WizardRunAnswers,
+    source_document: Option<AnswerDocument>,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,19 +166,70 @@ struct WizardRunOutput {
     warnings: Vec<String>,
 }
 
+pub fn run_cli(cli: WizardCliArgs) -> Result<()> {
+    let mut execution_override = None;
+    let mut legacy_new = None;
+    let args = match cli.command {
+        Some(WizardSubcommand::Run(args)) => args,
+        Some(WizardSubcommand::Validate(args)) => {
+            execution_override = Some(ExecutionMode::DryRun);
+            args
+        }
+        Some(WizardSubcommand::Apply(args)) => {
+            execution_override = Some(ExecutionMode::Execute);
+            args
+        }
+        Some(WizardSubcommand::New(new_args)) => {
+            legacy_new = Some(WizardLegacyNewCompat {
+                name: new_args.name,
+                out: new_args.out,
+            });
+            new_args.args
+        }
+        None => cli.args,
+    };
+    run_with_context(args, execution_override, legacy_new)
+}
+
 pub fn run(args: WizardArgs) -> Result<()> {
+    run_with_context(args, None, None)
+}
+
+fn run_with_context(
+    args: WizardArgs,
+    execution_override: Option<ExecutionMode>,
+    legacy_new: Option<WizardLegacyNewCompat>,
+) -> Result<()> {
     let mut args = args;
-    let execution = if args.dry_run {
+    if args.validate && args.apply {
+        bail!("{}", tr("cli.wizard.result.validate_apply_conflict"));
+    }
+
+    let mut execution = if args.dry_run {
         ExecutionMode::DryRun
     } else {
         args.execution
     };
+    if let Some(override_mode) = execution_override {
+        execution = override_mode;
+    }
 
-    let mut answers = match &args.qa_answers {
-        Some(path) => Some(load_run_answers(path)?),
+    let input_answers = args.answers.as_ref().or(args.qa_answers.as_ref());
+    let loaded_answers = match input_answers {
+        Some(path) => Some(load_run_answers(path, &args)?),
         None => None,
     };
-    apply_legacy_wizard_new_compat(&mut args, &mut answers)?;
+    let mut answers = loaded_answers
+        .as_ref()
+        .map(|loaded| loaded.run_answers.clone());
+    if args.validate {
+        execution = ExecutionMode::DryRun;
+    } else if args.apply {
+        execution = ExecutionMode::Execute;
+    }
+
+    apply_legacy_wizard_new_compat(legacy_new, &mut args, &mut answers)?;
+
     if answers.is_none() && io::stdin().is_terminal() && io::stdout().is_terminal() {
         answers = Some(collect_interactive_answers(&args)?);
     }
@@ -119,20 +249,23 @@ pub fn run(args: WizardArgs) -> Result<()> {
     let output = build_run_output(&args, execution, answers.as_ref())?;
 
     if let Some(path) = &args.qa_answers_out {
-        let doc = answers.unwrap_or_else(|| default_answers_for(&args));
+        let doc = answers
+            .clone()
+            .unwrap_or_else(|| default_answers_for(&args));
         let payload = serde_json::to_string_pretty(&doc)?;
-        if let Some(parent) = path.parent()
-            && !parent.as_os_str().is_empty()
-        {
-            fs::create_dir_all(parent).with_context(|| {
-                format!(
-                    "failed to create qa-answers-out parent {}",
-                    parent.display()
-                )
-            })?;
-        }
-        fs::write(path, payload)
-            .with_context(|| format!("failed to write qa answers {}", path.display()))?;
+        write_json_file(path, &payload, "qa-answers-out")?;
+    }
+
+    if let Some(path) = &args.emit_answers {
+        let run_answers = answers
+            .clone()
+            .unwrap_or_else(|| default_answers_for(&args));
+        let source_document = loaded_answers
+            .as_ref()
+            .and_then(|loaded| loaded.source_document.clone());
+        let doc = answer_document_from_run_answers(&run_answers, &args, source_document);
+        let payload = serde_json::to_string_pretty(&doc)?;
+        write_json_file(path, &payload, "emit-answers")?;
     }
 
     match execution {
@@ -171,30 +304,17 @@ pub fn run(args: WizardArgs) -> Result<()> {
 }
 
 fn apply_legacy_wizard_new_compat(
+    legacy_new: Option<WizardLegacyNewCompat>,
     args: &mut WizardArgs,
     answers: &mut Option<WizardRunAnswers>,
 ) -> Result<()> {
-    let has_legacy =
-        args.legacy_command.is_some() || args.legacy_name.is_some() || args.legacy_out.is_some();
-    if !has_legacy {
+    let Some(legacy_new) = legacy_new else {
         return Ok(());
-    }
+    };
 
-    match args.legacy_command.as_deref() {
-        Some("new") => {}
-        Some(other) => bail!("unexpected argument '{other}' found"),
-        None => bail!("wizard: missing legacy command before name (expected `new`)"),
-    }
-
-    let component_name = args
-        .legacy_name
-        .clone()
-        .unwrap_or_else(|| "component".to_string());
+    let component_name = legacy_new.name.unwrap_or_else(|| "component".to_string());
     ComponentName::parse(&component_name)?;
-    let output_parent = args
-        .legacy_out
-        .clone()
-        .unwrap_or_else(|| args.project_root.clone());
+    let output_parent = legacy_new.out.unwrap_or_else(|| args.project_root.clone());
     let output_dir = output_parent.join(&component_name);
 
     args.mode = RunMode::Create;
@@ -504,26 +624,172 @@ fn parse_string_array(fields: Option<&JsonMap<String, JsonValue>>, key: &str) ->
         .unwrap_or_default()
 }
 
-fn load_run_answers(path: &PathBuf) -> Result<WizardRunAnswers> {
+fn load_run_answers(path: &PathBuf, args: &WizardArgs) -> Result<LoadedRunAnswers> {
     let raw = fs::read_to_string(path)
         .with_context(|| format!("failed to read qa answers {}", path.display()))?;
-    let answers: WizardRunAnswers = serde_json::from_str(&raw)
+    let value: JsonValue = serde_json::from_str(&raw)
         .with_context(|| format!("qa answers {} must be valid JSON", path.display()))?;
-    if answers.schema != "component-wizard-run/v1" {
+
+    if let Some(doc) = parse_answer_document(&value)? {
+        let migrated = maybe_migrate_document(doc, args)?;
+        let run_answers = run_answers_from_answer_document(&migrated, args)?;
+        return Ok(LoadedRunAnswers {
+            run_answers,
+            source_document: Some(migrated),
+        });
+    }
+
+    let answers: WizardRunAnswers = serde_json::from_value(value)
+        .with_context(|| format!("qa answers {} must be valid JSON", path.display()))?;
+    if answers.schema != WIZARD_RUN_SCHEMA {
         bail!(
             "{}",
             trf(
                 "cli.wizard.result.invalid_schema",
-                &[&answers.schema, "component-wizard-run/v1"],
+                &[&answers.schema, WIZARD_RUN_SCHEMA],
             )
         );
     }
-    Ok(answers)
+    Ok(LoadedRunAnswers {
+        run_answers: answers,
+        source_document: None,
+    })
+}
+
+fn parse_answer_document(value: &JsonValue) -> Result<Option<AnswerDocument>> {
+    let JsonValue::Object(map) = value else {
+        return Ok(None);
+    };
+    if map.contains_key("wizard_id")
+        || map.contains_key("schema_id")
+        || map.contains_key("schema_version")
+        || map.contains_key("answers")
+    {
+        let doc: AnswerDocument = serde_json::from_value(value.clone())
+            .with_context(|| tr("cli.wizard.result.answer_doc_invalid_shape"))?;
+        return Ok(Some(doc));
+    }
+    Ok(None)
+}
+
+fn maybe_migrate_document(doc: AnswerDocument, args: &WizardArgs) -> Result<AnswerDocument> {
+    if doc.schema_id != ANSWER_DOC_SCHEMA_ID {
+        bail!(
+            "{}",
+            trf(
+                "cli.wizard.result.answer_schema_id_mismatch",
+                &[&doc.schema_id, ANSWER_DOC_SCHEMA_ID],
+            )
+        );
+    }
+    let target_version = requested_schema_version(args);
+    if doc.schema_version == target_version {
+        return Ok(doc);
+    }
+    if !args.migrate {
+        bail!(
+            "{}",
+            trf(
+                "cli.wizard.result.answer_schema_version_mismatch",
+                &[&doc.schema_version, &target_version],
+            )
+        );
+    }
+    let mut migrated = doc;
+    migrated.schema_version = target_version;
+    Ok(migrated)
+}
+
+fn run_answers_from_answer_document(
+    doc: &AnswerDocument,
+    args: &WizardArgs,
+) -> Result<WizardRunAnswers> {
+    let mode = doc
+        .answers
+        .get("mode")
+        .and_then(JsonValue::as_str)
+        .map(parse_run_mode)
+        .transpose()?
+        .unwrap_or(args.mode);
+    let fields = match doc.answers.get("fields") {
+        Some(JsonValue::Object(fields)) => fields.clone(),
+        _ => doc.answers.clone(),
+    };
+    Ok(WizardRunAnswers {
+        schema: WIZARD_RUN_SCHEMA.to_string(),
+        mode,
+        fields,
+    })
+}
+
+fn parse_run_mode(value: &str) -> Result<RunMode> {
+    match value {
+        "create" => Ok(RunMode::Create),
+        "build-test" | "build_test" => Ok(RunMode::BuildTest),
+        "doctor" => Ok(RunMode::Doctor),
+        _ => bail!(
+            "{}",
+            trf("cli.wizard.result.answer_mode_unsupported", &[value])
+        ),
+    }
+}
+
+fn answer_document_from_run_answers(
+    run_answers: &WizardRunAnswers,
+    args: &WizardArgs,
+    source_document: Option<AnswerDocument>,
+) -> AnswerDocument {
+    let locale = i18n::selected_locale().to_string();
+    let mut answers = JsonMap::new();
+    answers.insert(
+        "mode".to_string(),
+        JsonValue::String(mode_name(run_answers.mode).replace('_', "-")),
+    );
+    answers.insert(
+        "fields".to_string(),
+        JsonValue::Object(run_answers.fields.clone()),
+    );
+
+    let locks = source_document
+        .as_ref()
+        .map(|doc| doc.locks.clone())
+        .unwrap_or_default();
+
+    AnswerDocument {
+        wizard_id: source_document
+            .as_ref()
+            .map(|doc| doc.wizard_id.clone())
+            .unwrap_or_else(|| ANSWER_DOC_WIZARD_ID.to_string()),
+        schema_id: source_document
+            .as_ref()
+            .map(|doc| doc.schema_id.clone())
+            .unwrap_or_else(|| ANSWER_DOC_SCHEMA_ID.to_string()),
+        schema_version: requested_schema_version(args),
+        locale: Some(locale),
+        answers,
+        locks,
+    }
+}
+
+fn requested_schema_version(args: &WizardArgs) -> String {
+    args.schema_version
+        .clone()
+        .unwrap_or_else(|| ANSWER_DOC_SCHEMA_VERSION.to_string())
+}
+
+fn write_json_file(path: &PathBuf, payload: &str, label: &str) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {label} parent {}", parent.display()))?;
+    }
+    fs::write(path, payload).with_context(|| format!("failed to write {label} {}", path.display()))
 }
 
 fn default_answers_for(args: &WizardArgs) -> WizardRunAnswers {
     WizardRunAnswers {
-        schema: "component-wizard-run/v1".to_string(),
+        schema: WIZARD_RUN_SCHEMA.to_string(),
         mode: args.mode,
         fields: JsonMap::new(),
     }
@@ -613,7 +879,7 @@ fn collect_interactive_answers(args: &WizardArgs) -> Result<WizardRunAnswers> {
         fields.insert("overwrite_output".to_string(), overwrite);
     }
     Ok(WizardRunAnswers {
-        schema: "component-wizard-run/v1".to_string(),
+        schema: WIZARD_RUN_SCHEMA.to_string(),
         mode: args.mode,
         fields,
     })
@@ -698,7 +964,7 @@ fn build_qa_spec(args: &WizardArgs) -> JsonValue {
     json!({
         "id": format!("component.wizard.run.{}", mode_name(args.mode)),
         "title": tr("cli.wizard.result.interactive_header"),
-        "version": "1.0.0",
+        "version": requested_schema_version(args),
         "presentation": {"default_locale": locale},
         "questions": questions,
     })

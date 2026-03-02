@@ -25,8 +25,8 @@ Global:
 
 ## wizard
 - Purpose: run wizard workflows on the deterministic plan core (`create`, `build_test`, `doctor`).
-- Usage: `greentic-component wizard --mode create|build_test|doctor --execution dry-run|execute [--qa-answers answers.json] [--qa-answers-out answers.json] [--project-root path] [--template id] [--full-tests]`.
-- Tips: use `--execution dry-run` to emit plan JSON without changing files; use `--qa-answers` for non-interactive replay and `--qa-answers-out` to persist reproducible input.
+- Usage: `greentic-component wizard [run|validate|apply] --mode create|build_test|doctor [--execution dry-run|execute] [--answers answers.json] [--emit-answers answers.json] [--schema-version x.y.z] [--migrate] [--project-root path] [--template id] [--full-tests]`.
+- Tips: use `validate` (or `--validate`) to emit plan JSON without side effects; use `apply` (or `--apply`) to execute side effects; use `--answers` for non-interactive replay and `--emit-answers` to persist an AnswerDocument envelope. Legacy `--qa-answers` and `--qa-answers-out` remain supported for compatibility.
 
 ## inspect
 - Purpose: inspect a component manifest or a self-describing 0.6.0 wasm/describe artifact.

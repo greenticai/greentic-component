@@ -8,7 +8,7 @@ use crate::cmd::store::StoreCommand;
 use crate::cmd::{
     self, build::BuildArgs, doctor::DoctorArgs, flow::FlowCommand, hash::HashArgs,
     inspect::InspectArgs, new::NewArgs, templates::TemplatesArgs, test::TestArgs,
-    wizard::WizardArgs,
+    wizard::WizardCliArgs,
 };
 use crate::scaffold::engine::ScaffoldEngine;
 
@@ -32,7 +32,7 @@ enum Commands {
     /// Scaffold a new Greentic component project
     New(NewArgs),
     /// Component wizard helpers
-    Wizard(WizardArgs),
+    Wizard(Box<WizardCliArgs>),
     /// List available component templates
     Templates(TemplatesArgs),
     /// Run component doctor checks
@@ -72,7 +72,7 @@ pub fn main() -> Result<()> {
     let engine = ScaffoldEngine::new();
     match cli.command {
         Commands::New(args) => cmd::new::run(args, &engine),
-        Commands::Wizard(command) => cmd::wizard::run(command),
+        Commands::Wizard(command) => cmd::wizard::run_cli(*command),
         Commands::Templates(args) => cmd::templates::run(args, &engine),
         Commands::Doctor(args) => cmd::doctor::run(args).map_err(Error::new),
         Commands::Inspect(args) => {
@@ -200,9 +200,12 @@ mod tests {
         assert_eq!(cli.locale.as_deref(), Some("ar"));
         match cli.command {
             Commands::Wizard(args) => {
-                assert!(matches!(args.mode, crate::cmd::wizard::RunMode::Doctor));
                 assert!(matches!(
-                    args.execution,
+                    args.args.mode,
+                    crate::cmd::wizard::RunMode::Doctor
+                ));
+                assert!(matches!(
+                    args.args.execution,
                     crate::cmd::wizard::ExecutionMode::DryRun
                 ));
             }
@@ -222,13 +225,85 @@ mod tests {
         ])
         .expect("expected CLI to parse");
         match cli.command {
+            Commands::Wizard(args) => match args.command {
+                Some(crate::cmd::wizard::WizardSubcommand::New(new_args)) => {
+                    assert_eq!(new_args.name.as_deref(), Some("wizard-smoke"));
+                    assert_eq!(new_args.out.as_deref(), Some(std::path::Path::new("/tmp")));
+                }
+                _ => panic!("expected wizard new subcommand"),
+            },
+            _ => panic!("expected wizard args"),
+        }
+    }
+
+    #[test]
+    fn parses_wizard_validate_command_alias() {
+        let cli = Cli::try_parse_from([
+            "greentic-component",
+            "wizard",
+            "validate",
+            "--mode",
+            "create",
+        ])
+        .expect("expected CLI to parse");
+        match cli.command {
+            Commands::Wizard(args) => assert!(matches!(
+                args.command,
+                Some(crate::cmd::wizard::WizardSubcommand::Validate(_))
+            )),
+            _ => panic!("expected wizard args"),
+        }
+    }
+
+    #[test]
+    fn parses_wizard_validate_flag() {
+        let cli = Cli::try_parse_from([
+            "greentic-component",
+            "wizard",
+            "--validate",
+            "--mode",
+            "doctor",
+        ])
+        .expect("expected CLI to parse");
+        match cli.command {
             Commands::Wizard(args) => {
-                assert_eq!(args.legacy_command.as_deref(), Some("new"));
-                assert_eq!(args.legacy_name.as_deref(), Some("wizard-smoke"));
+                assert!(args.args.validate);
+                assert!(!args.args.apply);
+                assert!(matches!(
+                    args.args.mode,
+                    crate::cmd::wizard::RunMode::Doctor
+                ));
+            }
+            _ => panic!("expected wizard args"),
+        }
+    }
+
+    #[test]
+    fn parses_wizard_answers_aliases() {
+        let cli = Cli::try_parse_from([
+            "greentic-component",
+            "wizard",
+            "--answers",
+            "in.json",
+            "--emit-answers",
+            "out.json",
+            "--schema-version",
+            "1.2.3",
+            "--migrate",
+        ])
+        .expect("expected CLI to parse");
+        match cli.command {
+            Commands::Wizard(args) => {
                 assert_eq!(
-                    args.legacy_out.as_deref(),
-                    Some(std::path::Path::new("/tmp"))
+                    args.args.answers.as_deref(),
+                    Some(std::path::Path::new("in.json"))
                 );
+                assert_eq!(
+                    args.args.emit_answers.as_deref(),
+                    Some(std::path::Path::new("out.json"))
+                );
+                assert_eq!(args.args.schema_version.as_deref(), Some("1.2.3"));
+                assert!(args.args.migrate);
             }
             _ => panic!("expected wizard args"),
         }
