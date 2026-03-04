@@ -6,8 +6,8 @@ rust-version = "1.91"
 default-run = "greentic-component"
 license = "MIT"
 description = "High-level component loader and store for Greentic components"
-repository = "https://github.com/greentic-ai/greentic-component"
-homepage = "https://github.com/greentic-ai/greentic-component"
+repository = "https://github.com/greenticai/greentic-component"
+homepage = "https://github.com/greenticai/greentic-component"
 documentation = "https://docs.rs/greentic-component"
 keywords = ["greentic", "component", "wasm"]
 categories = ["wasm"]
@@ -124,3 +124,4 @@ required-features = ["abi"]
 [[example]]
 name = "gen_contract_fixture"
 required-features = ["abi"]
+

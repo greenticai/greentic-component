@@ -5,9 +5,9 @@ edition.workspace = true
 license.workspace = true
 publish = true
 description = "Wasmtime-based runtime for executing Greentic components"
-repository = "https://github.com/greentic-ai/greentic-component"
-homepage = "https://github.com/greentic-ai/greentic-component"
-documentation = "https://github.com/greentic-ai/greentic-component"
+repository = "https://github.com/greenticai/greentic-component"
+homepage = "https://github.com/greenticai/greentic-component"
+documentation = "https://github.com/greenticai/greentic-component"
 keywords = ["greentic", "component", "wasm"]
 categories = ["wasm"]
 
@@ -42,3 +42,4 @@ wasmtime-wasi.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 schemars.workspace = true
+

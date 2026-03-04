@@ -649,7 +649,7 @@ fn render_manifest_json(context: &WizardContext) -> String {
     let name_snake = context.name.replace('-', "_");
     format!(
         r#"{{
-  "$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "$schema": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
   "id": "com.example.{name}",
   "name": "{name}",
   "version": "0.1.0",
@@ -1749,3 +1749,4 @@ mod tests {
         assert!(!cbor.is_empty());
     }
 }
+

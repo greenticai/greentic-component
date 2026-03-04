@@ -5,9 +5,9 @@ edition.workspace = true
 license.workspace = true
 publish = true
 description = "Store abstraction and verification for Greentic components"
-repository = "https://github.com/greentic-ai/greentic-component"
-homepage = "https://github.com/greentic-ai/greentic-component"
-documentation = "https://github.com/greentic-ai/greentic-component"
+repository = "https://github.com/greenticai/greentic-component"
+homepage = "https://github.com/greenticai/greentic-component"
+documentation = "https://github.com/greenticai/greentic-component"
 keywords = ["greentic", "component", "store"]
 categories = ["wasm"]
 
@@ -39,3 +39,4 @@ percent-encoding.workspace = true
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tempfile = { workspace = true }
+

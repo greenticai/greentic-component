@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "$id": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
   "title": "Greentic Component Manifest v1",
   "type": "object",
   "additionalProperties": false,
@@ -480,3 +480,4 @@
     }
   }
 }
+

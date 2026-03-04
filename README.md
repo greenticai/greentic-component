@@ -256,12 +256,12 @@ Add new tests alongside the relevant crate to keep runtime guarantees tight.
 
 See `greentic_component::manifest` and `greentic_component::describe` for the Rust APIs, and consult the workspace tests for concrete usage.
 
-The schema is published at <https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json>. A minimal manifest looks like:
+The schema is published at <https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json>. A minimal manifest looks like:
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+  "$id": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
   "id": "com.greentic.examples.echo",
   "name": "Echo",
   "version": "0.1.0",
@@ -319,3 +319,4 @@ Contributions welcome—please run `cargo fmt`, `cargo clippy --all-targets --al
 ## Security
 
 See [SECURITY.md](SECURITY.md) for guidance on `x-redact`, capability declarations, and protecting operator logs.
+

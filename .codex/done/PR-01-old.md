@@ -25,7 +25,7 @@ Action in this PR: update greentic-component to write the JSON that serde can pa
 
 You have a schema referenced in the manifest:
 
-"$schema": "https://greentic-ai.github.io/greentic-component/schemas/v1/component.manifest.schema.json"
+"$schema": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json"
 
 Required change
 

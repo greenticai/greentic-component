@@ -237,8 +237,8 @@ schema_check() {
     fi
     step "Schema drift check"
     local remote=/tmp/local-check-schema.json
-    local schema_url="https://greentic-ai-org.github.io/greentic-component/schemas/v1/component.manifest.schema.json"
-    if [[ "$schema_url" == *"greentic-ai.github.io"* ]]; then
+    local schema_url="https://greenticai-org.github.io/greentic-component/schemas/v1/component.manifest.schema.json"
+    if [[ "$schema_url" == *"greenticai.github.io"* ]]; then
         echo "[fail] schema drift check (legacy host configured: $schema_url)"
         record_failure "schema drift check (legacy host configured)"
         return 0
@@ -710,3 +710,4 @@ fi
 
 echo ""
 echo "✅ LOCAL CHECK PASSED"
+
