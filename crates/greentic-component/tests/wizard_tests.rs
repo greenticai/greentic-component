@@ -6,6 +6,7 @@ use greentic_component::cmd::wizard::{
 };
 use serde_json::{Value, json};
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 fn create_answers(path: &std::path::Path, name: &str) {
@@ -150,6 +151,47 @@ fn create_answers_with_all_fields(path: &std::path::Path, name: &str) -> Value {
     });
     fs::write(path, serde_json::to_string_pretty(&payload).unwrap()).unwrap();
     payload
+}
+
+fn install_cargo_wrapper(root: &Path) -> std::path::PathBuf {
+    let bin_dir = root.join("test-bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let wrapper_path = bin_dir.join("cargo");
+    let real_cargo = std::process::Command::new("bash")
+        .arg("-lc")
+        .arg("command -v cargo")
+        .output()
+        .expect("locate cargo");
+    assert!(real_cargo.status.success(), "cargo should be available");
+    let real_cargo = String::from_utf8(real_cargo.stdout)
+        .unwrap()
+        .trim()
+        .to_string();
+    let real_component = std::process::Command::new("bash")
+        .arg("-lc")
+        .arg("command -v cargo-component")
+        .output()
+        .expect("locate cargo-component");
+    assert!(
+        real_component.status.success(),
+        "cargo-component should be available for wizard smoke test"
+    );
+    let real_component = String::from_utf8(real_component.stdout)
+        .unwrap()
+        .trim()
+        .to_string();
+    let script = format!(
+        "#!/bin/sh\nset -eu\nif [ \"${{1:-}}\" = \"component\" ]; then\n  shift\n  exec \"{real_component}\" \"$@\"\nfi\nexec \"{real_cargo}\" \"$@\"\n"
+    );
+    fs::write(&wrapper_path, script).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&wrapper_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&wrapper_path, perms).unwrap();
+    }
+    bin_dir
 }
 
 fn create_add_operation_answers(
@@ -1205,6 +1247,12 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
     let answers_out = temp.path().join("answers.out.json");
     let plan_out = temp.path().join("plan.json");
     let component_root = temp.path().join(component_name);
+    let cargo_wrapper_dir = install_cargo_wrapper(temp.path());
+    let path_env = format!(
+        "{}:{}",
+        cargo_wrapper_dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let expected_payload = create_answers_with_all_fields(&answers_in, component_name);
     let expected_fields = expected_payload
         .get("fields")
@@ -1225,7 +1273,8 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .arg(&plan_out)
         .env("HOME", temp.path())
         .env("GREENTIC_DEP_MODE", "local")
-        .env("CARGO_NET_OFFLINE", "true");
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
     dry_run.assert().success();
 
     let emitted: Value = serde_json::from_str(&fs::read_to_string(&answers_out).unwrap()).unwrap();
@@ -1261,7 +1310,8 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .arg(&answers_out)
         .env("HOME", temp.path())
         .env("GREENTIC_DEP_MODE", "local")
-        .env("CARGO_NET_OFFLINE", "true");
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
     replay.assert().success();
 
     assert!(component_root.join("Cargo.toml").exists());
@@ -1325,14 +1375,16 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .arg(component_root.join("Cargo.toml"))
         .arg("--offline")
         .env("CARGO_TERM_COLOR", "never")
-        .env("CARGO_NET_OFFLINE", "true");
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
     cargo_test.assert().success();
 
     let mut wasm_build = Command::new("make");
     wasm_build
         .current_dir(&component_root)
         .arg("wasm")
-        .env("CARGO_NET_OFFLINE", "true");
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
     wasm_build.assert().success();
 
     let wasm_path = component_root.join("dist/wizard-smoke-advanced__0_6_0.wasm");
@@ -1347,6 +1399,7 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .arg(&wasm_path)
         .arg("--manifest")
         .arg(component_root.join("component.manifest.json"))
-        .env("CARGO_NET_OFFLINE", "true");
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
     doctor.assert().success();
 }
