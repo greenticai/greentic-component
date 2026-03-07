@@ -21,6 +21,10 @@ inputs:
   targets:
     description: Newline-separated list of targets to install.
     required: true
+  cargo-component-version:
+    description: cargo-component version to provision for component-model builds.
+    required: false
+    default: 0.21.1
 
 runs:
   using: composite
@@ -56,3 +60,23 @@ runs:
       uses: Swatinem/rust-cache@v2
       with:
         shared-key: ${{ inputs.cache-key }}
+
+    - name: Restore cargo-component cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/.cargo/bin/cargo-component
+          ${{ github.workspace }}/.cargo/.crates2.json
+          ${{ github.workspace }}/.cargo/.crates.toml
+        key: cargo-component-${{ runner.os }}-${{ runner.arch }}-rust-${{ inputs.toolchain }}-v${{ inputs.cargo-component-version }}
+
+    - name: Install cargo-component
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v cargo-component >/dev/null 2>&1; then
+          echo "cargo-component already installed: $(cargo-component --version)"
+          exit 0
+        fi
+        cargo install cargo-component --version "${{ inputs.cargo-component-version }}" --locked
+        cargo-component --version
