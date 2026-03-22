@@ -44,6 +44,18 @@ pub fn qa_spec_json(mode: NormalizedMode) -> JsonValue {
     serde_json::to_value(qa_spec(mode)).unwrap_or_else(|_| json!({}))
 }
 
+pub fn apply_answers_cbor(
+    mode: NormalizedMode,
+    current_config: &[u8],
+    answers: &[u8],
+) -> Vec<u8> {
+    let payload = json!({
+        "current_config": decode_json_or_empty(current_config),
+        "answers": decode_json_or_empty(answers),
+    });
+    canonical::to_canonical_cbor_allow_floats(&apply_answers(mode, &payload)).unwrap_or_default()
+}
+
 fn question(id: &str, label_key: &str, help_key: &str, required: bool) -> Question {
     serde_json::from_value(json!({
         "id": id,
@@ -215,4 +227,11 @@ pub fn apply_answers(mode: NormalizedMode, payload: &JsonValue) -> JsonValue {
             "timings_ms": {}
         }
     })
+}
+
+fn decode_json_or_empty(bytes: &[u8]) -> JsonValue {
+    if let Ok(value) = canonical::from_cbor(bytes) {
+        return value;
+    }
+    serde_json::from_slice(bytes).unwrap_or_else(|_| json!({}))
 }

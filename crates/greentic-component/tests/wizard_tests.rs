@@ -1419,6 +1419,11 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         wasm_path.exists(),
         "wasm build should produce a dist artifact"
     );
+    let describe_path = component_root.join("dist/wizard-smoke-advanced__0_6_0.describe.cbor");
+    assert!(
+        describe_path.exists(),
+        "wasm build should produce a describe artifact"
+    );
 
     let mut doctor = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
     doctor
@@ -1430,6 +1435,20 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .assert()
         .success()
         .stdout(predicate::str::contains("doctor.embedded.describe_unavailable").not());
+
+    let mut inspect = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+    inspect
+        .arg("inspect")
+        .arg("--describe")
+        .arg(&describe_path)
+        .arg("--json")
+        .arg("--verify")
+        .env("CARGO_NET_OFFLINE", "true")
+        .env("PATH", &path_env);
+    inspect
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("describe unavailable").not());
 
     let mut inspect = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
     inspect

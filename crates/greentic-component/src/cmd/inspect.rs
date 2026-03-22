@@ -9,7 +9,7 @@ use wasmtime::{Engine, Store};
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
 use super::path::strip_file_scheme;
-use crate::describe::from_wit_world;
+use crate::describe::{DescribePayload, from_wit_world};
 use crate::embedded_compare::{
     EmbeddedManifestComparisonReport, compare_embedded_with_describe,
     compare_embedded_with_manifest,
@@ -614,10 +614,37 @@ fn inspect_describe(args: &InspectArgs) -> Result<InspectResult, ComponentError>
     if let Err(err) = ensure_canonical_allow_floats(payload) {
         warnings.push(format!("describe payload not canonical: {err}"));
     }
-    let describe: ComponentDescribe = canonical::from_cbor(payload)
-        .map_err(|err| ComponentError::Doctor(format!("describe decode failed: {err}")))?;
+    if let Ok(describe) = canonical::from_cbor::<ComponentDescribe>(payload) {
+        let mut report = DescribeReport::from(describe, args.verify)?;
+        report.wasm_path = wasm_path;
 
-    let mut report = DescribeReport::from(describe, args.verify)?;
+        if args.json {
+            let json = serde_json::to_string_pretty(&report)
+                .map_err(|err| ComponentError::Doctor(format!("failed to encode json: {err}")))?;
+            println!("{json}");
+        } else {
+            emit_describe_human(&report);
+        }
+
+        let verify_failed = args.verify
+            && report
+                .operations
+                .iter()
+                .any(|op| matches!(op.schema_hash_valid, Some(false)));
+        if verify_failed {
+            return Err(ComponentError::Doctor(
+                "schema_hash verification failed".to_string(),
+            ));
+        }
+        return Ok(InspectResult { warnings });
+    }
+
+    let derived: DescribePayload = canonical::from_cbor(payload)
+        .map_err(|err| ComponentError::Doctor(format!("describe decode failed: {err}")))?;
+    if args.verify {
+        warnings.push("verify skipped for WIT-derived describe payload".to_string());
+    }
+    let mut report = DerivedDescribeReport::from(derived);
     report.wasm_path = wasm_path;
 
     if args.json {
@@ -625,18 +652,7 @@ fn inspect_describe(args: &InspectArgs) -> Result<InspectResult, ComponentError>
             .map_err(|err| ComponentError::Doctor(format!("failed to encode json: {err}")))?;
         println!("{json}");
     } else {
-        emit_describe_human(&report);
-    }
-
-    let verify_failed = args.verify
-        && report
-            .operations
-            .iter()
-            .any(|op| matches!(op.schema_hash_valid, Some(false)));
-    if verify_failed {
-        return Err(ComponentError::Doctor(
-            "schema_hash verification failed".to_string(),
-        ));
+        emit_derived_describe_human(&report);
     }
 
     Ok(InspectResult { warnings })
@@ -656,6 +672,69 @@ fn emit_describe_human(report: &DescribeReport) {
         }
     }
     println!("  config: {}", report.config.summary);
+}
+
+#[derive(Debug, Serialize)]
+struct DerivedDescribeReport {
+    kind: &'static str,
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    schema_id: Option<String>,
+    versions: Vec<DerivedDescribeVersionReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wasm_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Serialize)]
+struct DerivedDescribeVersionReport {
+    version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world: Option<String>,
+    function_count: usize,
+}
+
+impl DerivedDescribeReport {
+    fn from(payload: DescribePayload) -> Self {
+        Self {
+            kind: "wit-derived",
+            name: payload.name,
+            schema_id: payload.schema_id,
+            versions: payload
+                .versions
+                .into_iter()
+                .map(|version| DerivedDescribeVersionReport {
+                    version: version.version.to_string(),
+                    world: version
+                        .schema
+                        .get("world")
+                        .and_then(|world| world.as_str())
+                        .map(str::to_string),
+                    function_count: version
+                        .schema
+                        .get("functions")
+                        .and_then(|functions| functions.as_array())
+                        .map(|functions| functions.len())
+                        .unwrap_or(0),
+                })
+                .collect(),
+            wasm_path: None,
+        }
+    }
+}
+
+fn emit_derived_describe_human(report: &DerivedDescribeReport) {
+    println!("describe: wit-derived");
+    println!("  name: {}", report.name);
+    if let Some(schema_id) = &report.schema_id {
+        println!("  schema id: {schema_id}");
+    }
+    for version in &report.versions {
+        println!("  - version: {}", version.version);
+        if let Some(world) = &version.world {
+            println!("    world: {world}");
+        }
+        println!("    functions: {}", version.function_count);
+    }
 }
 
 #[derive(Debug, Serialize)]

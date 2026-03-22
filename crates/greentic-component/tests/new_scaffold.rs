@@ -33,6 +33,10 @@ fn wasm_target_available() -> bool {
         })
 }
 
+fn cratesio_canonical_aux_exports_available() -> bool {
+    std::env::var_os("GREENTIC_CANONICAL_AUX_EXPORTS_CRATESIO").is_some()
+}
+
 fn install_cargo_wrapper(root: &Path) -> std::path::PathBuf {
     let bin_dir = root.join("test-bin");
     fs::create_dir_all(&bin_dir).expect("create test bin");
@@ -214,7 +218,13 @@ fn scaffold_rust_wasi_template() {
         status.success(),
         "scaffolded project should pass host tests"
     );
-    if cargo_component_available() && wasm_target_available() {
+    // The scaffold intentionally emits `greentic-interfaces-guest = "0.4"` so
+    // it will pick up the new canonical QA/i18n exports once published. Until
+    // that crates.io release lands, keep this smoke test on host-only checks.
+    if cargo_component_available()
+        && wasm_target_available()
+        && cratesio_canonical_aux_exports_available()
+    {
         let cargo_wrapper_dir = install_cargo_wrapper(temp.path());
         let path_env = format!(
             "{}:{}",
@@ -322,7 +332,7 @@ fn doctor_accepts_built_scaffold_artifact() {
         .env("HOME", temp.path())
         .env("GREENTIC_TEMPLATE_YEAR", "2030")
         .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
-        .env("GREENTIC_DEP_MODE", "cratesio")
+        .env("GREENTIC_DEP_MODE", "local")
         .env("GIT_AUTHOR_NAME", "Greentic Labs")
         .env("GIT_AUTHOR_EMAIL", "greentic-labs@example.com")
         .env("GIT_COMMITTER_NAME", "Greentic Labs")

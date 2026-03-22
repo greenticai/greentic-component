@@ -21,7 +21,7 @@ use crate::cmd::i18n;
 use crate::config::{
     ConfigInferenceOptions, ConfigSchemaSource, load_manifest_with_schema, resolve_manifest_path,
 };
-use crate::describe::from_wit_world;
+use crate::describe::{DescribePayload, from_wit_world};
 use crate::embedded_descriptor::embed_and_verify_wasm;
 use crate::parse_manifest;
 use crate::path_safety::normalize_under_root;
@@ -479,7 +479,7 @@ fn write_wit_describe_artifacts(
     manifest: &JsonValue,
     wasm_path: &Path,
     abi_version: Option<&str>,
-    payload: &crate::describe::DescribePayload,
+    payload: &DescribePayload,
 ) -> Result<()> {
     let dist_dir = manifest_dir.join("dist");
     fs::create_dir_all(&dist_dir)
@@ -487,6 +487,12 @@ fn write_wit_describe_artifacts(
 
     let (name, abi_underscore) = artifact_basename(manifest, wasm_path, abi_version);
     let base = format!("{name}__{abi_underscore}");
+    let describe_cbor_path = dist_dir.join(format!("{base}.describe.cbor"));
+    let cbor = canonical::to_canonical_cbor_allow_floats(payload)
+        .map_err(|err| anyhow!("describe fallback canonicalization failed: {err}"))?;
+    fs::write(&describe_cbor_path, cbor)
+        .with_context(|| format!("failed to write {}", describe_cbor_path.display()))?;
+
     let describe_json_path = dist_dir.join(format!("{base}.describe.json"));
     let json = serde_json::to_string_pretty(payload)?;
     fs::write(&describe_json_path, json + "\n")
@@ -535,7 +541,13 @@ fn artifact_basename(
 
 fn sanitize_name(raw: &str) -> String {
     raw.chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' {
+                ch
+            } else {
+                '_'
+            }
+        })
         .collect::<String>()
         .trim_matches('_')
         .to_string()
@@ -638,5 +650,22 @@ impl WasiView for BuildWasi {
             ctx: &mut self.ctx,
             table: &mut self.table,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_name;
+
+    #[test]
+    fn sanitize_name_preserves_hyphens_for_dist_artifacts() {
+        assert_eq!(
+            sanitize_name("wizard-smoke-advanced"),
+            "wizard-smoke-advanced"
+        );
+        assert_eq!(
+            sanitize_name("wizard_smoke_advanced"),
+            "wizard_smoke_advanced"
+        );
     }
 }

@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 #[cfg(target_arch = "wasm32")]
-use greentic_interfaces_guest::component_v0_6::node;
+use greentic_interfaces_guest::component_v0_6::{component_i18n, component_qa, node};
 #[cfg(target_arch = "wasm32")]
 use greentic_types::cbor::canonical;
 #[cfg(target_arch = "wasm32")]
@@ -125,7 +125,47 @@ impl node::Guest for Component {
 }
 
 #[cfg(target_arch = "wasm32")]
-greentic_interfaces_guest::export_component_v060!(Component);
+impl component_qa::Guest for Component {
+    fn qa_spec(mode: component_qa::QaMode) -> Vec<u8> {
+        let mode = match mode {
+            component_qa::QaMode::Default | component_qa::QaMode::Setup => {
+                qa::NormalizedMode::Setup
+            }
+            component_qa::QaMode::Update => qa::NormalizedMode::Update,
+            component_qa::QaMode::Remove => qa::NormalizedMode::Remove,
+        };
+        qa::qa_spec_cbor(mode)
+    }
+
+    fn apply_answers(
+        mode: component_qa::QaMode,
+        current_config: Vec<u8>,
+        answers: Vec<u8>,
+    ) -> Vec<u8> {
+        let mode = match mode {
+            component_qa::QaMode::Default | component_qa::QaMode::Setup => {
+                qa::NormalizedMode::Setup
+            }
+            component_qa::QaMode::Update => qa::NormalizedMode::Update,
+            component_qa::QaMode::Remove => qa::NormalizedMode::Remove,
+        };
+        qa::apply_answers_cbor(mode, &current_config, &answers)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl component_i18n::Guest for Component {
+    fn i18n_keys() -> Vec<String> {
+        qa::i18n_keys()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+greentic_interfaces_guest::export_component_v060!(
+    Component,
+    component_qa: Component,
+    component_i18n: Component,
+);
 
 // Host-side metadata helper used by tooling/tests outside wasm runtime.
 pub fn describe_payload() -> String {

@@ -81,7 +81,10 @@ fn readme_quickstart_example_stays_fresh() {
 
     let lib_rs = fs::read_to_string(component_dir.join("src/lib.rs")).expect("lib.rs");
     assert!(
-        lib_rs.contains("impl node::Guest") && lib_rs.contains("export_component_v060!(Component)"),
-        "scaffold should expose 0.6 node exports"
+        lib_rs.contains("impl node::Guest")
+            && lib_rs.contains("impl component_qa::Guest")
+            && lib_rs.contains("impl component_i18n::Guest")
+            && lib_rs.contains("export_component_v060!("),
+        "scaffold should expose canonical 0.6 node, qa, and i18n exports"
     );
 }
