@@ -1,0 +1,3 @@
+[registries.corp-artifacts-greentic]
+index = "sparse+https://corp-artifacts-599558443099.d.codeartifact.eu-north-1.amazonaws.com/cargo/greentic/"
+credential-provider = "cargo:token"
