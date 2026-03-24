@@ -42,6 +42,14 @@ jobs:
             --output text)
           echo "::add-mask::$TOKEN"
           echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+      - name: Configure Cargo registry
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [registries.corp-artifacts-greentic]
+          index = "sparse+https://corp-artifacts-599558443099.d.codeartifact.eu-north-1.amazonaws.com/cargo/greentic/"
+          credential-provider = "cargo:token"
+          EOF
 
       - name: Apply deps-dev overlay for publish
         run: |
@@ -95,3 +103,4 @@ jobs:
             gh api "repos/${{ github.repository }}/git/refs" -X POST -f ref="refs/tags/${TAG}" -f sha="${GITHUB_SHA}"
             echo "Created tag ${TAG}"
           fi
+
