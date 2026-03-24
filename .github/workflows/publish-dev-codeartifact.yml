@@ -2,96 +2,96 @@
 
 on:
   push:
-    branches: [ develop ]
-  workflow_dispatch: {}
+    branches: ["develop"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  publish:
+  publish-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@master
+
+      - uses: gittools/actions/gitversion/setup@v3
         with:
-          toolchain: 1.91.0
-      - uses: Swatinem/rust-cache@v2
-      - uses: aws-actions/configure-aws-credentials@v4
+          versionSpec: "6.x"
+
+      - id: gitversion
+        uses: gittools/actions/gitversion/execute@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
-      - name: Get CodeArtifact Token
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Fetch CodeArtifact token
         run: |
-          token=$(aws codeartifact get-authorization-token --domain ${{ secrets.CODEARTIFACT_DOMAIN }} --domain-owner ${{ secrets.CODEARTIFACT_DOMAIN_OWNER }} --region eu-north-1 --query authorizationToken --output text)
-          echo "::add-mask::$token"
-          echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$token" >> $GITHUB_ENV
-      - name: Configure CodeArtifact Registry
+          TOKEN=$(aws codeartifact get-authorization-token \
+            --domain ${{ secrets.CODEARTIFACT_DOMAIN }} \
+            --domain-owner ${{ secrets.CODEARTIFACT_DOMAIN_OWNER }} \
+            --region eu-north-1 \
+            --query authorizationToken \
+            --output text)
+          echo "::add-mask::$TOKEN"
+          echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Apply deps-dev overlay for publish
         run: |
-          mkdir -p .cargo
-          cp ci/cargo-config-dev.toml .cargo/config.toml
-      - name: Apply deps-dev overlay (if present)
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f ci/deps-dev.toml ]; then
-            echo "No ci/deps-dev.toml, skipping overlay"
-            exit 0
-          fi
-          while IFS= read -r line; do
-            [[ -z "${line// }" || "${line}" =~ ^[[:space:]]*# ]] && continue
-            if [[ "$line" =~ ^([a-zA-Z0-9_-]+)[[:space:]]*=[[:space:]]*\"([^\"]+)\"[[:space:]]*$ ]]; then
-              dep="${BASH_REMATCH[1]}"
-              ver="${BASH_REMATCH[2]}"
-              echo "Pinning ${dep} => ${ver}"
-              sed -i -E "s#^${dep}[[:space:]]*=.*#${dep} = { version = \"=${ver}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml || true
-              cargo update -p "${dep}" --precise "${ver}" || true
-            fi
-          done < ci/deps-dev.toml
-          cargo update --workspace || true
-      - name: Set dev version
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE=$(sed -nE 's/^version\s*=\s*"([^"]+)"/\1/p' Cargo.toml | head -n1)
-          BASE="${BASE%%-dev.*}"
-          VERSION="${BASE}-dev.${GITHUB_RUN_NUMBER}"
-          sed -i -E "0,/^version\s*=\s*\"[^\"]+\"/s//version = \"${VERSION}\"/" Cargo.toml
-          echo "DEV_VERSION=${VERSION}" >> $GITHUB_ENV
-      - name: Publish crates to CodeArtifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          for crate in greentic-component-manifest greentic-component-store greentic-component-runtime greentic-component; do
-            echo "Publishing ${crate}"
-            set +e
-            output=$(cargo publish -p "${crate}" --registry corp-artifacts-greentic --allow-dirty 2>&1)
-            status=$?
-            set -e
-            echo "$output"
-            if [ "$status" -ne 0 ]; then
-              if echo "$output" | grep -E -q "already uploaded|already exists|version .* is already in use|already exists on crates.io index"; then
-                echo "${crate} already published, continue"
-              else
-                echo "Publish failed for ${crate}" >&2
-                exit "$status"
-              fi
-            fi
-            sleep 5
-          done
-      - name: Create git tag after successful publish
-        run: |
-          set -euo pipefail
-          TAG="${DEV_VERSION}"
-          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-            echo "Tag ${TAG} already exists"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag "${TAG}"
-            git push origin "${TAG}"
+          matched=0
+          while IFS=$'\t' read -r DEP_NAME DEP_VERSION; do
+            [[ -z "$DEP_NAME" || -z "$DEP_VERSION" ]] && continue
+            matched=1
+            echo "Using ${DEP_NAME} version for publish: ${DEP_VERSION}"
+            sed -i -E "s#^[[:space:]]*${DEP_NAME}[[:space:]]*=.*#${DEP_NAME} = { version = \"=${DEP_VERSION}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+            grep -E "^${DEP_NAME}[[:space:]]*=.*registry[[:space:]]*=[[:space:]]*\"corp-artifacts-greentic\"" Cargo.toml
+          done < <(
+            awk '
+              /^[[:space:]]*[a-zA-Z0-9_-]+[[:space:]]*=/ {
+                split($0, a, "=")
+                name=a[1]
+                gsub(/[[:space:]]/, "", name)
+                if (match($0, /"[^"]+"/)) {
+                  ver=substr($0, RSTART+1, RLENGTH-2)
+                  print name "\t" ver
+                }
+              }
+            ' ci/deps-dev.toml
+          )
+
+          if [[ $matched -eq 0 ]]; then
+            echo "No dependencies parsed from ci/deps-dev.toml"
+            cat ci/deps-dev.toml
+            exit 1
           fi
 
+      - name: Set version in Cargo.toml
+        id: ver
+        run: |
+          VERSION="${{ steps.gitversion.outputs.majorMinorPatch }}-dev.${{ github.run_number }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          sed -i -E "s/^version\s*=\s*\".*\"/version = \"${VERSION}\"/" Cargo.toml
+          echo "Publishing version: ${VERSION}"
+          grep '^version\s*=\s*' Cargo.toml
+
+      - name: Publish crate (gate)
+        run: cargo publish -p greentic-component-manifest --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component-store --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component-runtime --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component --registry corp-artifacts-greentic --allow-dirty
+
+      - name: Create git tag only after successful publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.ver.outputs.version }}"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists"
+          else
+            gh api "repos/${{ github.repository }}/git/refs" -X POST -f ref="refs/tags/${TAG}" -f sha="${GITHUB_SHA}"
+            echo "Created tag ${TAG}"
+          fi
