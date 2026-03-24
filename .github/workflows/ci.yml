@@ -11,7 +11,7 @@ env:
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -159,7 +159,7 @@ jobs:
   publish:
     name: publish
     needs: [lint, test]
-    if: github.ref == 'refs/heads/master' || inputs.publish == true
+    if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ubuntu-latest
     concurrency:
       group: publish-${{ github.workflow }}-${{ github.ref }}
@@ -246,7 +246,7 @@ jobs:
   binstall-release:
     name: binstall release
     needs: [lint, test]
-    if: github.ref == 'refs/heads/master' || inputs.publish == true
+    if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
