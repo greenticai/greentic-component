@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": ["custom.regex"],
+  "baseBranches": ["develop"],
+  "labels": ["dependencies", "renovate"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^ci/deps-dev\\.toml$"],
+      "matchStrings": [
+        "(?m)^greentic-qa-lib\\s*=\\s*\"(?<currentValue>[^\"]+)\"\\s*$"
+      ],
+      "depNameTemplate": "greenticai/greentic-qa",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchFileNames": ["ci/deps-dev.toml"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ]
+}

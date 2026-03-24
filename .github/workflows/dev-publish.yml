@@ -1,0 +1,135 @@
+﻿name: Dev Publish crates
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch: {}
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Get CodeArtifact Token
+        run: |
+          token=$(aws codeartifact get-authorization-token --domain ${{ secrets.CODEARTIFACT_DOMAIN }} --domain-owner ${{ secrets.CODEARTIFACT_DOMAIN_OWNER }} --region ${{ secrets.AWS_REGION }} --query authorizationToken --output text)
+          echo "::add-mask::$token"
+          echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$token" >> $GITHUB_ENV
+      - name: Configure CodeArtifact Registry
+        run: |
+          mkdir -p .cargo
+          cp ci/cargo-config-dev.toml .cargo/config.toml
+      - name: Apply deps-dev overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r line; do
+            [[ -z "${line// }" || "${line}" =~ ^[[:space:]]*# ]] && continue
+            if [[ "$line" =~ ^([a-zA-Z0-9_-]+)[[:space:]]*=[[:space:]]*\"([^\"]+)\"[[:space:]]*$ ]]; then
+              dep="${BASH_REMATCH[1]}"
+              ver="${BASH_REMATCH[2]}"
+              echo "Pinning ${dep} => ${ver}"
+              sed -i -E "s#^${dep}[[:space:]]*=.*#${dep} = { version = \"=${ver}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+              cargo update -p "${dep}" --precise "${ver}" || true
+            fi
+          done < ci/deps-dev.toml
+          cargo update --workspace
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo build --workspace --all-features
+      - run: cargo test --workspace --all-features -- --nocapture
+
+  publish-dev:
+    needs: build-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.91.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Get CodeArtifact Token
+        run: |
+          token=$(aws codeartifact get-authorization-token --domain ${{ secrets.CODEARTIFACT_DOMAIN }} --domain-owner ${{ secrets.CODEARTIFACT_DOMAIN_OWNER }} --region ${{ secrets.AWS_REGION }} --query authorizationToken --output text)
+          echo "::add-mask::$token"
+          echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$token" >> $GITHUB_ENV
+      - name: Configure CodeArtifact Registry
+        run: |
+          mkdir -p .cargo
+          cp ci/cargo-config-dev.toml .cargo/config.toml
+      - name: Apply deps-dev overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r line; do
+            [[ -z "${line// }" || "${line}" =~ ^[[:space:]]*# ]] && continue
+            if [[ "$line" =~ ^([a-zA-Z0-9_-]+)[[:space:]]*=[[:space:]]*\"([^\"]+)\"[[:space:]]*$ ]]; then
+              dep="${BASH_REMATCH[1]}"
+              ver="${BASH_REMATCH[2]}"
+              echo "Pinning ${dep} => ${ver}"
+              sed -i -E "s#^${dep}[[:space:]]*=.*#${dep} = { version = \"=${ver}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+              cargo update -p "${dep}" --precise "${ver}" || true
+            fi
+          done < ci/deps-dev.toml
+          cargo update --workspace
+      - name: Setup GitVersion
+        uses: gittools/actions/gitversion/setup@v1
+        with:
+          versionSpec: "5.x"
+      - name: Compute version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1
+      - name: Set crate dev version
+        run: |
+          VERSION="${{ steps.gitversion.outputs.MajorMinorPatch }}-dev.${{ github.run_number }}"
+          sed -i -E "0,/^version\s*=\s*\"[^\"]+\"/s//version = \"$VERSION\"/" Cargo.toml
+      - name: Publish workspace crates to CodeArtifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          for crate in greentic-component-manifest greentic-component-store greentic-component-runtime greentic-component; do
+            echo "Publishing $crate"
+            set +e
+            output="$(cargo publish -p "$crate" --registry corp-artifacts-greentic --allow-dirty 2>&1)"
+            status=$?
+            set -e
+            echo "$output"
+            if [ "$status" -ne 0 ]; then
+              if echo "$output" | grep -E -q "already uploaded|already exists|version .* is already in use|already exists on crates.io index"; then
+                echo "Crate $crate already published, continuing."
+              else
+                echo "Publish failed for $crate" >&2
+                exit "$status"
+              fi
+            fi
+            sleep 5
+          done
+      - name: Create git tag only after successful publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.gitversion.outputs.MajorMinorPatch }}-dev.${{ github.run_number }}"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            gh api "repos/${{ github.repository }}/git/refs" -X POST -f ref="refs/tags/$TAG" -f sha="${GITHUB_SHA}"
+          fi
