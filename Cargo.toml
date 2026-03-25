@@ -73,7 +73,7 @@ greentic-interfaces = { version = "0.4", default-features = false, features = [
 greentic-interfaces-wasmtime = "0.4"
 greentic-distributor-client = { version = "0.4", default-features = false, features = ["dist-client"] }
 greentic-types = "0.4"
-greentic-qa-lib = "0.4"
+greentic-qa-lib = "0.4.16"
 handlebars = "6"
 hex = "0.4"
 ignore = "0.4"
