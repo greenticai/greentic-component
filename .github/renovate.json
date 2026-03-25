@@ -33,6 +33,15 @@
                                                 ],
                              "automerge":  true,
                              "automergeType":  "pr"
+                         },
+                         {
+                             "matchManagers":  [
+                                                   "custom.regex"
+                                               ],
+                             "matchDepNames":  [
+                                                   "greenticai/greentic-qa"
+                                               ],
+                             "allowedVersions":  "/-dev\\./"
                          }
                      ]
 }
