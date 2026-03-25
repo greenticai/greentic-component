@@ -1,4 +1,7 @@
 .DS_Store
 /target
+temp_auto_push.bat
 **/*.rs.bk
 /target-*
+.gitignore
+branch_structure.json
