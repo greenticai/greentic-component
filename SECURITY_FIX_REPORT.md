@@ -23,6 +23,11 @@ Dependency manifests and lockfiles discovered in repo:
 
 Diff check for dependency-file changes in current PR workspace:
 - `git diff --name-only` filtered for dependency files returned no matches.
+- Current workspace diff contains only: `pr-comment.md` (non-dependency file).
+
+## Local Validation
+- Attempted `cargo audit` as a best-effort local check.
+- Audit could not run in this CI sandbox because toolchain/advisory downloads require network/DNS access, which is restricted.
 
 ## Remediation Actions
 No vulnerability remediation code changes were required because no active alerts or PR-introduced dependency vulnerabilities were present.
