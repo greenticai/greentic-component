@@ -24,6 +24,8 @@ jobs:
         uses: gittools/actions/gitversion/execute@v3
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.91.0
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -61,18 +63,12 @@ jobs:
           while IFS=$'\t' read -r DEP_NAME DEP_VERSION; do
             [[ -z "$DEP_NAME" || -z "$DEP_VERSION" ]] && continue
             matched=1
-            found=0
             echo "Applying ${DEP_NAME} => ${DEP_VERSION}"
 
-            while IFS= read -r CARGO_FILE; do
-              if grep -Eq "^[[:space:]]*${DEP_NAME}[[:space:]]*=" "$CARGO_FILE"; then
-                sed -i -E "s#^[[:space:]]*${DEP_NAME}[[:space:]]*=.*#${DEP_NAME} = { version = \"=${DEP_VERSION}\", registry = \"corp-artifacts-greentic\" }#" "$CARGO_FILE"
-                found=1
-              fi
-            done < <(find . -name Cargo.toml -not -path "./target/*" -print)
-
-            if [[ $found -eq 0 ]]; then
-              echo "Dependency ${DEP_NAME} not found in Cargo.toml files; continuing"
+            if grep -Eq "^[[:space:]]*${DEP_NAME}[[:space:]]*=" Cargo.toml; then
+              sed -i -E "s#^[[:space:]]*${DEP_NAME}[[:space:]]*=.*#${DEP_NAME} = { version = \"=${DEP_VERSION}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+            else
+              echo "Dependency ${DEP_NAME} not found in root Cargo.toml; continuing"
             fi
           done < <(
             awk '
