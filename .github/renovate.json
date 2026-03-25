@@ -33,12 +33,14 @@
       "matchFileNames": ["ci/deps-dev.toml"],
       "automerge": true,
       "automergeType": "pr",
-      "allowedVersions": "/-dev\\./"
+      "allowedVersions": "/-dev\\./",
+      "additionalBranchPrefix": "develop-"
     },
     {
       "matchBaseBranches": ["release"],
       "matchFileNames": ["Cargo.toml"],
-      "allowedVersions": "/^(?!.*-dev\\.).*$/"
+      "allowedVersions": "/^(?!.*-dev\\.).*$/",
+      "additionalBranchPrefix": "release-"
     },
     {
       "matchBaseBranches": ["release"],
