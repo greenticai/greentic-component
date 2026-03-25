@@ -1,4 +1,4 @@
-﻿{
+{
     "$schema":  "https://docs.renovatebot.com/renovate-schema.json",
     "enabledManagers":  [
                             "custom.regex"
@@ -22,8 +22,7 @@
                                "depNameTemplate":  "greenticai/greentic-qa",
                                "datasourceTemplate":  "github-tags",
                                "versioningTemplate":  "semver",
-                               "extractVersionTemplate":  "^v?(?\u003cversion\u003e.*)$",
-                               "allowedVersions":  "/-dev\\./"
+                               "extractVersionTemplate":  "^v?(?\u003cversion\u003e.*)$"
                            }
                        ],
     "packageRules":  [
@@ -45,4 +44,3 @@
                          }
                      ]
 }
-
