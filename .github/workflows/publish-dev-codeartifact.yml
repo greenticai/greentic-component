@@ -42,6 +42,7 @@ jobs:
             --output text)
           echo "::add-mask::$TOKEN"
           echo "CARGO_REGISTRIES_CORP_ARTIFACTS_GREENTIC_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
       - name: Configure Cargo registry
         run: |
           mkdir -p .cargo
@@ -52,14 +53,27 @@ jobs:
           EOF
 
       - name: Apply deps-dev overlay for publish
+        shell: bash
         run: |
+          set -euo pipefail
           matched=0
+
           while IFS=$'\t' read -r DEP_NAME DEP_VERSION; do
             [[ -z "$DEP_NAME" || -z "$DEP_VERSION" ]] && continue
             matched=1
-            echo "Using ${DEP_NAME} version for publish: ${DEP_VERSION}"
-            sed -i -E "s#^[[:space:]]*${DEP_NAME}[[:space:]]*=.*#${DEP_NAME} = { version = \"=${DEP_VERSION}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
-            grep -E "^${DEP_NAME}[[:space:]]*=.*registry[[:space:]]*=[[:space:]]*\"corp-artifacts-greentic\"" Cargo.toml
+            found=0
+            echo "Applying ${DEP_NAME} => ${DEP_VERSION}"
+
+            while IFS= read -r CARGO_FILE; do
+              if grep -Eq "^[[:space:]]*${DEP_NAME}[[:space:]]*=" "$CARGO_FILE"; then
+                sed -i -E "s#^[[:space:]]*${DEP_NAME}[[:space:]]*=.*#${DEP_NAME} = { version = \"=${DEP_VERSION}\", registry = \"corp-artifacts-greentic\" }#" "$CARGO_FILE"
+                found=1
+              fi
+            done < <(find . -name Cargo.toml -not -path "./target/*" -print)
+
+            if [[ $found -eq 0 ]]; then
+              echo "Dependency ${DEP_NAME} not found in Cargo.toml files; continuing"
+            fi
           done < <(
             awk '
               /^[[:space:]]*[a-zA-Z0-9_-]+[[:space:]]*=/ {
@@ -82,15 +96,67 @@ jobs:
 
       - name: Set version in Cargo.toml
         id: ver
+        shell: bash
         run: |
+          set -euo pipefail
           VERSION="${{ steps.gitversion.outputs.majorMinorPatch }}-dev.${{ github.run_number }}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
           sed -i -E "s/^version\s*=\s*\".*\"/version = \"${VERSION}\"/" Cargo.toml
+          sed -i -E "s#^greentic-component-manifest\s*=.*#greentic-component-manifest = { version = \"=${VERSION}\", path = \"crates/component-manifest\" }#" Cargo.toml
+          sed -i -E "s#^greentic-component-store\s*=.*#greentic-component-store = { version = \"=${VERSION}\", path = \"crates/greentic-component-store\" }#" Cargo.toml
+
           echo "Publishing version: ${VERSION}"
           grep '^version\s*=\s*' Cargo.toml
 
       - name: Publish crate (gate)
-        run: cargo publish -p greentic-component-manifest --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component-store --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component-runtime --registry corp-artifacts-greentic --allow-dirty && sleep 5 && cargo publish -p greentic-component --registry corp-artifacts-greentic --allow-dirty
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+
+          publish_one() {
+            local crate="$1"
+            local manifest_path="$2"
+            local attempts=8
+            local delay=15
+
+            for i in $(seq 1 "$attempts"); do
+              echo "Publishing ${crate} (attempt ${i}/${attempts})"
+              set +e
+              output="$(cargo publish -p "${crate}" --manifest-path "${manifest_path}" --registry corp-artifacts-greentic --allow-dirty 2>&1)"
+              status=$?
+              set -e
+              echo "${output}"
+
+              if [ "${status}" -eq 0 ]; then
+                return 0
+              fi
+
+              if echo "${output}" | grep -E -q "already uploaded|already exists|version .* is already in use|already exists on crates.io index"; then
+                echo "Crate ${crate} is already published, continuing."
+                return 0
+              fi
+
+              if [ "${i}" -lt "${attempts}" ]; then
+                echo "Publish failed for ${crate}, retrying in ${delay}s..."
+                sleep "${delay}"
+                continue
+              fi
+
+              echo "Publish failed for ${crate} after ${attempts} attempts."
+              return "${status}"
+            done
+          }
+
+          publish_one greentic-component-manifest crates/component-manifest/Cargo.toml
+          sed -i -E "s#^greentic-component-manifest\s*=.*#greentic-component-manifest = { version = \"=${VERSION}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+
+          publish_one greentic-component-store crates/greentic-component-store/Cargo.toml
+          sed -i -E "s#^greentic-component-store\s*=.*#greentic-component-store = { version = \"=${VERSION}\", registry = \"corp-artifacts-greentic\" }#" Cargo.toml
+
+          publish_one greentic-component-runtime crates/greentic-component-runtime/Cargo.toml
+          publish_one greentic-component crates/greentic-component/Cargo.toml
 
       - name: Create git tag only after successful publish
         env:
@@ -103,4 +169,3 @@ jobs:
             gh api "repos/${{ github.repository }}/git/refs" -X POST -f ref="refs/tags/${TAG}" -f sha="${GITHUB_SHA}"
             echo "Created tag ${TAG}"
           fi
-

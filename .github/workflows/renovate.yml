@@ -1,6 +1,8 @@
 ﻿name: Renovate
 
 on:
+  push:
+    branches: ["develop"]
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch: {}
