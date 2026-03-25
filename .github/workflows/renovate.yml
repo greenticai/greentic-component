@@ -27,4 +27,6 @@ jobs:
           RENOVATE_BASE_BRANCHES: develop
           RENOVATE_CONFIG_FILE: .github/renovate.json
           RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: optional
+
 
