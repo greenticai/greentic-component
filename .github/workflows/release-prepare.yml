@@ -1,0 +1,61 @@
+name: Prepare Release Version
+
+on:
+  push:
+    branches: ["release"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: "6.x"
+
+      - id: gitversion
+        uses: gittools/actions/gitversion/execute@v3
+        with:
+          useConfigFile: true
+          configFilePath: GitVersion.yml
+
+      - name: Apply stable version
+        id: ver
+        run: |
+          VERSION="${{ steps.gitversion.outputs.majorMinorPatch }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          sed -i -E "s/^version\s*=\s*\".*\"/version = \"${VERSION}\"/" Cargo.toml
+          grep '^version\s*=\s*' Cargo.toml
+
+      - name: Commit version update
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+          git add Cargo.toml
+          git commit -m "chore(release): set version ${{ steps.ver.outputs.version }}"
+          git push origin HEAD:release
+
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists"
+            exit 0
+          fi
+          SHA="$(git rev-parse HEAD)"
+          gh api "repos/${{ github.repository }}/git/refs" -X POST -f ref="refs/tags/${TAG}" -f sha="${SHA}"
+          echo "Created tag ${TAG}"

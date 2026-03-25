@@ -1,8 +1,8 @@
-﻿name: Renovate
+name: Renovate
 
 on:
   push:
-    branches: ["develop"]
+    branches: ["develop", "release"]
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch: {}
@@ -24,9 +24,7 @@ jobs:
           RENOVATE_PLATFORM: github
           RENOVATE_AUTODISCOVER: false
           RENOVATE_REPOSITORIES: ${{ github.repository }}
-          RENOVATE_BASE_BRANCHES: develop
+          RENOVATE_BASE_BRANCHES: develop,release
           RENOVATE_CONFIG_FILE: .github/renovate.json
           RENOVATE_ONBOARDING: 'false'
           RENOVATE_REQUIRE_CONFIG: optional
-
-
