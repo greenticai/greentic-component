@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "อินพุตวิซาร์ดไม่ผ่านการตรวจสอบความถูกต้อง; โปรดแก้ไขแล้วลองอีกครั้ง",
   "cli.wizard.result.qa_value_required": "จำเป็นต้องระบุค่า",
   "cli.wizard.result.validate_apply_conflict": "--validate และ --apply ไม่สามารถใช้ร่วมกันได้",
-  "cli.wizard.step.template_used": "เทมเพลตที่เลือก: {}"
+  "cli.wizard.step.template_used": "เทมเพลตที่เลือก: {}",
+  "cli.wizard.validation.component_name_invalid": "ชื่อคอมโพเนนต์ต้องเป็นตัวพิมพ์เล็กแบบ kebab-case หรือ snake_case (ได้รับ `{}`)",
+  "cli.wizard.validation.config_field_invalid": "ฟิลด์ config ต้องเป็น `name:type[:required|optional]` (ได้รับ `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "ชื่อฟิลด์ config ต้องเป็นตัวพิมพ์เล็กแบบ snake_case (ได้รับ `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "ชนิดของฟิลด์ config ต้องเป็นหนึ่งใน string, bool, integer, number (ได้รับ `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "โหมด filesystem ต้องเป็นหนึ่งใน none, read_only, sandbox (ได้รับ `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "การเมานต์ filesystem ต้องเป็น `name:host_class:guest_path` (ได้รับ `{}`)",
+  "cli.wizard.validation.path_io": "ตรวจสอบพาธ {} ไม่สำเร็จ: {}",
+  "cli.wizard.validation.secret_format_invalid": "รูปแบบ secret ต้องเป็นหนึ่งใน bytes, text, json (ได้รับ `{}`)",
+  "cli.wizard.validation.target_path_is_file": "พาธเป้าหมาย {} มีอยู่แล้วและเป็นไฟล์",
+  "cli.wizard.validation.telemetry_attribute_invalid": "แอตทริบิวต์ telemetry ต้องเป็น `key=value` (ได้รับ `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "ขอบเขต telemetry ต้องเป็นหนึ่งใน tenant, pack, node (ได้รับ `{}`)"
 }

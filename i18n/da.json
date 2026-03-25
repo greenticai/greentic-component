@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard-input fejlede validering; ret venligst og prøv igen",
   "cli.wizard.result.qa_value_required": "værdi er påkrævet",
   "cli.wizard.result.validate_apply_conflict": "--validate og --apply kan ikke bruges sammen",
-  "cli.wizard.step.template_used": "valgt skabelon: {}"
+  "cli.wizard.step.template_used": "valgt skabelon: {}",
+  "cli.wizard.validation.component_name_invalid": "komponentnavn skal være i små bogstaver i kebab- eller snake-case (fik `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfigurationsfelt skal være `name:type[:required|optional]` (fik `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfigurationsfeltnavn skal være i små bogstaver i snake_case (fik `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfigurationsfelttype skal være en af string, bool, integer, number (fik `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filsystemtilstand skal være en af none, read_only, sandbox (fik `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filsystemmontering skal være `name:host_class:guest_path` (fik `{}`)",
+  "cli.wizard.validation.path_io": "kunne ikke inspicere sti {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "hemmeligt format skal være en af bytes, text, json (fik `{}`)",
+  "cli.wizard.validation.target_path_is_file": "målstien {} findes allerede og er en fil",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetriattribut skal være `key=value` (fik `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetriområde skal være en af tenant, pack, node (fik `{}`)"
 }

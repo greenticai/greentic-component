@@ -8,7 +8,6 @@ MODE="${1:-all}"
 AUTH_MODE="${AUTH_MODE:-auto}"
 LOCALE="${LOCALE:-en}"
 EN_PATH="${EN_PATH:-crates/greentic-component/i18n/en.json}"
-I18N_TRANSLATOR_MANIFEST="${I18N_TRANSLATOR_MANIFEST:-../greentic-i18n/Cargo.toml}"
 
 usage() {
   cat <<'EOF'
@@ -18,7 +17,6 @@ Environment overrides:
   EN_PATH=...                     English source file path (default: i18n/en.json)
   AUTH_MODE=...                   Translator auth mode for translate (default: auto)
   LOCALE=...                      CLI locale used for translator output (default: en)
-  I18N_TRANSLATOR_MANIFEST=...    Path to greentic-i18n Cargo.toml
 
 Examples:
   tools/i18n.sh all
@@ -27,20 +25,45 @@ Examples:
 EOF
 }
 
+log() {
+  printf '[i18n] %s\n' "$*"
+}
+
+fail() {
+  printf '[i18n] error: %s\n' "$*" >&2
+  exit 1
+}
+
+ensure_translator() {
+  if command -v greentic-i18n-translator >/dev/null 2>&1; then
+    return
+  fi
+
+  command -v cargo-binstall >/dev/null 2>&1 \
+    || fail "greentic-i18n-translator not found and cargo-binstall is unavailable"
+
+  log "installing greentic-i18n-translator via cargo-binstall"
+  cargo binstall -y greentic-i18n-translator \
+    || fail "failed to install greentic-i18n-translator via cargo-binstall"
+
+  command -v greentic-i18n-translator >/dev/null 2>&1 \
+    || fail "greentic-i18n-translator is still not on PATH after cargo-binstall"
+}
+
 run_translate() {
-  cargo run --manifest-path "$I18N_TRANSLATOR_MANIFEST" -p greentic-i18n-translator -- \
+  greentic-i18n-translator \
     --locale "$LOCALE" \
     translate --langs all --en "$EN_PATH" --auth-mode "$AUTH_MODE"
 }
 
 run_validate() {
-  cargo run --manifest-path "$I18N_TRANSLATOR_MANIFEST" -p greentic-i18n-translator -- \
+  greentic-i18n-translator \
     --locale "$LOCALE" \
     validate --langs all --en "$EN_PATH"
 }
 
 run_status() {
-  cargo run --manifest-path "$I18N_TRANSLATOR_MANIFEST" -p greentic-i18n-translator -- \
+  greentic-i18n-translator \
     --locale "$LOCALE" \
     status --langs all --en "$EN_PATH"
 }
@@ -49,6 +72,8 @@ if [[ "${MODE}" == "-h" || "${MODE}" == "--help" ]]; then
   usage
   exit 0
 fi
+
+ensure_translator
 
 case "$MODE" in
   translate) run_translate ;;

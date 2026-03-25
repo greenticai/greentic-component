@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "asistente mantañ yatiyawi jan validación paski; askiñcha ukat wasitat yant'ma",
   "cli.wizard.result.qa_value_required": "valor wakisiwa",
   "cli.wizard.result.validate_apply_conflict": "--validate ukat --apply janiw mayacht'asis apnaqasispati",
-  "cli.wizard.step.template_used": "plantilla ajllita: {}"
+  "cli.wizard.step.template_used": "plantilla ajllita: {}",
+  "cli.wizard.validation.component_name_invalid": "componente sutixa jisk'a qillqatan kebab-or-snake case ukhamañapawa (ukjawa `{}`)",
+  "cli.wizard.validation.config_field_invalid": "config campo ukaxa `name:type[:required|optional]` ukhamañapawa (ukjawa `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "config campo sutixa jisk'a qillqatan snake_case ukhamañapawa (ukjawa `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "config campo kasta ukaxa string, bool, integer, number ukanakat maynïñapawa (ukjawa `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem modo ukaxa none, read_only, sandbox ukanakat maynïñapawa (ukjawa `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount ukaxa `name:host_class:guest_path` ukhamañapawa (ukjawa `{}`)",
+  "cli.wizard.validation.path_io": "janiw thakhi {} uñakipt'añjamäkiti: {}",
+  "cli.wizard.validation.secret_format_invalid": "secreto formato ukaxa bytes, text, json ukanakat maynïñapawa (ukjawa `{}`)",
+  "cli.wizard.validation.target_path_is_file": "thakhi {} nayraqata utjxi ukat mä archivo satawa",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry atributo ukaxa `key=value` ukhamañapawa (ukjawa `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope ukaxa tenant, pack, node ukanakat maynïñapawa (ukjawa `{}`)"
 }

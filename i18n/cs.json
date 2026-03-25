@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "vstup průvodce neprošel validací; opravte jej a zkuste to znovu",
   "cli.wizard.result.qa_value_required": "hodnota je povinná",
   "cli.wizard.result.validate_apply_conflict": "--validate a --apply nelze použít současně",
-  "cli.wizard.step.template_used": "vybraná šablona: {}"
+  "cli.wizard.step.template_used": "vybraná šablona: {}",
+  "cli.wizard.validation.component_name_invalid": "název komponenty musí být malými písmeny ve formátu kebab-case nebo snake_case (zadáno `{}`)",
+  "cli.wizard.validation.config_field_invalid": "pole konfigurace musí být ve formátu `name:type[:required|optional]` (zadáno `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "název pole konfigurace musí být malými písmeny ve formátu snake_case (zadáno `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "typ pole konfigurace musí být jeden z string, bool, integer, number (zadáno `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "režim souborového systému musí být jeden z none, read_only, sandbox (zadáno `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "připojení souborového systému musí být ve formátu `name:host_class:guest_path` (zadáno `{}`)",
+  "cli.wizard.validation.path_io": "nepodařilo se zkontrolovat cestu {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "formát tajného údaje musí být jeden z bytes, text, json (zadáno `{}`)",
+  "cli.wizard.validation.target_path_is_file": "cílová cesta {} již existuje a je to soubor",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atribut telemetrie musí být ve formátu `key=value` (zadáno `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "rozsah telemetrie musí být jeden z tenant, pack, node (zadáno `{}`)"
 }

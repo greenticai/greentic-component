@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "input wizard gagal pengesahan; sila betulkan dan cuba lagi",
   "cli.wizard.result.qa_value_required": "nilai diperlukan",
   "cli.wizard.result.validate_apply_conflict": "--validate dan --apply tidak boleh digunakan bersama",
-  "cli.wizard.step.template_used": "templat dipilih: {}"
+  "cli.wizard.step.template_used": "templat dipilih: {}",
+  "cli.wizard.validation.component_name_invalid": "nama komponen mesti dalam huruf kecil gaya kebab-atau-snake case (dapat `{}`)",
+  "cli.wizard.validation.config_field_invalid": "medan config mesti `name:type[:required|optional]` (dapat `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "nama medan config mesti dalam huruf kecil snake_case (dapat `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "jenis medan config mesti salah satu daripada string, bool, integer, number (dapat `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "mod sistem fail mesti salah satu daripada none, read_only, sandbox (dapat `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "mount sistem fail mesti `name:host_class:guest_path` (dapat `{}`)",
+  "cli.wizard.validation.path_io": "gagal memeriksa laluan {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "format rahsia mesti salah satu daripada bytes, text, json (dapat `{}`)",
+  "cli.wizard.validation.target_path_is_file": "laluan sasaran {} sudah wujud dan ialah fail",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atribut telemetri mesti `key=value` (dapat `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "skop telemetri mesti salah satu daripada tenant, pack, node (dapat `{}`)"
 }

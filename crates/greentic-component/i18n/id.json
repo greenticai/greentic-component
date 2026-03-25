@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "input wizard gagal validasi; mohon perbaiki lalu coba lagi",
   "cli.wizard.result.qa_value_required": "nilai wajib diisi",
   "cli.wizard.result.validate_apply_conflict": "--validate dan --apply tidak dapat digunakan bersamaan",
-  "cli.wizard.step.template_used": "template dipilih: {}"
+  "cli.wizard.step.template_used": "template dipilih: {}",
+  "cli.wizard.validation.component_name_invalid": "nama komponen harus berupa huruf kecil dalam format kebab-case atau snake_case (didapat `{}`)",
+  "cli.wizard.validation.config_field_invalid": "field config harus berupa `name:type[:required|optional]` (didapat `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "nama field config harus berupa snake_case huruf kecil (didapat `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "tipe field config harus salah satu dari string, bool, integer, number (didapat `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "mode filesystem harus salah satu dari none, read_only, sandbox (didapat `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "mount filesystem harus berupa `name:host_class:guest_path` (didapat `{}`)",
+  "cli.wizard.validation.path_io": "gagal memeriksa path {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "format secret harus salah satu dari bytes, text, json (didapat `{}`)",
+  "cli.wizard.validation.target_path_is_file": "path target {} sudah ada dan merupakan sebuah file",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atribut telemetry harus berupa `key=value` (didapat `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "cakupan telemetry harus salah satu dari tenant, pack, node (didapat `{}`)"
 }

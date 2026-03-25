@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard 入力の検証に失敗しました。修正して再試行してください",
   "cli.wizard.result.qa_value_required": "値は必須です",
   "cli.wizard.result.validate_apply_conflict": "--validate と --apply は同時に使用できません",
-  "cli.wizard.step.template_used": "選択されたテンプレート: {}"
+  "cli.wizard.step.template_used": "選択されたテンプレート: {}",
+  "cli.wizard.validation.component_name_invalid": "コンポーネント名は小文字のkebab-caseまたはsnake_caseである必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.config_field_invalid": "設定フィールドは `name:type[:required|optional]` である必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.config_field_name_invalid": "設定フィールド名は小文字のsnake_caseである必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.config_field_type_invalid": "設定フィールドの型は string、bool、integer、number のいずれかである必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode は none、read_only、sandbox のいずれかである必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount は `name:host_class:guest_path` である必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.path_io": "パス {} の確認に失敗しました: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format は bytes、text、json のいずれかである必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.target_path_is_file": "対象パス {} はすでに存在しており、ファイルです",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute は `key=value` である必要があります（受け取った値: `{}`）",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope は tenant、pack、node のいずれかである必要があります（受け取った値: `{}`）"
 }

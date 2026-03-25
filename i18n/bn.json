@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "উইজার্ড ইনপুট ভ্যালিডেশন ব্যর্থ হয়েছে; অনুগ্রহ করে সংশোধন করে আবার চেষ্টা করুন",
   "cli.wizard.result.qa_value_required": "মান আবশ্যক",
   "cli.wizard.result.validate_apply_conflict": "--validate এবং --apply একসাথে ব্যবহার করা যাবে না",
-  "cli.wizard.step.template_used": "নির্বাচিত টেমপ্লেট: {}"
+  "cli.wizard.step.template_used": "নির্বাচিত টেমপ্লেট: {}",
+  "cli.wizard.validation.component_name_invalid": "কম্পোনেন্টের নাম ছোটহাতের kebab-or-snake case হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.config_field_invalid": "কনফিগ ফিল্ড `name:type[:required|optional]` হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.config_field_name_invalid": "কনফিগ ফিল্ডের নাম ছোটহাতের snake_case হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.config_field_type_invalid": "কনফিগ ফিল্ডের ধরন string, bool, integer, number-এর একটি হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.filesystem_mode_invalid": "ফাইলসিস্টেম মোড none, read_only, sandbox-এর একটি হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.filesystem_mount_invalid": "ফাইলসিস্টেম মাউন্ট `name:host_class:guest_path` হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.path_io": "পাথ {} পরীক্ষা করতে ব্যর্থ হয়েছে: {}",
+  "cli.wizard.validation.secret_format_invalid": "সিক্রেট ফরম্যাট bytes, text, json-এর একটি হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.target_path_is_file": "টার্গেট পাথ {} আগে থেকেই আছে এবং এটি একটি ফাইল",
+  "cli.wizard.validation.telemetry_attribute_invalid": "টেলিমেট্রি অ্যাট্রিবিউট `key=value` হতে হবে (`{}` পাওয়া গেছে)",
+  "cli.wizard.validation.telemetry_scope_invalid": "টেলিমেট্রি স্কোপ tenant, pack, node-এর একটি হতে হবে (`{}` পাওয়া গেছে)"
 }

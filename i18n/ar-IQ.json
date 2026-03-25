@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "فشل التحقق من صحة إدخال المعالج؛ يرجى التصحيح والمحاولة مرة أخرى",
   "cli.wizard.result.qa_value_required": "القيمة مطلوبة",
   "cli.wizard.result.validate_apply_conflict": "لا يمكن استخدام --validate و --apply معًا",
-  "cli.wizard.step.template_used": "القالب المحدد: {}"
+  "cli.wizard.step.template_used": "القالب المحدد: {}",
+  "cli.wizard.validation.component_name_invalid": "يجب أن يكون اسم المكوّن بأحرف صغيرة بصيغة kebab-or-snake case (القيمة `{}`)",
+  "cli.wizard.validation.config_field_invalid": "يجب أن يكون حقل الإعداد `name:type[:required|optional]` (القيمة `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "يجب أن يكون اسم حقل الإعداد بصيغة snake_case وبأحرف صغيرة (القيمة `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "يجب أن يكون نوع حقل الإعداد واحدًا من string أو bool أو integer أو number (القيمة `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "يجب أن يكون وضع نظام الملفات واحدًا من none أو read_only أو sandbox (القيمة `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "يجب أن يكون ربط نظام الملفات `name:host_class:guest_path` (القيمة `{}`)",
+  "cli.wizard.validation.path_io": "فشل فحص المسار {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "يجب أن تكون صيغة السر واحدة من bytes أو text أو json (القيمة `{}`)",
+  "cli.wizard.validation.target_path_is_file": "المسار الهدف {} موجود بالفعل وهو ملف",
+  "cli.wizard.validation.telemetry_attribute_invalid": "يجب أن تكون سمة telemetry بالشكل `key=value` (القيمة `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "يجب أن يكون نطاق telemetry واحدًا من tenant أو pack أو node (القيمة `{}`)"
 }

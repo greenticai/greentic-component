@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "విజార్డ్ ఇన్‌పుట్ ధృవీకరణలో విఫలమైంది; దయచేసి సరిచేసి మళ్లీ ప్రయత్నించండి",
   "cli.wizard.result.qa_value_required": "విలువ అవసరం",
   "cli.wizard.result.validate_apply_conflict": "--validate మరియు --apply ను కలిసి ఉపయోగించలేరు",
-  "cli.wizard.step.template_used": "ఎంచుకున్న టెంప్లేట్: {}"
+  "cli.wizard.step.template_used": "ఎంచుకున్న టెంప్లేట్: {}",
+  "cli.wizard.validation.component_name_invalid": "కాంపొనెంట్ పేరు చిన్నఅక్షరాల kebab-or-snake case లో ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` రూపంలో ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.config_field_name_invalid": "config field పేరు చిన్నఅక్షరాల snake_case లో ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.config_field_type_invalid": "config field రకం string, bool, integer, number లో ఒకటిగా ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox లో ఒకటిగా ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` రూపంలో ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.path_io": "మార్గం {} ను పరిశీలించడం విఫలమైంది: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json లో ఒకటిగా ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.target_path_is_file": "లక్ష్య మార్గం {} ఇప్పటికే ఉంది మరియు అది ఒక ఫైల్",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` రూపంలో ఉండాలి (`{}` వచ్చింది)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node లో ఒకటిగా ఉండాలి (`{}` వచ్చింది)"
 }

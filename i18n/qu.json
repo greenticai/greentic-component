@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard yaykuy chiqaqchaypi pantarqan; ama hina kaspa allinchay hinaspa yapamanta kallpay",
   "cli.wizard.result.qa_value_required": "valorqa munasqa",
   "cli.wizard.result.validate_apply_conflict": "--validate hinaspa --apply mana kuskapi llamk'achiyta atinchu",
-  "cli.wizard.step.template_used": "akllasqa plantilla: {}"
+  "cli.wizard.step.template_used": "akllasqa plantilla: {}",
+  "cli.wizard.validation.component_name_invalid": "componente sutiqa uchuy qillqallapi kebab-or-snake case kanan tiyan (chaskisqa `{}`)",
+  "cli.wizard.validation.config_field_invalid": "config campoqa `name:type[:required|optional]` kanan tiyan (chaskisqa `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "config campo sutinqa uchuy qillqallapi snake_case kanan tiyan (chaskisqa `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "config campo tiponqa kaykunamanta huk kanan tiyan: string, bool, integer, number (chaskisqa `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem modeqa kaykunamanta huk kanan tiyan: none, read_only, sandbox (chaskisqa `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mountqa `name:host_class:guest_path` kanan tiyan (chaskisqa `{}`)",
+  "cli.wizard.validation.path_io": "ñan {} qhawanapaq mana atisqa: {}",
+  "cli.wizard.validation.secret_format_invalid": "secreto formatonqa kaykunamanta huk kanan tiyan: bytes, text, json (chaskisqa `{}`)",
+  "cli.wizard.validation.target_path_is_file": "objetivo ñan {} ñam kashan hinaspa huk willañiqi kanku",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry atributoqa `key=value` kanan tiyan (chaskisqa `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scoponqa kaykunamanta huk kanan tiyan: tenant, pack, node (chaskisqa `{}`)"
 }

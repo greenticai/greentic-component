@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard input failed validation; please correct and try again",
   "cli.wizard.result.qa_value_required": "value is required",
   "cli.wizard.result.validate_apply_conflict": "--validate and --apply cannot be used together",
-  "cli.wizard.step.template_used": "template selected: {}"
+  "cli.wizard.step.template_used": "template selected: {}",
+  "cli.wizard.validation.component_name_invalid": "component name must be lower-case kebab- or snake-case (got `{}`)",
+  "cli.wizard.validation.config_field_invalid": "config field must be `name:type[:required|optional]` (got `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "config field name must be lower-case snake_case (got `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "config field type must be one of string, bool, integer, number (got `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode must be one of none, read_only, sandbox (got `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount must be `name:host_class:guest_path` (got `{}`)",
+  "cli.wizard.validation.path_io": "failed to inspect path {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format must be one of bytes, text, json (got `{}`)",
+  "cli.wizard.validation.target_path_is_file": "target path {} already exists and is a file",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute must be `key=value` (got `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope must be one of tenant, pack, node (got `{}`)"
 }

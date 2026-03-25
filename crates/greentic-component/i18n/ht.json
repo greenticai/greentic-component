@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "antre asistan an pa pase validasyon; tanpri korije epi eseye ankò",
   "cli.wizard.result.qa_value_required": "valè obligatwa",
   "cli.wizard.result.validate_apply_conflict": "--validate ak --apply pa ka itilize ansanm",
-  "cli.wizard.step.template_used": "modèl chwazi: {}"
+  "cli.wizard.step.template_used": "modèl chwazi: {}",
+  "cli.wizard.validation.component_name_invalid": "non konpozan an dwe an miniskil nan fòma kebab-oswa-snake case (resevwa `{}`)",
+  "cli.wizard.validation.config_field_invalid": "chan konfigirasyon an dwe `name:type[:required|optional]` (resevwa `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "non chan konfigirasyon an dwe an miniskil nan fòma snake_case (resevwa `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "tip chan konfigirasyon an dwe youn nan string, bool, integer, number (resevwa `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "mòd filesystem lan dwe youn nan none, read_only, sandbox (resevwa `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "montaj filesystem lan dwe `name:host_class:guest_path` (resevwa `{}`)",
+  "cli.wizard.validation.path_io": "echèk pandan enspeksyon chemen {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "fòma sekrè a dwe youn nan bytes, text, json (resevwa `{}`)",
+  "cli.wizard.validation.target_path_is_file": "chemen sib la {} deja egziste epi li se yon fichye",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atribit telemetry la dwe `key=value` (resevwa `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "dimansyon telemetry la dwe youn nan tenant, pack, node (resevwa `{}`)"
 }

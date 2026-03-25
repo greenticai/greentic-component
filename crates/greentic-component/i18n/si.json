@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard ආදානය වලංගුකරණය අසමත් විය; කරුණාකර නිවැරදි කර නැවත උත්සාහ කරන්න",
   "cli.wizard.result.qa_value_required": "අගය අවශ්‍යයි",
   "cli.wizard.result.validate_apply_conflict": "--validate සහ --apply එකට භාවිතා කළ නොහැක",
-  "cli.wizard.step.template_used": "තෝරාගත් ටෙම්ප්ලේට්: {}"
+  "cli.wizard.step.template_used": "තෝරාගත් ටෙම්ප්ලේට්: {}",
+  "cli.wizard.validation.component_name_invalid": "සංරචක නාමය කුඩා අකුරු kebab-or-snake case විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.config_field_invalid": "config ක්ෂේත්‍රය `name:type[:required|optional]` විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.config_field_name_invalid": "config ක්ෂේත්‍ර නාමය කුඩා අකුරු snake_case විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.config_field_type_invalid": "config ක්ෂේත්‍ර වර්ගය string, bool, integer, number වලින් එකක් විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode එක none, read_only, sandbox වලින් එකක් විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount එක `name:host_class:guest_path` විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.path_io": "මාර්ගය {} පරීක්ෂා කිරීමට අසමත් විය: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format එක bytes, text, json වලින් එකක් විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.target_path_is_file": "ඉලක්ක මාර්ගය {} දැනටමත් පවතින අතර එය ගොනුවකි",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute එක `key=value` විය යුතුය (`{}` ලැබුණි)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope එක tenant, pack, node වලින් එකක් විය යුතුය (`{}` ලැබුණි)"
 }

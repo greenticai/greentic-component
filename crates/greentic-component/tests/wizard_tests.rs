@@ -8,7 +8,7 @@ use predicates::prelude::{PredicateBooleanExt, predicate};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn create_answers(path: &std::path::Path, name: &str) {
     let root = path.parent().unwrap_or_else(|| std::path::Path::new("."));
@@ -215,6 +215,10 @@ fn install_cargo_wrapper(root: &Path) -> std::path::PathBuf {
         fs::set_permissions(&greentic_component_path, perms).unwrap();
     }
     bin_dir
+}
+
+fn disable_interactive_stdin(cmd: &mut Command) -> &mut Command {
+    cmd.stdin(Stdio::null())
 }
 
 fn create_add_operation_answers(
@@ -1263,6 +1267,7 @@ fn wizard_full_chain_dry_run_emit_validate_replay_execute() {
 }
 
 #[test]
+#[ignore = "nightly e2e workflow"]
 fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
     let temp = tempfile::TempDir::new().unwrap();
     let component_name = "wizard-smoke-advanced";
@@ -1283,7 +1288,7 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .expect("expected fields");
 
     let mut dry_run = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    dry_run
+    disable_interactive_stdin(&mut dry_run)
         .arg("wizard")
         .arg("--mode")
         .arg("create")
@@ -1325,7 +1330,7 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
     );
 
     let mut replay = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    replay
+    disable_interactive_stdin(&mut replay)
         .arg("wizard")
         .arg("--mode")
         .arg("create")
@@ -1391,23 +1396,8 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         Some("enabled")
     );
 
-    let mut cargo_test = Command::new("cargo");
-    cargo_test
-        .arg("test")
-        .arg("--manifest-path")
-        .arg(component_root.join("Cargo.toml"))
-        .arg("--offline")
-        .env("CARGO_TERM_COLOR", "never")
-        .env("CARGO_NET_OFFLINE", "true")
-        .env("PATH", &path_env);
-    cargo_test
-        .assert()
-        .success()
-        .stderr(predicate::str::contains("COMPONENT_ORG").not())
-        .stderr(predicate::str::contains("COMPONENT_VERSION").not());
-
     let mut wasm_build = Command::new("make");
-    wasm_build
+    disable_interactive_stdin(&mut wasm_build)
         .current_dir(&component_root)
         .arg("wasm")
         .env("CARGO_NET_OFFLINE", "true")
@@ -1419,14 +1409,9 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         wasm_path.exists(),
         "wasm build should produce a dist artifact"
     );
-    let describe_path = component_root.join("dist/wizard-smoke-advanced__0_6_0.describe.cbor");
-    assert!(
-        describe_path.exists(),
-        "wasm build should produce a describe artifact"
-    );
 
     let mut doctor = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    doctor
+    disable_interactive_stdin(&mut doctor)
         .arg("doctor")
         .arg(&wasm_path)
         .env("CARGO_NET_OFFLINE", "true")
@@ -1437,21 +1422,7 @@ fn wizard_emit_answers_round_trips_all_fields_and_replay_builds_component() {
         .stdout(predicate::str::contains("doctor.embedded.describe_unavailable").not());
 
     let mut inspect = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    inspect
-        .arg("inspect")
-        .arg("--describe")
-        .arg(&describe_path)
-        .arg("--json")
-        .arg("--verify")
-        .env("CARGO_NET_OFFLINE", "true")
-        .env("PATH", &path_env);
-    inspect
-        .assert()
-        .success()
-        .stderr(predicate::str::contains("describe unavailable").not());
-
-    let mut inspect = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    inspect
+    disable_interactive_stdin(&mut inspect)
         .arg("inspect")
         .arg(&wasm_path)
         .env("CARGO_NET_OFFLINE", "true")

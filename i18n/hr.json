@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ulaz čarobnjaka nije prošao provjeru; ispravite i pokušajte ponovno",
   "cli.wizard.result.qa_value_required": "vrijednost je obavezna",
   "cli.wizard.result.validate_apply_conflict": "--validate i --apply ne mogu se koristiti zajedno",
-  "cli.wizard.step.template_used": "odabran predložak: {}"
+  "cli.wizard.step.template_used": "odabran predložak: {}",
+  "cli.wizard.validation.component_name_invalid": "naziv komponente mora biti malim slovima u kebab- ili snake-case formatu (dobiveno `{}`)",
+  "cli.wizard.validation.config_field_invalid": "polje konfiguracije mora biti `name:type[:required|optional]` (dobiveno `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "naziv polja konfiguracije mora biti malim slovima u snake_case formatu (dobiveno `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "tip polja konfiguracije mora biti jedan od string, bool, integer, number (dobiveno `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "način rada datotečnog sustava mora biti jedan od none, read_only, sandbox (dobiveno `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "montiranje datotečnog sustava mora biti `name:host_class:guest_path` (dobiveno `{}`)",
+  "cli.wizard.validation.path_io": "provjera putanje {} nije uspjela: {}",
+  "cli.wizard.validation.secret_format_invalid": "format tajne mora biti jedan od bytes, text, json (dobiveno `{}`)",
+  "cli.wizard.validation.target_path_is_file": "ciljna putanja {} već postoji i datoteka je",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atribut telemetrije mora biti `key=value` (dobiveno `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "opseg telemetrije mora biti jedan od tenant, pack, node (dobiveno `{}`)"
 }

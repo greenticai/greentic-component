@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ವಿಜಾರ್ಡ್ ಇನ್‌ಪುಟ್ ಮಾನ್ಯತೆ ವಿಫಲವಾಗಿದೆ; ದಯವಿಟ್ಟು ಸರಿಪಡಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   "cli.wizard.result.qa_value_required": "ಮೌಲ್ಯ ಅಗತ್ಯ",
   "cli.wizard.result.validate_apply_conflict": "--validate ಮತ್ತು --apply ಅನ್ನು ಒಟ್ಟಿಗೆ ಬಳಸಲು ಸಾಧ್ಯವಿಲ್ಲ",
-  "cli.wizard.step.template_used": "ಆಯ್ಕೆಯಾದ ಟೆಂಪ್ಲೇಟ್: {}"
+  "cli.wizard.step.template_used": "ಆಯ್ಕೆಯಾದ ಟೆಂಪ್ಲೇಟ್: {}",
+  "cli.wizard.validation.component_name_invalid": "ಕಾಂಪೊನೆಂಟ್ ಹೆಸರು lowercase kebab-or-snake case ಆಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` ಆಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.config_field_name_invalid": "config field ಹೆಸರು lowercase snake_case ಆಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.config_field_type_invalid": "config field type string, bool, integer, number ಇವುಗಳಲ್ಲಿ ಒಂದಾಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox ಇವುಗಳಲ್ಲಿ ಒಂದಾಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` ಆಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.path_io": "path {} ಪರಿಶೀಲಿಸಲು ವಿಫಲವಾಯಿತು: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json ಇವುಗಳಲ್ಲಿ ಒಂದಾಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.target_path_is_file": "ಗುರಿ path {} ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ ಮತ್ತು ಅದು ಒಂದು file ಆಗಿದೆ",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` ಆಗಿರಬೇಕು (`{}` ದೊರಕಿತು)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node ಇವುಗಳಲ್ಲಿ ಒಂದಾಗಿರಬೇಕು (`{}` ದೊರಕಿತು)"
 }

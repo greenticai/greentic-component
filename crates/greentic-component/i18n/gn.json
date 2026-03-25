@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard jeike ndohasái validación; emyatyrõ ha eha'ã jey",
   "cli.wizard.result.qa_value_required": "tekotevẽ valor",
   "cli.wizard.result.validate_apply_conflict": "--validate ha --apply ndaikatúi ojepuru oñondive",
-  "cli.wizard.step.template_used": "plantilla ojeporavóva: {}"
+  "cli.wizard.step.template_used": "plantilla ojeporavóva: {}",
+  "cli.wizard.validation.component_name_invalid": "téra componente rehegua oĩva'erã minúsculape kebab térã snake case-pe (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.config_field_invalid": "config ñu rehegua oĩva'erã `name:type[:required|optional]`-pe (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "config ñu réra oĩva'erã minúsculape snake_case-pe (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "config ñu tipo oĩva'erã peteĩva string, bool, integer, number apytégui (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem modo oĩva'erã peteĩva none, read_only, sandbox apytégui (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount oĩva'erã `name:host_class:guest_path`-pe (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.path_io": "ndaikatúi ojehecha hag̃ua tape {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "secreto formato oĩva'erã peteĩva bytes, text, json apytégui (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.target_path_is_file": "tape target {} oĩma ha peteĩ marandurenda",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry atributo oĩva'erã `key=value`-pe (ojegueru va'ekue `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope oĩva'erã peteĩva tenant, pack, node apytégui (ojegueru va'ekue `{}`)"
 }

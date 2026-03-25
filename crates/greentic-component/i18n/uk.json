@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "перевірка вхідних даних wizard не пройдена; виправте й спробуйте ще раз",
   "cli.wizard.result.qa_value_required": "потрібне значення",
   "cli.wizard.result.validate_apply_conflict": "--validate і --apply не можна використовувати разом",
-  "cli.wizard.step.template_used": "вибрано шаблон: {}"
+  "cli.wizard.step.template_used": "вибрано шаблон: {}",
+  "cli.wizard.validation.component_name_invalid": "назва компонента має бути в нижньому регістрі у форматі kebab- або snake-case (отримано `{}`)",
+  "cli.wizard.validation.config_field_invalid": "поле конфігурації має бути у форматі `name:type[:required|optional]` (отримано `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "назва поля конфігурації має бути в нижньому регістрі у форматі snake_case (отримано `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "тип поля конфігурації має бути одним із string, bool, integer, number (отримано `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "режим файлової системи має бути одним із none, read_only, sandbox (отримано `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "монтування файлової системи має бути у форматі `name:host_class:guest_path` (отримано `{}`)",
+  "cli.wizard.validation.path_io": "не вдалося перевірити шлях {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "формат секрету має бути одним із bytes, text, json (отримано `{}`)",
+  "cli.wizard.validation.target_path_is_file": "цільовий шлях {} уже існує і є файлом",
+  "cli.wizard.validation.telemetry_attribute_invalid": "атрибут телеметрії має бути у форматі `key=value` (отримано `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "область телеметрії має бути однією з tenant, pack, node (отримано `{}`)"
 }

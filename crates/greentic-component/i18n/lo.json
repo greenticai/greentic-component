@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ຂໍ້ມູນນຳເຂົ້າ wizard ບໍ່ຜ່ານການກວດສອບ; ກະລຸນາແກ້ໄຂແລ້ວລອງອີກຄັ້ງ",
   "cli.wizard.result.qa_value_required": "ຈໍາເປັນຕ້ອງມີຄ່າ",
   "cli.wizard.result.validate_apply_conflict": "--validate ແລະ --apply ບໍ່ສາມາດໃຊ້ຮ່ວມກັນໄດ້",
-  "cli.wizard.step.template_used": "template ທີ່ເລືອກ: {}"
+  "cli.wizard.step.template_used": "template ທີ່ເລືອກ: {}",
+  "cli.wizard.validation.component_name_invalid": "ຊື່ component ຕ້ອງເປັນ lowercase ແບບ kebab-or-snake case (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.config_field_invalid": "ຊ່ອງ config ຕ້ອງເປັນ `name:type[:required|optional]` (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "ຊື່ຊ່ອງ config ຕ້ອງເປັນ lowercase snake_case (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "ປະເພດຂອງຊ່ອງ config ຕ້ອງເປັນໜຶ່ງໃນ string, bool, integer, number (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "ໂໝດ filesystem ຕ້ອງເປັນໜຶ່ງໃນ none, read_only, sandbox (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount ຕ້ອງເປັນ `name:host_class:guest_path` (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.path_io": "ກວດສອບ path {} ບໍ່ສຳເລັດ: {}",
+  "cli.wizard.validation.secret_format_invalid": "ຮູບແບບ secret ຕ້ອງເປັນໜຶ່ງໃນ bytes, text, json (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.target_path_is_file": "path ປາຍທາງ {} ມີຢູ່ແລ້ວ ແລະເປັນໄຟລ໌",
+  "cli.wizard.validation.telemetry_attribute_invalid": "attribute telemetry ຕ້ອງເປັນ `key=value` (ໄດ້ຮັບ `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "ຂອບເຂດ telemetry ຕ້ອງເປັນໜຶ່ງໃນ tenant, pack, node (ໄດ້ຮັບ `{}`)"
 }

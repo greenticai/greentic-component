@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "viisardi sisend ei läbinud valideerimist; palun paranda ja proovi uuesti",
   "cli.wizard.result.qa_value_required": "väärtus on nõutav",
   "cli.wizard.result.validate_apply_conflict": "--validate ja --apply ei saa kasutada koos",
-  "cli.wizard.step.template_used": "valitud mall: {}"
+  "cli.wizard.step.template_used": "valitud mall: {}",
+  "cli.wizard.validation.component_name_invalid": "komponendi nimi peab olema väiketähtedega kebab- või snake-case kujul (saadi `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfiguratsiooniväli peab olema kujul `name:type[:required|optional]` (saadi `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfiguratsioonivälja nimi peab olema väiketähtedega snake_case kujul (saadi `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfiguratsioonivälja tüüp peab olema üks järgmistest: string, bool, integer, number (saadi `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "failisüsteemi režiim peab olema üks järgmistest: none, read_only, sandbox (saadi `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "failisüsteemi haakepunkt peab olema kujul `name:host_class:guest_path` (saadi `{}`)",
+  "cli.wizard.validation.path_io": "tee {} kontrollimine ebaõnnestus: {}",
+  "cli.wizard.validation.secret_format_invalid": "saladuse vorming peab olema üks järgmistest: bytes, text, json (saadi `{}`)",
+  "cli.wizard.validation.target_path_is_file": "sihttee {} on juba olemas ja on fail",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemeetria atribuut peab olema kujul `key=value` (saadi `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemeetria ulatus peab olema üks järgmistest: tenant, pack, node (saadi `{}`)"
 }

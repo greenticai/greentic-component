@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "nabigo sa validation ang wizard input; pakitama at subukang muli",
   "cli.wizard.result.qa_value_required": "kailangan ang value",
   "cli.wizard.result.validate_apply_conflict": "hindi maaaring gamitin nang magkasama ang --validate at --apply",
-  "cli.wizard.step.template_used": "napiling template: {}"
+  "cli.wizard.step.template_used": "napiling template: {}",
+  "cli.wizard.validation.component_name_invalid": "ang pangalan ng component ay dapat lowercase kebab-or-snake case (nakuha ang `{}`)",
+  "cli.wizard.validation.config_field_invalid": "ang config field ay dapat `name:type[:required|optional]` (nakuha ang `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "ang pangalan ng config field ay dapat lowercase snake_case (nakuha ang `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "ang uri ng config field ay dapat isa sa string, bool, integer, number (nakuha ang `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "ang filesystem mode ay dapat isa sa none, read_only, sandbox (nakuha ang `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "ang filesystem mount ay dapat `name:host_class:guest_path` (nakuha ang `{}`)",
+  "cli.wizard.validation.path_io": "nabigong siyasatin ang path {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "ang format ng secret ay dapat isa sa bytes, text, json (nakuha ang `{}`)",
+  "cli.wizard.validation.target_path_is_file": "ang target path {} ay umiiral na at isang file",
+  "cli.wizard.validation.telemetry_attribute_invalid": "ang telemetry attribute ay dapat `key=value` (nakuha ang `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "ang telemetry scope ay dapat isa sa tenant, pack, node (nakuha ang `{}`)"
 }

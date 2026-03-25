@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "la entrada del asistente no superó la validación; corrige e inténtalo de nuevo",
   "cli.wizard.result.qa_value_required": "el valor es obligatorio",
   "cli.wizard.result.validate_apply_conflict": "--validate y --apply no se pueden usar juntos",
-  "cli.wizard.step.template_used": "plantilla seleccionada: {}"
+  "cli.wizard.step.template_used": "plantilla seleccionada: {}",
+  "cli.wizard.validation.component_name_invalid": "el nombre del componente debe estar en kebab-case o snake_case en minúsculas (se recibió `{}`)",
+  "cli.wizard.validation.config_field_invalid": "el campo de configuración debe ser `name:type[:required|optional]` (se recibió `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "el nombre del campo de configuración debe estar en snake_case en minúsculas (se recibió `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "el tipo del campo de configuración debe ser uno de string, bool, integer, number (se recibió `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "el modo del sistema de archivos debe ser uno de none, read_only, sandbox (se recibió `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "el montaje del sistema de archivos debe ser `name:host_class:guest_path` (se recibió `{}`)",
+  "cli.wizard.validation.path_io": "no se pudo inspeccionar la ruta {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "el formato del secreto debe ser uno de bytes, text, json (se recibió `{}`)",
+  "cli.wizard.validation.target_path_is_file": "la ruta de destino {} ya existe y es un archivo",
+  "cli.wizard.validation.telemetry_attribute_invalid": "el atributo de telemetría debe ser `key=value` (se recibió `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "el ámbito de telemetría debe ser uno de tenant, pack, node (se recibió `{}`)"
 }

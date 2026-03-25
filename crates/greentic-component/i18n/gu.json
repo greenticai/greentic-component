@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard ઇનપુટ માન્યકરણમાં નિષ્ફળ ગયું; કૃપા કરીને સુધારો અને ફરી પ્રયાસ કરો",
   "cli.wizard.result.qa_value_required": "મૂલ્ય જરૂરી છે",
   "cli.wizard.result.validate_apply_conflict": "--validate અને --apply નો સાથે ઉપયોગ કરી શકાય નહીં",
-  "cli.wizard.step.template_used": "ટેમ્પ્લેટ પસંદ થયું: {}"
+  "cli.wizard.step.template_used": "ટેમ્પ્લેટ પસંદ થયું: {}",
+  "cli.wizard.validation.component_name_invalid": "કંપનીન્ટનું નામ લોઅરકેસ kebab-or-snake case માં હોવું જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` હોવું જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.config_field_name_invalid": "config field નું નામ લોઅરકેસ snake_case માં હોવું જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.config_field_type_invalid": "config field નો પ્રકાર string, bool, integer, number માંથી એક હોવો જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox માંથી એક હોવો જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` હોવું જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.path_io": "path {} ની તપાસ કરવામાં નિષ્ફળ: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json માંથી એક હોવો જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.target_path_is_file": "target path {} પહેલેથી અસ્તિત્વમાં છે અને તે file છે",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` હોવું જોઈએ (`{}` મળ્યું)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node માંથી એક હોવો જોઈએ (`{}` મળ્યું)"
 }

@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "വിജാർഡ് ഇൻപുട്ട് സാധുത പരിശോധനയിൽ പരാജയപ്പെട്ടു; ദയവായി തിരുത്തി വീണ്ടും ശ്രമിക്കുക",
   "cli.wizard.result.qa_value_required": "മൂല്യം ആവശ്യമാണ്",
   "cli.wizard.result.validate_apply_conflict": "--validateയും --applyയും ഒരുമിച്ച് ഉപയോഗിക്കാനാകില്ല",
-  "cli.wizard.step.template_used": "തിരഞ്ഞെടുത്ത ടെംപ്ലേറ്റ്: {}"
+  "cli.wizard.step.template_used": "തിരഞ്ഞെടുത്ത ടെംപ്ലേറ്റ്: {}",
+  "cli.wizard.validation.component_name_invalid": "കമ്പോണന്റ് നാമം lowercase kebab-or-snake case ആയിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` ആയിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.config_field_name_invalid": "config field നാമം lowercase snake_case ആയിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.config_field_type_invalid": "config field തരം string, bool, integer, number എന്നിവയിൽ ഒന്നായിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox എന്നിവയിൽ ഒന്നായിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` ആയിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.path_io": "path {} പരിശോധിക്കാൻ പരാജയപ്പെട്ടു: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json എന്നിവയിൽ ഒന്നായിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.target_path_is_file": "target path {} ഇതിനകം നിലവിലുണ്ട്, അത് ഒരു ഫയലാണ്",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` ആയിരിക്കണം (`{}` ലഭിച്ചു)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node എന്നിവയിൽ ഒന്നായിരിക്കണം (`{}` ലഭിച്ചു)"
 }
