@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "đầu vào wizard không vượt qua xác thực; vui lòng sửa và thử lại",
   "cli.wizard.result.qa_value_required": "bắt buộc phải có giá trị",
   "cli.wizard.result.validate_apply_conflict": "--validate và --apply không thể dùng cùng nhau",
-  "cli.wizard.step.template_used": "mẫu đã chọn: {}"
+  "cli.wizard.step.template_used": "mẫu đã chọn: {}",
+  "cli.wizard.validation.component_name_invalid": "tên component phải ở dạng kebab-case hoặc snake_case viết thường (nhận được `{}`)",
+  "cli.wizard.validation.config_field_invalid": "trường config phải có dạng `name:type[:required|optional]` (nhận được `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "tên trường config phải ở dạng snake_case viết thường (nhận được `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "kiểu trường config phải là một trong string, bool, integer, number (nhận được `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "chế độ filesystem phải là một trong none, read_only, sandbox (nhận được `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "mount filesystem phải có dạng `name:host_class:guest_path` (nhận được `{}`)",
+  "cli.wizard.validation.path_io": "không thể kiểm tra đường dẫn {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "định dạng secret phải là một trong bytes, text, json (nhận được `{}`)",
+  "cli.wizard.validation.target_path_is_file": "đường dẫn đích {} đã tồn tại và là một tệp",
+  "cli.wizard.validation.telemetry_attribute_invalid": "thuộc tính telemetry phải có dạng `key=value` (nhận được `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "phạm vi telemetry phải là một trong tenant, pack, node (nhận được `{}`)"
 }

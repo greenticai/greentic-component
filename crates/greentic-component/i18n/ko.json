@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "마법사 입력 검증에 실패했습니다. 수정한 후 다시 시도하세요",
   "cli.wizard.result.qa_value_required": "값이 필요합니다",
   "cli.wizard.result.validate_apply_conflict": "--validate와 --apply는 함께 사용할 수 없습니다",
-  "cli.wizard.step.template_used": "선택된 템플릿: {}"
+  "cli.wizard.step.template_used": "선택된 템플릿: {}",
+  "cli.wizard.validation.component_name_invalid": "컴포넌트 이름은 소문자 케밥 또는 스네이크 케이스여야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.config_field_invalid": "config 필드는 `name:type[:required|optional]` 형식이어야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.config_field_name_invalid": "config 필드 이름은 소문자 snake_case여야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.config_field_type_invalid": "config 필드 유형은 string, bool, integer, number 중 하나여야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem 모드는 none, read_only, sandbox 중 하나여야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem 마운트는 `name:host_class:guest_path` 형식이어야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.path_io": "경로 {}를 확인하지 못했습니다: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret 형식은 bytes, text, json 중 하나여야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.target_path_is_file": "대상 경로 {}가 이미 존재하며 파일입니다",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry 속성은 `key=value` 형식이어야 합니다 (`{}` 입력됨)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry 범위는 tenant, pack, node 중 하나여야 합니다 (`{}` 입력됨)"
 }

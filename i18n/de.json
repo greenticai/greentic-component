@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "Assistent-Eingabe hat die Validierung nicht bestanden; bitte korrigieren und erneut versuchen",
   "cli.wizard.result.qa_value_required": "Wert ist erforderlich",
   "cli.wizard.result.validate_apply_conflict": "--validate und --apply können nicht zusammen verwendet werden",
-  "cli.wizard.step.template_used": "Template ausgewählt: {}"
+  "cli.wizard.step.template_used": "Template ausgewählt: {}",
+  "cli.wizard.validation.component_name_invalid": "Der Komponentenname muss in Kleinbuchstaben im Kebab- oder Snake-Case sein (erhalten: `{}`)",
+  "cli.wizard.validation.config_field_invalid": "Das Konfigurationsfeld muss `name:type[:required|optional]` sein (erhalten: `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "Der Name des Konfigurationsfelds muss in Kleinbuchstaben im Snake-Case sein (erhalten: `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "Der Typ des Konfigurationsfelds muss einer von string, bool, integer, number sein (erhalten: `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "Der Dateisystemmodus muss einer von none, read_only, sandbox sein (erhalten: `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "Der Dateisystem-Mount muss `name:host_class:guest_path` sein (erhalten: `{}`)",
+  "cli.wizard.validation.path_io": "Pfad {} konnte nicht geprüft werden: {}",
+  "cli.wizard.validation.secret_format_invalid": "Das Secret-Format muss eines von bytes, text, json sein (erhalten: `{}`)",
+  "cli.wizard.validation.target_path_is_file": "Der Zielpfad {} existiert bereits und ist eine Datei",
+  "cli.wizard.validation.telemetry_attribute_invalid": "Das Telemetrieattribut muss `key=value` sein (erhalten: `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "Der Telemetriebereich muss einer von tenant, pack, node sein (erhalten: `{}`)"
 }

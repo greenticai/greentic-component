@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "வழிகாட்டி உள்ளீடு சரிபார்ப்பில் தோல்வியடைந்தது; தயவு செய்து திருத்தி மீண்டும் முயற்சிக்கவும்",
   "cli.wizard.result.qa_value_required": "மதிப்பு அவசியம்",
   "cli.wizard.result.validate_apply_conflict": "--validate மற்றும் --apply ஒன்றாக பயன்படுத்த முடியாது",
-  "cli.wizard.step.template_used": "தேர்ந்தெடுக்கப்பட்ட வார்ப்புரு: {}"
+  "cli.wizard.step.template_used": "தேர்ந்தெடுக்கப்பட்ட வார்ப்புரு: {}",
+  "cli.wizard.validation.component_name_invalid": "கூறு பெயர் lowercase kebab-or-snake case ஆக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` ஆக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.config_field_name_invalid": "config field பெயர் lowercase snake_case ஆக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.config_field_type_invalid": "config field வகை string, bool, integer, number இவற்றில் ஒன்றாக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox இவற்றில் ஒன்றாக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` ஆக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.path_io": "பாதை {} ஐ பரிசோதிக்க முடியவில்லை: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json இவற்றில் ஒன்றாக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.target_path_is_file": "இலக்கு பாதை {} ஏற்கனவே உள்ளது மற்றும் அது ஒரு கோப்பு",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` ஆக இருக்க வேண்டும் (`{}` கிடைத்தது)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node இவற்றில் ஒன்றாக இருக்க வேண்டும் (`{}` கிடைத்தது)"
 }

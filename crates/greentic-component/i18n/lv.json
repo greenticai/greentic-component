@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "vedņa ievade neizturēja validāciju; lūdzu, izlabojiet un mēģiniet vēlreiz",
   "cli.wizard.result.qa_value_required": "vērtība ir obligāta",
   "cli.wizard.result.validate_apply_conflict": "--validate un --apply nevar izmantot kopā",
-  "cli.wizard.step.template_used": "izvēlēta veidne: {}"
+  "cli.wizard.step.template_used": "izvēlēta veidne: {}",
+  "cli.wizard.validation.component_name_invalid": "komponenta nosaukumam jābūt ar mazajiem burtiem kebab-vai-snake formātā (saņemts `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfigurācijas laukam jābūt `name:type[:required|optional]` formātā (saņemts `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfigurācijas lauka nosaukumam jābūt ar mazajiem burtiem snake_case formātā (saņemts `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfigurācijas lauka tipam jābūt vienam no string, bool, integer, number (saņemts `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "failu sistēmas režīmam jābūt vienam no none, read_only, sandbox (saņemts `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "failu sistēmas montējumam jābūt `name:host_class:guest_path` formātā (saņemts `{}`)",
+  "cli.wizard.validation.path_io": "neizdevās pārbaudīt ceļu {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "noslēpuma formātam jābūt vienam no bytes, text, json (saņemts `{}`)",
+  "cli.wizard.validation.target_path_is_file": "mērķa ceļš {} jau pastāv un ir fails",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetrijas atribūtam jābūt `key=value` formātā (saņemts `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetrijas tvērumam jābūt vienam no tenant, pack, node (saņemts `{}`)"
 }

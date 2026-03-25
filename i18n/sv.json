@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard-indata klarade inte validering; korrigera och försök igen",
   "cli.wizard.result.qa_value_required": "värde krävs",
   "cli.wizard.result.validate_apply_conflict": "--validate och --apply kan inte användas tillsammans",
-  "cli.wizard.step.template_used": "vald mall: {}"
+  "cli.wizard.step.template_used": "vald mall: {}",
+  "cli.wizard.validation.component_name_invalid": "komponentnamnet måste vara gemena kebab- eller snake_case (fick `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfigurationsfältet måste vara `name:type[:required|optional]` (fick `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfigurationsfältets namn måste vara gemena snake_case (fick `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfigurationsfältets typ måste vara en av string, bool, integer, number (fick `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filsystemsläget måste vara ett av none, read_only, sandbox (fick `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filsystemmonteringen måste vara `name:host_class:guest_path` (fick `{}`)",
+  "cli.wizard.validation.path_io": "det gick inte att inspektera sökvägen {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "hemlighetsformatet måste vara ett av bytes, text, json (fick `{}`)",
+  "cli.wizard.validation.target_path_is_file": "målsökvägen {} finns redan och är en fil",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetriattributet måste vara `key=value` (fick `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetriomfånget måste vara ett av tenant, pack, node (fick `{}`)"
 }

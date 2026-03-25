@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard input သည် validation မအောင်မြင်ပါ; ပြင်ဆင်ပြီး ထပ်ကြိုးစားပါ",
   "cli.wizard.result.qa_value_required": "value လိုအပ်သည်",
   "cli.wizard.result.validate_apply_conflict": "--validate နှင့် --apply ကို အတူတကွ မသုံးနိုင်ပါ",
-  "cli.wizard.step.template_used": "ရွေးချယ်ထားသော template: {}"
+  "cli.wizard.step.template_used": "ရွေးချယ်ထားသော template: {}",
+  "cli.wizard.validation.component_name_invalid": "component အမည်သည် lowercase kebab-or-snake case ဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.config_field_invalid": "config field သည် `name:type[:required|optional]` ဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.config_field_name_invalid": "config field အမည်သည် lowercase snake_case ဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.config_field_type_invalid": "config field အမျိုးအစားသည် string, bool, integer, number တို့အနက် တစ်ခုဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode သည် none, read_only, sandbox တို့အနက် တစ်ခုဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount သည် `name:host_class:guest_path` ဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.path_io": "path {} ကို စစ်ဆေးရာတွင် မအောင်မြင်ပါ: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format သည် bytes, text, json တို့အနက် တစ်ခုဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.target_path_is_file": "target path {} သည် ရှိပြီးသားဖြစ်ကာ file တစ်ခုဖြစ်သည်",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute သည် `key=value` ဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope သည် tenant, pack, node တို့အနက် တစ်ခုဖြစ်ရမည် (`{}` ကိုရရှိခဲ့သည်)"
 }

@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ਵਿਜ਼ਾਰਡ ਇਨਪੁੱਟ ਵੈਲੀਡੇਸ਼ਨ ਵਿੱਚ ਫੇਲ੍ਹ ਹੋਇਆ; ਕਿਰਪਾ ਕਰਕੇ ਠੀਕ ਕਰਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ",
   "cli.wizard.result.qa_value_required": "ਮੁੱਲ ਲਾਜ਼ਮੀ ਹੈ",
   "cli.wizard.result.validate_apply_conflict": "--validate ਅਤੇ --apply ਨੂੰ ਇਕੱਠੇ ਵਰਤਿਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
-  "cli.wizard.step.template_used": "ਚੁਣਿਆ ਟੈਂਪਲੇਟ: {}"
+  "cli.wizard.step.template_used": "ਚੁਣਿਆ ਟੈਂਪਲੇਟ: {}",
+  "cli.wizard.validation.component_name_invalid": "ਕੰਪੋਨੈਂਟ ਦਾ ਨਾਮ ਲੋਅਰਕੇਸ kebab-or-snake case ਵਿੱਚ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.config_field_invalid": "config ਫੀਲਡ `name:type[:required|optional]` ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.config_field_name_invalid": "config ਫੀਲਡ ਦਾ ਨਾਮ ਲੋਅਰਕੇਸ snake_case ਵਿੱਚ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.config_field_type_invalid": "config ਫੀਲਡ ਦੀ ਕਿਸਮ string, bool, integer, number ਵਿੱਚੋਂ ਇੱਕ ਹੋਣੀ ਚਾਹੀਦੀ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox ਵਿੱਚੋਂ ਇੱਕ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.path_io": "path {} ਦੀ ਜਾਂਚ ਕਰਨ ਵਿੱਚ ਅਸਫਲ: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json ਵਿੱਚੋਂ ਇੱਕ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.target_path_is_file": "target path {} ਪਹਿਲਾਂ ਹੀ ਮੌਜੂਦ ਹੈ ਅਤੇ ਇਹ ਇੱਕ ਫਾਈਲ ਹੈ",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node ਵਿੱਚੋਂ ਇੱਕ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ (`{}` ਮਿਲਿਆ)"
 }

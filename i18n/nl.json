@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard-invoer validatie mislukt; corrigeer dit en probeer opnieuw",
   "cli.wizard.result.qa_value_required": "waarde is vereist",
   "cli.wizard.result.validate_apply_conflict": "--validate en --apply kunnen niet samen worden gebruikt",
-  "cli.wizard.step.template_used": "sjabloon geselecteerd: {}"
+  "cli.wizard.step.template_used": "sjabloon geselecteerd: {}",
+  "cli.wizard.validation.component_name_invalid": "componentnaam moet lowercase kebab- of snake-case zijn (ontvangen `{}`)",
+  "cli.wizard.validation.config_field_invalid": "configuratieveld moet `name:type[:required|optional]` zijn (ontvangen `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "naam van configuratieveld moet lowercase snake_case zijn (ontvangen `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "type van configuratieveld moet een van string, bool, integer, number zijn (ontvangen `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystemmodus moet een van none, read_only, sandbox zijn (ontvangen `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem-koppeling moet `name:host_class:guest_path` zijn (ontvangen `{}`)",
+  "cli.wizard.validation.path_io": "kan pad {} niet inspecteren: {}",
+  "cli.wizard.validation.secret_format_invalid": "secretformaat moet een van bytes, text, json zijn (ontvangen `{}`)",
+  "cli.wizard.validation.target_path_is_file": "doelpad {} bestaat al en is een bestand",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetryattribuut moet `key=value` zijn (ontvangen `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetryscope moet een van tenant, pack, node zijn (ontvangen `{}`)"
 }

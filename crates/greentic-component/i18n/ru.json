@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ввод мастера не прошел проверку; исправьте и попробуйте снова",
   "cli.wizard.result.qa_value_required": "требуется значение",
   "cli.wizard.result.validate_apply_conflict": "--validate и --apply нельзя использовать вместе",
-  "cli.wizard.step.template_used": "выбран шаблон: {}"
+  "cli.wizard.step.template_used": "выбран шаблон: {}",
+  "cli.wizard.validation.component_name_invalid": "имя компонента должно быть в нижнем регистре в формате kebab-case или snake_case (получено `{}`)",
+  "cli.wizard.validation.config_field_invalid": "поле конфигурации должно быть в формате `name:type[:required|optional]` (получено `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "имя поля конфигурации должно быть в нижнем регистре в формате snake_case (получено `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "тип поля конфигурации должен быть одним из: string, bool, integer, number (получено `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "режим файловой системы должен быть одним из: none, read_only, sandbox (получено `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "монтирование файловой системы должно быть в формате `name:host_class:guest_path` (получено `{}`)",
+  "cli.wizard.validation.path_io": "не удалось проверить путь {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "формат секрета должен быть одним из: bytes, text, json (получено `{}`)",
+  "cli.wizard.validation.target_path_is_file": "целевой путь {} уже существует и является файлом",
+  "cli.wizard.validation.telemetry_attribute_invalid": "атрибут телеметрии должен быть в формате `key=value` (получено `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "область телеметрии должна быть одной из: tenant, pack, node (получено `{}`)"
 }

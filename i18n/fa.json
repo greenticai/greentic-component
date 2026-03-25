@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ورودی ویزارد در اعتبارسنجی ناموفق بود؛ لطفاً اصلاح کرده و دوباره تلاش کنید",
   "cli.wizard.result.qa_value_required": "مقدار لازم است",
   "cli.wizard.result.validate_apply_conflict": "استفاده هم‌زمان از --validate و --apply ممکن نیست",
-  "cli.wizard.step.template_used": "قالب انتخاب شد: {}"
+  "cli.wizard.step.template_used": "قالب انتخاب شد: {}",
+  "cli.wizard.validation.component_name_invalid": "نام مؤلفه باید به صورت lowercase kebab-or-snake case باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.config_field_invalid": "فیلد پیکربندی باید به صورت `name:type[:required|optional]` باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "نام فیلد پیکربندی باید به صورت lowercase snake_case باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "نوع فیلد پیکربندی باید یکی از string، bool، integer، number باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "حالت filesystem باید یکی از none، read_only، sandbox باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "mount مربوط به filesystem باید به صورت `name:host_class:guest_path` باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.path_io": "بررسی مسیر {} ناموفق بود: {}",
+  "cli.wizard.validation.secret_format_invalid": "قالب secret باید یکی از bytes، text، json باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.target_path_is_file": "مسیر هدف {} از قبل وجود دارد و یک فایل است",
+  "cli.wizard.validation.telemetry_attribute_invalid": "ویژگی telemetry باید به صورت `key=value` باشد (دریافت شد: `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "دامنه telemetry باید یکی از tenant، pack، node باشد (دریافت شد: `{}`)"
 }

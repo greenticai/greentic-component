@@ -147,6 +147,20 @@ fn execute_plan_writes_expected_files() {
     assert!(target.join("assets/i18n/en.json").exists());
     assert!(target.join("assets/i18n/locales.json").exists());
     assert!(target.join("tools/i18n.sh").exists());
+    let i18n_tool =
+        std::fs::read_to_string(target.join("tools/i18n.sh")).expect("read tools/i18n.sh");
+    assert!(
+        i18n_tool.contains("--skip-git-repo-check"),
+        "wizard i18n script should wrap codex exec with --skip-git-repo-check"
+    );
+    assert!(
+        i18n_tool.contains("greentic-i18n-translator"),
+        "wizard i18n script should call greentic-i18n-translator directly"
+    );
+    assert!(
+        i18n_tool.contains("cargo binstall -y greentic-i18n-translator"),
+        "wizard i18n script should install greentic-i18n-translator with cargo-binstall when missing"
+    );
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;

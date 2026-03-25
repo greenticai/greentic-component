@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "wizard calaquilistli amo opanoc validacion; xijchihchihua huan sempa xijyejyeco",
   "cli.wizard.result.qa_value_required": "moneki valor",
   "cli.wizard.result.validate_apply_conflict": "--validate ihuan --apply amo hueli motekizneki san sekan",
-  "cli.wizard.step.template_used": "plantilla omopejpen: {}"
+  "cli.wizard.step.template_used": "plantilla omopejpen: {}",
+  "cli.wizard.validation.component_name_invalid": "itoka componente moneki ma eli lowercase kebab-or-snake case (got `{}`)",
+  "cli.wizard.validation.config_field_invalid": "config field moneki ma eli `name:type[:required|optional]` (got `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "itoka config field moneki ma eli lowercase snake_case (got `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "itlachial config field moneki ma eli se de string, bool, integer, number (got `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode moneki ma eli se de none, read_only, sandbox (got `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount moneki ma eli `name:host_class:guest_path` (got `{}`)",
+  "cli.wizard.validation.path_io": "ax omohuelitak ojechmita path {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format moneki ma eli se de bytes, text, json (got `{}`)",
+  "cli.wizard.validation.target_path_is_file": "target path {} ya onka uan eli se archivo",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute moneki ma eli `key=value` (got `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope moneki ma eli se de tenant, pack, node (got `{}`)"
 }

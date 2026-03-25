@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "η είσοδος του wizard απέτυχε στην επικύρωση· διορθώστε τη και δοκιμάστε ξανά",
   "cli.wizard.result.qa_value_required": "η τιμή είναι υποχρεωτική",
   "cli.wizard.result.validate_apply_conflict": "τα --validate και --apply δεν μπορούν να χρησιμοποιηθούν μαζί",
-  "cli.wizard.step.template_used": "επιλέχθηκε πρότυπο: {}"
+  "cli.wizard.step.template_used": "επιλέχθηκε πρότυπο: {}",
+  "cli.wizard.validation.component_name_invalid": "το όνομα του component πρέπει να είναι σε πεζά kebab-or-snake case (δόθηκε `{}`)",
+  "cli.wizard.validation.config_field_invalid": "το πεδίο config πρέπει να είναι `name:type[:required|optional]` (δόθηκε `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "το όνομα πεδίου config πρέπει να είναι σε πεζά snake_case (δόθηκε `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "ο τύπος πεδίου config πρέπει να είναι ένας από string, bool, integer, number (δόθηκε `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "η λειτουργία filesystem πρέπει να είναι μία από none, read_only, sandbox (δόθηκε `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "το mount του filesystem πρέπει να είναι `name:host_class:guest_path` (δόθηκε `{}`)",
+  "cli.wizard.validation.path_io": "αποτυχία ελέγχου της διαδρομής {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "η μορφή secret πρέπει να είναι μία από bytes, text, json (δόθηκε `{}`)",
+  "cli.wizard.validation.target_path_is_file": "η διαδρομή προορισμού {} υπάρχει ήδη και είναι αρχείο",
+  "cli.wizard.validation.telemetry_attribute_invalid": "το γνώρισμα telemetry πρέπει να είναι `key=value` (δόθηκε `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "το scope telemetry πρέπει να είναι ένα από tenant, pack, node (δόθηκε `{}`)"
 }

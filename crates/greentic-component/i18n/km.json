@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ការបញ្ចូល wizard មិនឆ្លងការផ្ទៀងផ្ទាត់; សូមកែតម្រូវ ហើយព្យាយាមម្តងទៀត",
   "cli.wizard.result.qa_value_required": "តម្លៃត្រូវបានទាមទារ",
   "cli.wizard.result.validate_apply_conflict": "មិនអាចប្រើ --validate និង --apply ជាមួយគ្នាបាន",
-  "cli.wizard.step.template_used": "template ដែលបានជ្រើស: {}"
+  "cli.wizard.step.template_used": "template ដែលបានជ្រើស: {}",
+  "cli.wizard.validation.component_name_invalid": "ឈ្មោះ component ត្រូវតែជា kebab-case ឬ snake_case អក្សរតូច (បាន `{}`)",
+  "cli.wizard.validation.config_field_invalid": "វាល config ត្រូវតែជា `name:type[:required|optional]` (បាន `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "ឈ្មោះវាល config ត្រូវតែជា snake_case អក្សរតូច (បាន `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "ប្រភេទវាល config ត្រូវតែជា​មួយ​ក្នុង​ចំណោម string, bool, integer, number (បាន `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "របៀប filesystem ត្រូវតែជា​មួយ​ក្នុង​ចំណោម none, read_only, sandbox (បាន `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount ត្រូវតែជា `name:host_class:guest_path` (បាន `{}`)",
+  "cli.wizard.validation.path_io": "មិនអាចពិនិត្យ path {} បានទេ៖ {}",
+  "cli.wizard.validation.secret_format_invalid": "ទម្រង់ secret ត្រូវតែជា​មួយ​ក្នុង​ចំណោម bytes, text, json (បាន `{}`)",
+  "cli.wizard.validation.target_path_is_file": "path គោលដៅ {} មានរួចហើយ ហើយជា file មួយ",
+  "cli.wizard.validation.telemetry_attribute_invalid": "attribute telemetry ត្រូវតែជា `key=value` (បាន `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "scope telemetry ត្រូវតែជា​មួយ​ក្នុង​ចំណោម tenant, pack, node (បាន `{}`)"
 }

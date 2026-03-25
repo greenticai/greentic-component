@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "входът на wizard не премина валидация; моля, коригирайте и опитайте отново",
   "cli.wizard.result.qa_value_required": "стойността е задължителна",
   "cli.wizard.result.validate_apply_conflict": "--validate и --apply не могат да се използват заедно",
-  "cli.wizard.step.template_used": "избран шаблон: {}"
+  "cli.wizard.step.template_used": "избран шаблон: {}",
+  "cli.wizard.validation.component_name_invalid": "името на компонента трябва да е с малки букви в kebab-or-snake case (получено `{}`)",
+  "cli.wizard.validation.config_field_invalid": "полето на конфигурацията трябва да е `name:type[:required|optional]` (получено `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "името на полето на конфигурацията трябва да е с малки букви в snake_case (получено `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "типът на полето на конфигурацията трябва да е един от string, bool, integer, number (получено `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "режимът на файловата система трябва да е един от none, read_only, sandbox (получено `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "монтирането на файловата система трябва да е `name:host_class:guest_path` (получено `{}`)",
+  "cli.wizard.validation.path_io": "неуспешна проверка на пътя {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "форматът на тайната трябва да е един от bytes, text, json (получено `{}`)",
+  "cli.wizard.validation.target_path_is_file": "целевият път {} вече съществува и е файл",
+  "cli.wizard.validation.telemetry_attribute_invalid": "атрибутът на телеметрията трябва да е `key=value` (получено `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "обхватът на телеметрията трябва да е един от tenant, pack, node (получено `{}`)"
 }

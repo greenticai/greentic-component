@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "veiviserinndata feilet validering; vennligst korriger og prøv igjen",
   "cli.wizard.result.qa_value_required": "verdi er påkrevd",
   "cli.wizard.result.validate_apply_conflict": "--validate og --apply kan ikke brukes sammen",
-  "cli.wizard.step.template_used": "mal valgt: {}"
+  "cli.wizard.step.template_used": "mal valgt: {}",
+  "cli.wizard.validation.component_name_invalid": "komponentnavnet må være med små bokstaver i kebab- eller snake_case (fikk `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfigurasjonsfeltet må være `name:type[:required|optional]` (fikk `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "navnet på konfigurasjonsfeltet må være med små bokstaver i snake_case (fikk `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "typen for konfigurasjonsfeltet må være en av string, bool, integer, number (fikk `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filsystemmodusen må være en av none, read_only, sandbox (fikk `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filsystemmonteringen må være `name:host_class:guest_path` (fikk `{}`)",
+  "cli.wizard.validation.path_io": "kunne ikke inspisere sti {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "hemmelighetsformatet må være en av bytes, text, json (fikk `{}`)",
+  "cli.wizard.validation.target_path_is_file": "målstien {} finnes allerede og er en fil",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetriattributtet må være `key=value` (fikk `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetriomfanget må være en av tenant, pack, node (fikk `{}`)"
 }

@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "विजार्ड इनपुट प्रमाणीकरणमा असफल भयो; कृपया सच्याएर फेरि प्रयास गर्नुहोस्",
   "cli.wizard.result.qa_value_required": "मान आवश्यक छ",
   "cli.wizard.result.validate_apply_conflict": "--validate र --apply एकैसाथ प्रयोग गर्न सकिँदैन",
-  "cli.wizard.step.template_used": "चयन गरिएको टेम्प्लेट: {}"
+  "cli.wizard.step.template_used": "चयन गरिएको टेम्प्लेट: {}",
+  "cli.wizard.validation.component_name_invalid": "कम्पोनेन्टको नाम सानो अक्षरको kebab-or-snake case मा हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.config_field_invalid": "config field `name:type[:required|optional]` हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.config_field_name_invalid": "config field को नाम सानो अक्षरको snake_case मा हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.config_field_type_invalid": "config field को प्रकार string, bool, integer, number मध्ये एक हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.filesystem_mode_invalid": "filesystem mode none, read_only, sandbox मध्ये एक हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.filesystem_mount_invalid": "filesystem mount `name:host_class:guest_path` हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.path_io": "पथ {} जाँच्न असफल भयो: {}",
+  "cli.wizard.validation.secret_format_invalid": "secret format bytes, text, json मध्ये एक हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.target_path_is_file": "लक्षित पथ {} पहिले नै अवस्थित छ र यो फाइल हो",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetry attribute `key=value` हुनुपर्छ (`{}` प्राप्त भयो)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetry scope tenant, pack, node मध्ये एक हुनुपर्छ (`{}` प्राप्त भयो)"
 }

@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "sihirbaz girdisi doğrulamayı geçemedi; lütfen düzeltip tekrar deneyin",
   "cli.wizard.result.qa_value_required": "değer gerekli",
   "cli.wizard.result.validate_apply_conflict": "--validate ve --apply birlikte kullanılamaz",
-  "cli.wizard.step.template_used": "seçilen şablon: {}"
+  "cli.wizard.step.template_used": "seçilen şablon: {}",
+  "cli.wizard.validation.component_name_invalid": "bileşen adı küçük harfli kebab-case veya snake_case olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.config_field_invalid": "config alanı `name:type[:required|optional]` biçiminde olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.config_field_name_invalid": "config alanı adı küçük harfli snake_case olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.config_field_type_invalid": "config alanı türü string, bool, integer, number değerlerinden biri olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.filesystem_mode_invalid": "dosya sistemi modu none, read_only, sandbox değerlerinden biri olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.filesystem_mount_invalid": "dosya sistemi bağlama noktası `name:host_class:guest_path` biçiminde olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.path_io": "{} yolu incelenemedi: {}",
+  "cli.wizard.validation.secret_format_invalid": "gizli değer biçimi bytes, text, json değerlerinden biri olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.target_path_is_file": "hedef yol {} zaten var ve bir dosya",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetri özniteliği `key=value` biçiminde olmalıdır (`{}` alındı)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetri kapsamı tenant, pack, node değerlerinden biri olmalıdır (`{}` alındı)"
 }

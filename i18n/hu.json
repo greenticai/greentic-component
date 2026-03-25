@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "a varázsló bemenete nem felelt meg az ellenőrzésnek; javítsa, majd próbálja újra",
   "cli.wizard.result.qa_value_required": "érték megadása kötelező",
   "cli.wizard.result.validate_apply_conflict": "a --validate és a --apply nem használható együtt",
-  "cli.wizard.step.template_used": "kiválasztott sablon: {}"
+  "cli.wizard.step.template_used": "kiválasztott sablon: {}",
+  "cli.wizard.validation.component_name_invalid": "a komponens neve kisbetűs kebab- vagy snake_case formátumú kell legyen (kapott: `{}`)",
+  "cli.wizard.validation.config_field_invalid": "a konfigurációs mezőnek `name:type[:required|optional]` formátumúnak kell lennie (kapott: `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "a konfigurációs mező neve kisbetűs snake_case formátumú kell legyen (kapott: `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "a konfigurációs mező típusa a következők egyike kell legyen: string, bool, integer, number (kapott: `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "a fájlrendszer módja a következők egyike kell legyen: none, read_only, sandbox (kapott: `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "a fájlrendszer csatolásának `name:host_class:guest_path` formátumúnak kell lennie (kapott: `{}`)",
+  "cli.wizard.validation.path_io": "nem sikerült ellenőrizni az útvonalat {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "a titok formátuma a következők egyike kell legyen: bytes, text, json (kapott: `{}`)",
+  "cli.wizard.validation.target_path_is_file": "a célútvonal {} már létezik, és egy fájl",
+  "cli.wizard.validation.telemetry_attribute_invalid": "a telemetria attribútumának `key=value` formátumúnak kell lennie (kapott: `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "a telemetria hatóköre a következők egyike kell legyen: tenant, pack, node (kapott: `{}`)"
 }

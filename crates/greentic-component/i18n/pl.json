@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "dane wejściowe kreatora nie przeszły walidacji; popraw je i spróbuj ponownie",
   "cli.wizard.result.qa_value_required": "wartość jest wymagana",
   "cli.wizard.result.validate_apply_conflict": "--validate i --apply nie mogą być używane jednocześnie",
-  "cli.wizard.step.template_used": "wybrano szablon: {}"
+  "cli.wizard.step.template_used": "wybrano szablon: {}",
+  "cli.wizard.validation.component_name_invalid": "nazwa komponentu musi być zapisana małymi literami w formacie kebab-case lub snake_case (otrzymano `{}`)",
+  "cli.wizard.validation.config_field_invalid": "pole konfiguracji musi mieć format `name:type[:required|optional]` (otrzymano `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "nazwa pola konfiguracji musi być zapisana małymi literami w formacie snake_case (otrzymano `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "typ pola konfiguracji musi być jednym z: string, bool, integer, number (otrzymano `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "tryb systemu plików musi być jednym z: none, read_only, sandbox (otrzymano `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "montowanie systemu plików musi mieć format `name:host_class:guest_path` (otrzymano `{}`)",
+  "cli.wizard.validation.path_io": "nie udało się sprawdzić ścieżki {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "format sekretu musi być jednym z: bytes, text, json (otrzymano `{}`)",
+  "cli.wizard.validation.target_path_is_file": "ścieżka docelowa {} już istnieje i jest plikiem",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atrybut telemetryczny musi mieć format `key=value` (otrzymano `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "zakres telemetrii musi być jednym z: tenant, pack, node (otrzymano `{}`)"
 }

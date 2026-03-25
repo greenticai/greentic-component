@@ -19,7 +19,7 @@ use crate::scaffold::runtime_capabilities::{
     RuntimeCapabilitiesInput, parse_filesystem_mode, parse_filesystem_mount, parse_secret_format,
     parse_telemetry_attributes, parse_telemetry_scope,
 };
-use crate::scaffold::validate::{ComponentName, normalize_version};
+use crate::scaffold::validate::{ComponentName, ValidationError, normalize_version};
 use crate::wizard::{self, AnswersPayload, WizardPlanEnvelope, WizardPlanMetadata, WizardStep};
 
 const WIZARD_RUN_SCHEMA: &str = "component-wizard-run/v1";
@@ -205,12 +205,30 @@ pub fn run(args: WizardArgs) -> Result<()> {
     run_with_context(args, None, None)
 }
 
+fn is_interactive_session() -> bool {
+    if std::env::var_os("GREENTIC_FORCE_NONINTERACTIVE").is_some() {
+        return false;
+    }
+    let running_cli_binary = std::env::current_exe()
+        .ok()
+        .and_then(|path| {
+            path.file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+        })
+        .is_some_and(|stem| stem == "greentic-component");
+    if !running_cli_binary {
+        return false;
+    }
+    io::stdin().is_terminal() && io::stdout().is_terminal()
+}
+
 fn run_with_context(
     args: WizardArgs,
     execution_override: Option<ExecutionMode>,
     legacy_new: Option<WizardLegacyNewCompat>,
 ) -> Result<()> {
     let mut args = args;
+    let interactive = is_interactive_session();
     if args.validate && args.apply {
         bail!("{}", tr("cli.wizard.result.validate_apply_conflict"));
     }
@@ -226,7 +244,9 @@ fn run_with_context(
 
     let input_answers = args.answers.as_ref().or(args.qa_answers.as_ref());
     let loaded_answers = match input_answers {
-        Some(path) => Some(load_run_answers(path, &args)?),
+        Some(path) => load_answers_with_recovery(Some(path), &args, interactive, |line| {
+            println!("{line}");
+        })?,
         None => None,
     };
     let mut answers = loaded_answers
@@ -240,7 +260,7 @@ fn run_with_context(
 
     apply_legacy_wizard_new_compat(legacy_new, &mut args, &mut answers)?;
 
-    if answers.is_none() && io::stdin().is_terminal() && io::stdout().is_terminal() {
+    if answers.is_none() && interactive {
         return run_interactive_loop(args, execution);
     }
 
@@ -249,6 +269,18 @@ fn run_with_context(
     {
         if args.mode == RunMode::Create {
             args.mode = doc.mode;
+        } else if interactive {
+            report_interactive_validation_error(
+                &anyhow!(
+                    "{}",
+                    trf(
+                        "cli.wizard.result.answers_mode_mismatch",
+                        &[&format!("{:?}", doc.mode), &format!("{:?}", args.mode)],
+                    )
+                ),
+                |line| println!("{line}"),
+            );
+            return run_interactive_loop(args, execution);
         } else {
             bail!(
                 "{}",
@@ -260,7 +292,13 @@ fn run_with_context(
         }
     }
 
-    let output = build_run_output(&args, execution, answers.as_ref())?;
+    let Some(output) =
+        build_output_with_recovery(&args, execution, answers.as_ref(), interactive, |line| {
+            println!("{line}")
+        })?
+    else {
+        return run_interactive_loop(args, execution);
+    };
 
     if let Some(path) = &args.qa_answers_out {
         let doc = answers
@@ -327,7 +365,13 @@ fn run_interactive_loop(mut args: WizardArgs, execution: ExecutionMode) -> Resul
         let Some(answers) = collect_interactive_answers(&args)? else {
             continue;
         };
-        let output = build_run_output(&args, execution, Some(&answers))?;
+        let Some(output) =
+            build_output_with_recovery(&args, execution, Some(&answers), true, |line| {
+                println!("{line}");
+            })?
+        else {
+            continue;
+        };
 
         match execution {
             ExecutionMode::DryRun => {
@@ -420,7 +464,7 @@ fn resolve_plan_out(args: &WizardArgs) -> Result<PathBuf> {
     if let Some(path) = &args.plan_out {
         return Ok(path.clone());
     }
-    if io::stdin().is_terminal() && io::stdout().is_terminal() {
+    if is_interactive_session() {
         return prompt_path(
             tr("cli.wizard.prompt.plan_out"),
             Some("./answers.json".to_string()),
@@ -1278,6 +1322,28 @@ fn load_run_answers(path: &PathBuf, args: &WizardArgs) -> Result<LoadedRunAnswer
     })
 }
 
+fn load_answers_with_recovery<F>(
+    path: Option<&PathBuf>,
+    args: &WizardArgs,
+    interactive: bool,
+    mut report: F,
+) -> Result<Option<LoadedRunAnswers>>
+where
+    F: FnMut(String),
+{
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    match load_run_answers(path, args) {
+        Ok(loaded) => Ok(Some(loaded)),
+        Err(err) if interactive => {
+            report_interactive_validation_error(&err, &mut report);
+            Ok(None)
+        }
+        Err(err) => Err(err),
+    }
+}
+
 fn parse_answer_document(value: &JsonValue) -> Result<Option<AnswerDocument>> {
     let JsonValue::Object(map) = value else {
         return Ok(None);
@@ -1898,7 +1964,7 @@ fn prompt_component_name_value(
         };
         match ComponentName::parse(name) {
             Ok(_) => return Ok(InteractiveAnswer::Value(value)),
-            Err(err) => println!("{}", err),
+            Err(err) => println!("{}", render_validation_error_detail(&err.into())),
         }
     }
 }
@@ -2416,6 +2482,26 @@ fn collect_interactive_question_map_with_skip(
     Ok(Some(answered))
 }
 
+fn build_output_with_recovery<F>(
+    args: &WizardArgs,
+    execution: ExecutionMode,
+    answers: Option<&WizardRunAnswers>,
+    interactive: bool,
+    mut report: F,
+) -> Result<Option<WizardRunOutput>>
+where
+    F: FnMut(String),
+{
+    match build_run_output(args, execution, answers) {
+        Ok(output) => Ok(Some(output)),
+        Err(err) if interactive => {
+            report_interactive_validation_error(&err, &mut report);
+            Ok(None)
+        }
+        Err(err) => Err(err),
+    }
+}
+
 fn previous_interactive_question_index(
     questions: &[JsonValue],
     current: usize,
@@ -2449,13 +2535,76 @@ fn trf(key: &str, args: &[&str]) -> String {
     msg
 }
 
+fn report_interactive_validation_error<F>(err: &anyhow::Error, mut report: F)
+where
+    F: FnMut(String),
+{
+    report(tr("cli.wizard.result.qa_validation_error"));
+    report(render_validation_error_detail(err));
+}
+
+fn render_validation_error_detail(err: &anyhow::Error) -> String {
+    if let Some(validation) = err.downcast_ref::<ValidationError>() {
+        return match validation {
+            ValidationError::EmptyName => tr("cli.wizard.result.qa_value_required"),
+            ValidationError::InvalidName(name) => {
+                trf("cli.wizard.validation.component_name_invalid", &[name])
+            }
+            ValidationError::InvalidOperationName(name) => {
+                trf("cli.wizard.error.operation_name_invalid", &[name])
+            }
+            ValidationError::InvalidFilesystemMode(mode) => {
+                trf("cli.wizard.validation.filesystem_mode_invalid", &[mode])
+            }
+            ValidationError::InvalidFilesystemMount(mount) => {
+                trf("cli.wizard.validation.filesystem_mount_invalid", &[mount])
+            }
+            ValidationError::InvalidTelemetryScope(scope) => {
+                trf("cli.wizard.validation.telemetry_scope_invalid", &[scope])
+            }
+            ValidationError::InvalidSecretFormat(format) => {
+                trf("cli.wizard.validation.secret_format_invalid", &[format])
+            }
+            ValidationError::InvalidTelemetryAttribute(attr) => {
+                trf("cli.wizard.validation.telemetry_attribute_invalid", &[attr])
+            }
+            ValidationError::InvalidConfigField(field) => {
+                trf("cli.wizard.validation.config_field_invalid", &[field])
+            }
+            ValidationError::InvalidConfigFieldName(name) => {
+                trf("cli.wizard.validation.config_field_name_invalid", &[name])
+            }
+            ValidationError::InvalidConfigFieldType(kind) => {
+                trf("cli.wizard.validation.config_field_type_invalid", &[kind])
+            }
+            ValidationError::TargetIsFile(path) => trf(
+                "cli.wizard.validation.target_path_is_file",
+                &[path.display().to_string().as_str()],
+            ),
+            ValidationError::TargetDirNotEmpty(path) => trf(
+                "cli.wizard.error.target_dir_not_empty",
+                &[path.display().to_string().as_str()],
+            ),
+            ValidationError::Io(path, source) => trf(
+                "cli.wizard.validation.path_io",
+                &[path.display().to_string().as_str(), &source.to_string()],
+            ),
+            _ => validation.to_string(),
+        };
+    }
+    err.to_string()
+}
+
 #[cfg(test)]
 mod tests {
+    use anyhow::anyhow;
     use serde_json::{Map as JsonMap, Value as JsonValue};
 
     use super::{
-        RunMode, WizardArgs, create_questions, fallback_default_for_question,
-        parse_main_menu_selection, should_skip_create_advanced_question,
+        ExecutionMode, RunMode, WizardArgs, WizardRunAnswers, build_output_with_recovery,
+        create_questions, fallback_default_for_question, load_answers_with_recovery,
+        parse_main_menu_selection, render_validation_error_detail,
+        should_skip_create_advanced_question,
     };
 
     #[test]
@@ -2497,6 +2646,149 @@ mod tests {
         assert_eq!(parse_main_menu_selection(""), None);
         assert_eq!(parse_main_menu_selection("6"), None);
         assert_eq!(parse_main_menu_selection("unknown"), None);
+    }
+
+    #[test]
+    fn render_validation_error_detail_localizes_component_name_errors() {
+        let message = render_validation_error_detail(
+            &crate::scaffold::validate::ComponentName::parse("Bad Name")
+                .expect_err("invalid component name")
+                .into(),
+        );
+        assert_eq!(
+            message,
+            "component name must be lowercase kebab-or-snake case (got `Bad Name`)"
+        );
+    }
+
+    #[test]
+    fn interactive_answers_recovery_reports_malformed_answers_without_exiting() {
+        let temp = tempfile::TempDir::new().expect("tempdir");
+        let answers_path = temp.path().join("faulty-answers.json");
+        std::fs::write(&answers_path, "{ this is not valid json").expect("write malformed");
+        let args = WizardArgs {
+            mode: RunMode::Create,
+            execution: ExecutionMode::Execute,
+            dry_run: false,
+            validate: false,
+            apply: false,
+            qa_answers: None,
+            answers: Some(answers_path.clone()),
+            qa_answers_out: None,
+            emit_answers: None,
+            schema_version: None,
+            migrate: false,
+            plan_out: None,
+            project_root: temp.path().to_path_buf(),
+            template: None,
+            full_tests: false,
+            json: false,
+        };
+
+        let mut reported = Vec::new();
+        let loaded = load_answers_with_recovery(Some(&answers_path), &args, true, |line| {
+            reported.push(line);
+        })
+        .expect("interactive recovery should continue");
+
+        assert!(
+            loaded.is_none(),
+            "malformed answers should fall back to interactive mode"
+        );
+        assert_eq!(
+            reported.first().map(String::as_str),
+            Some("wizard input failed validation; please correct and try again")
+        );
+        assert!(
+            reported
+                .iter()
+                .any(|line| line.contains("must be valid JSON")),
+            "expected specific parse failure in {reported:?}"
+        );
+    }
+
+    #[test]
+    fn interactive_build_recovery_reports_invalid_answer_values_without_exiting() {
+        let temp = tempfile::TempDir::new().expect("tempdir");
+        let mut fields = JsonMap::new();
+        fields.insert(
+            "component_name".to_string(),
+            JsonValue::String("Bad Name".to_string()),
+        );
+        fields.insert(
+            "output_dir".to_string(),
+            JsonValue::String(temp.path().join("component").display().to_string()),
+        );
+        fields.insert(
+            "abi_version".to_string(),
+            JsonValue::String("0.6.0".to_string()),
+        );
+        let answers = WizardRunAnswers {
+            schema: "component-wizard-run/v1".to_string(),
+            mode: RunMode::Create,
+            fields,
+        };
+        let args = WizardArgs {
+            mode: RunMode::Create,
+            execution: ExecutionMode::Execute,
+            dry_run: false,
+            validate: false,
+            apply: false,
+            qa_answers: None,
+            answers: None,
+            qa_answers_out: None,
+            emit_answers: None,
+            schema_version: None,
+            migrate: false,
+            plan_out: None,
+            project_root: temp.path().to_path_buf(),
+            template: None,
+            full_tests: false,
+            json: false,
+        };
+
+        let mut reported = Vec::new();
+        let output = build_output_with_recovery(
+            &args,
+            ExecutionMode::Execute,
+            Some(&answers),
+            true,
+            |line| {
+                reported.push(line);
+            },
+        )
+        .expect("interactive recovery should continue");
+
+        assert!(
+            output.is_none(),
+            "invalid answers should return to wizard prompts"
+        );
+        assert_eq!(
+            reported.first().map(String::as_str),
+            Some("wizard input failed validation; please correct and try again")
+        );
+        assert!(
+            reported.iter().any(|line| {
+                line.contains("component name must be lowercase kebab-or-snake case")
+            }),
+            "expected translated validation detail in {reported:?}"
+        );
+    }
+
+    #[test]
+    fn interactive_build_recovery_reports_existing_i18n_errors_without_exiting() {
+        let mut reported = Vec::new();
+        super::report_interactive_validation_error(
+            &anyhow!("unsupported answers mode `broken`"),
+            |line| reported.push(line),
+        );
+        assert_eq!(
+            reported,
+            vec![
+                "wizard input failed validation; please correct and try again".to_string(),
+                "unsupported answers mode `broken`".to_string()
+            ]
+        );
     }
 
     #[test]

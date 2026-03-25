@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "向导输入验证失败；请更正后重试",
   "cli.wizard.result.qa_value_required": "必须提供值",
   "cli.wizard.result.validate_apply_conflict": "--validate 和 --apply 不能同时使用",
-  "cli.wizard.step.template_used": "已选择模板：{}"
+  "cli.wizard.step.template_used": "已选择模板：{}",
+  "cli.wizard.validation.component_name_invalid": "组件名称必须为小写 kebab-case 或 snake_case（得到 `{}`）",
+  "cli.wizard.validation.config_field_invalid": "配置字段必须为 `name:type[:required|optional]`（得到 `{}`）",
+  "cli.wizard.validation.config_field_name_invalid": "配置字段名称必须为小写 snake_case（得到 `{}`）",
+  "cli.wizard.validation.config_field_type_invalid": "配置字段类型必须是 string、bool、integer、number 之一（得到 `{}`）",
+  "cli.wizard.validation.filesystem_mode_invalid": "文件系统模式必须是 none、read_only、sandbox 之一（得到 `{}`）",
+  "cli.wizard.validation.filesystem_mount_invalid": "文件系统挂载必须为 `name:host_class:guest_path`（得到 `{}`）",
+  "cli.wizard.validation.path_io": "检查路径 {} 失败：{}",
+  "cli.wizard.validation.secret_format_invalid": "密钥格式必须是 bytes、text、json 之一（得到 `{}`）",
+  "cli.wizard.validation.target_path_is_file": "目标路径 {} 已存在且是一个文件",
+  "cli.wizard.validation.telemetry_attribute_invalid": "遥测属性必须为 `key=value`（得到 `{}`）",
+  "cli.wizard.validation.telemetry_scope_invalid": "遥测范围必须是 tenant、pack、node 之一（得到 `{}`）"
 }

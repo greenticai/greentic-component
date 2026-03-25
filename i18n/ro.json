@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "intrarea wizard nu a trecut validarea; corectați și încercați din nou",
   "cli.wizard.result.qa_value_required": "valoarea este necesară",
   "cli.wizard.result.validate_apply_conflict": "--validate și --apply nu pot fi utilizate împreună",
-  "cli.wizard.step.template_used": "șablon selectat: {}"
+  "cli.wizard.step.template_used": "șablon selectat: {}",
+  "cli.wizard.validation.component_name_invalid": "numele componentei trebuie să fie în lowercase kebab-case sau snake_case (primit `{}`)",
+  "cli.wizard.validation.config_field_invalid": "câmpul de configurare trebuie să fie `name:type[:required|optional]` (primit `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "numele câmpului de configurare trebuie să fie în lowercase snake_case (primit `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "tipul câmpului de configurare trebuie să fie unul dintre string, bool, integer, number (primit `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "modul filesystem trebuie să fie unul dintre none, read_only, sandbox (primit `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "montarea filesystem trebuie să fie `name:host_class:guest_path` (primit `{}`)",
+  "cli.wizard.validation.path_io": "inspectarea căii {} a eșuat: {}",
+  "cli.wizard.validation.secret_format_invalid": "formatul secretului trebuie să fie unul dintre bytes, text, json (primit `{}`)",
+  "cli.wizard.validation.target_path_is_file": "calea țintă {} există deja și este un fișier",
+  "cli.wizard.validation.telemetry_attribute_invalid": "atributul telemetry trebuie să fie `key=value` (primit `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "domeniul telemetry trebuie să fie unul dintre tenant, pack, node (primit `{}`)"
 }

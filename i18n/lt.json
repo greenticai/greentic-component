@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "vedlio įvestis nepraėjo validacijos; pataisykite ir bandykite dar kartą",
   "cli.wizard.result.qa_value_required": "reikšmė privaloma",
   "cli.wizard.result.validate_apply_conflict": "--validate ir --apply negali būti naudojami kartu",
-  "cli.wizard.step.template_used": "pasirinktas šablonas: {}"
+  "cli.wizard.step.template_used": "pasirinktas šablonas: {}",
+  "cli.wizard.validation.component_name_invalid": "komponento pavadinimas turi būti mažosiomis raidėmis, kebab arba snake formatu (gauta `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfigūracijos laukas turi būti `name:type[:required|optional]` (gauta `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfigūracijos lauko pavadinimas turi būti mažosiomis raidėmis, snake_case formatu (gauta `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfigūracijos lauko tipas turi būti vienas iš string, bool, integer, number (gauta `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "failų sistemos režimas turi būti vienas iš none, read_only, sandbox (gauta `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "failų sistemos prijungimas turi būti `name:host_class:guest_path` (gauta `{}`)",
+  "cli.wizard.validation.path_io": "nepavyko patikrinti kelio {}: {}",
+  "cli.wizard.validation.secret_format_invalid": "paslapties formatas turi būti vienas iš bytes, text, json (gauta `{}`)",
+  "cli.wizard.validation.target_path_is_file": "tikslinis kelias {} jau egzistuoja ir yra failas",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetrijos atributas turi būti `key=value` (gauta `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetrijos sritis turi būti viena iš tenant, pack, node (gauta `{}`)"
 }

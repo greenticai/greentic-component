@@ -401,5 +401,16 @@
   "cli.wizard.result.qa_validation_error": "ohjatun toiminnon syöte ei läpäissyt validointia; korjaa ja yritä uudelleen",
   "cli.wizard.result.qa_value_required": "arvo vaaditaan",
   "cli.wizard.result.validate_apply_conflict": "--validate- ja --apply-valitsimia ei voi käyttää yhdessä",
-  "cli.wizard.step.template_used": "valittu malli: {}"
+  "cli.wizard.step.template_used": "valittu malli: {}",
+  "cli.wizard.validation.component_name_invalid": "komponentin nimen on oltava pienaakkosilla kirjoitettua kebab- tai snake-casea (saatiin `{}`)",
+  "cli.wizard.validation.config_field_invalid": "konfiguraatiokentän on oltava muodossa `name:type[:required|optional]` (saatiin `{}`)",
+  "cli.wizard.validation.config_field_name_invalid": "konfiguraatiokentän nimen on oltava pienaakkosilla kirjoitettua snake_casea (saatiin `{}`)",
+  "cli.wizard.validation.config_field_type_invalid": "konfiguraatiokentän tyypin on oltava yksi seuraavista: string, bool, integer, number (saatiin `{}`)",
+  "cli.wizard.validation.filesystem_mode_invalid": "tiedostojärjestelmätilan on oltava yksi seuraavista: none, read_only, sandbox (saatiin `{}`)",
+  "cli.wizard.validation.filesystem_mount_invalid": "tiedostojärjestelmäliitoksen on oltava muodossa `name:host_class:guest_path` (saatiin `{}`)",
+  "cli.wizard.validation.path_io": "polun {} tarkistus epäonnistui: {}",
+  "cli.wizard.validation.secret_format_invalid": "salaisuuden muodon on oltava yksi seuraavista: bytes, text, json (saatiin `{}`)",
+  "cli.wizard.validation.target_path_is_file": "kohdepolku {} on jo olemassa ja on tiedosto",
+  "cli.wizard.validation.telemetry_attribute_invalid": "telemetria-attribuutin on oltava muodossa `key=value` (saatiin `{}`)",
+  "cli.wizard.validation.telemetry_scope_invalid": "telemetrian laajuuden on oltava yksi seuraavista: tenant, pack, node (saatiin `{}`)"
 }

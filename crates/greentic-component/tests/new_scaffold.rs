@@ -138,6 +138,7 @@ fn scaffold_rust_wasi_template() {
     let locales_json =
         fs::read_to_string(component_dir.join("assets/i18n/locales.json")).expect("locales.json");
     let i18n_tool = component_dir.join("tools/i18n.sh");
+    let i18n_tool_contents = fs::read_to_string(&i18n_tool).expect("read scaffolded tools/i18n.sh");
     let manifest_json: JsonValue = serde_json::from_str(&manifest).expect("manifest json");
     let operations = manifest_json["operations"]
         .as_array()
@@ -171,6 +172,18 @@ fn scaffold_rust_wasi_template() {
     assert!(component_dir.join("assets/i18n/en.json").exists());
     assert!(component_dir.join("assets/i18n/locales.json").exists());
     assert!(component_dir.join("tools/i18n.sh").exists());
+    assert!(
+        i18n_tool_contents.contains("--skip-git-repo-check"),
+        "tools/i18n.sh should wrap codex exec with --skip-git-repo-check"
+    );
+    assert!(
+        i18n_tool_contents.contains("greentic-i18n-translator"),
+        "tools/i18n.sh should call greentic-i18n-translator directly"
+    );
+    assert!(
+        i18n_tool_contents.contains("cargo binstall -y greentic-i18n-translator"),
+        "tools/i18n.sh should install greentic-i18n-translator with cargo-binstall when missing"
+    );
     assert!(
         qa_rs.contains("\"qa.field.api_key.label\"")
             && !qa_rs.contains("Provide values for initial provider setup."),
