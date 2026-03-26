@@ -1,46 +1,62 @@
 {
-    "$schema":  "https://docs.renovatebot.com/renovate-schema.json",
-    "enabledManagers":  [
-                            "custom.regex"
-                        ],
-    "baseBranches":  [
-                         "develop"
-                     ],
-    "labels":  [
-                   "dependencies",
-                   "renovate"
-               ],
-    "customManagers":  [
-                           {
-                               "customType":  "regex",
-                               "fileMatch":  [
-                                                 "^ci/deps-dev\\.toml$"
-                                             ],
-                               "matchStrings":  [
-                                                    "(?m)^greentic-qa-lib\\s*=\\s*\"(?\u003ccurrentValue\u003e[^\"]+)\"\\s*$"
-                                                ],
-                               "depNameTemplate":  "greenticai/greentic-qa",
-                               "datasourceTemplate":  "github-tags",
-                               "versioningTemplate":  "semver",
-                               "extractVersionTemplate":  "^v?(?\u003cversion\u003e.*)$"
-                           }
-                       ],
-    "packageRules":  [
-                         {
-                             "matchFileNames":  [
-                                                    "ci/deps-dev.toml"
-                                                ],
-                             "automerge":  true,
-                             "automergeType":  "pr"
-                         },
-                         {
-                             "matchManagers":  [
-                                                   "custom.regex"
-                                               ],
-                             "matchDepNames":  [
-                                                   "greenticai/greentic-qa"
-                                               ],
-                             "allowedVersions":  "/-dev\\./"
-                         }
-                     ]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": ["custom.regex"],
+  "baseBranches": ["develop", "release"],
+  "labels": ["dependencies", "renovate"],
+  "platformAutomerge": true,
+  "automergeType": "pr",
+  "prCreation": "immediate",
+  "rebaseWhen": "never",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^ci/deps-dev\\.toml$"],
+      "matchStrings": [
+        "(?m)^greentic-qa-lib\\s*=\\s*\"(?<currentValue>[^\"]+)\"\\s*$"
+      ],
+      "depNameTemplate": "greenticai/greentic-qa",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^Cargo\\.toml$"],
+      "matchStrings": [
+        "(?m)^greentic-qa-lib\\s*=\\s*\"(?<currentValue>[^\"]+)\"\\s*$"
+      ],
+      "depNameTemplate": "greenticai/greentic-qa",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "loose",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchBaseBranches": ["develop"],
+      "matchFileNames": ["ci/deps-dev.toml"],
+      "automerge": true,
+      "automergeType": "pr",
+      "allowedVersions": "/-dev\\./",
+      "additionalBranchPrefix": "develop-"
+    },
+    {
+      "matchBaseBranches": ["release"],
+      "matchFileNames": ["Cargo.toml"],
+      "ignoreUnstable": true,
+      "automerge": true,
+      "automergeType": "pr",
+      "additionalBranchPrefix": "release-"
+    },
+    {
+      "matchBaseBranches": ["release"],
+      "matchFileNames": ["ci/deps-dev.toml"],
+      "enabled": false
+    },
+    {
+      "matchBaseBranches": ["develop"],
+      "matchFileNames": ["Cargo.toml"],
+      "enabled": false
+    }
+  ]
 }
