@@ -4,10 +4,10 @@ use std::path::Path;
 use thiserror::Error;
 use wit_parser::{Resolve, WorldId, WorldItem};
 
+use wasmparser::Parser;
+
 use crate::lifecycle::Lifecycle;
 use crate::wasm::{self, WorldSource};
-
-const WASI_TARGET_MARKER: &str = "wasm32-wasip2";
 const DEFAULT_REQUIRED_EXPORTS: [&str; 1] = ["describe"];
 
 #[derive(Debug, Error)]
@@ -77,10 +77,9 @@ pub fn has_lifecycle(wasm_path: &Path) -> Result<Lifecycle, AbiError> {
 }
 
 fn ensure_wasi_target(bytes: &[u8]) -> Result<(), AbiError> {
-    if bytes
-        .windows(WASI_TARGET_MARKER.len())
-        .any(|window| window == WASI_TARGET_MARKER.as_bytes())
-    {
+    // Accept fully-fledged components (wasm32-wasip2 output) and core modules
+    // with embedded WIT metadata (cargo-component output via wasm32-wasip1).
+    if Parser::is_component(bytes) || Parser::is_core_wasm(bytes) {
         Ok(())
     } else {
         Err(AbiError::MissingWasiTarget)

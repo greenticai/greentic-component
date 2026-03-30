@@ -324,11 +324,6 @@ world node {
             name: "component-type".into(),
             data: std::borrow::Cow::Borrowed(&metadata),
         });
-        module.section(&CustomSection {
-            name: "producers".into(),
-            data: std::borrow::Cow::Borrowed(b"wasm32-wasip2"),
-        });
-
         let wasm_bytes = module.finish();
         let observed_world = detect_world(&wasm_bytes).unwrap_or_else(|| "root:root/root".into());
         let mut hasher = Hasher::new();
