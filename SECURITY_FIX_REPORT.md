@@ -1,29 +1,21 @@
-# Security Fix Report
+# SECURITY_FIX_REPORT
 
-Date (UTC): 2026-03-30
-Branch: fix/replace-wasi-target-byte-scan
+## Summary
+- Dependabot alerts provided: `0`
+- Code scanning alerts provided: `0`
+- New PR dependency vulnerabilities provided: `0`
 
-## Inputs Reviewed
-- Security alerts JSON:
-  - `dependabot`: 0 alerts
-  - `code_scanning`: 0 alerts
-- New PR Dependency Vulnerabilities: 0 findings
+No vulnerabilities were identified from the supplied security inputs.
 
-## Repository Checks Performed
-1. Enumerated dependency manifests/lockfiles in the Rust workspace.
-2. Compared this branch against `origin/main` for dependency file changes (`Cargo.toml`/`Cargo.lock` across the repo).
-3. Verified the provided security inputs indicate no active alerts and no PR dependency vulnerabilities.
-
-## Findings
-- No Dependabot alerts to remediate.
-- No code scanning alerts to remediate.
-- No new PR dependency vulnerabilities were reported.
-- No dependency manifest or lockfile changes were introduced by this PR relative to `origin/main`.
+## PR Dependency Review
+- Checked repository dependency manifests (`Cargo.toml`/`Cargo.lock` and crate manifests).
+- Checked working-tree diffs for dependency file modifications.
+- Result: no dependency file changes detected in this PR context.
 
 ## Remediation Actions
-- No code or dependency changes were required.
-- No security fixes were applied because no actionable vulnerabilities were present.
+- No remediation patches were required.
+- No dependency upgrades or code fixes were applied.
 
-## Residual Risk
-- No residual risk identified from the provided security alert inputs and PR dependency diff inspection.
-- Continue standard CI security scanning for future changes.
+## Notes
+- `cargo-audit` is not available in this CI environment, so no local advisory DB audit was executed.
+- Based on provided alert feeds and current diff state, there are no actionable security fixes in this run.
