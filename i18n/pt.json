@@ -317,6 +317,8 @@
   "cli.help.a016": "Imprimir esta mensagem ou a ajuda dos subcomandos fornecidos",
   "cli.help.a017": "Imprimir ajuda",
   "cli.help.a018": "Mostrar versão",
+  "cli.help.a019": "Imprima o esquema atual de answers.json e saia",
+  "cli.help.a020": "Imprima o esquema atual de answers.json e saia.\n\nFerramentas de programação agêntica, como Codex e Claude, devem chamar isto primeiro para buscar o esquema atual de respostas, preencher answers.json e reproduzir o assistente de forma não interativa.",
   "cli.wizard.error.add_operation_name_required": "add_operation requer `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test falhou em {}",
   "cli.wizard.error.create_flow_failed": "falha no fluxo de criação do assistente: {}",

@@ -56,6 +56,13 @@ pub struct WizardLegacyNewArgs {
 
 #[derive(Args, Debug, Clone)]
 pub struct WizardArgs {
+    #[arg(
+        long = "schema",
+        default_value_t = false,
+        help = "Print the current answers.json schema and exit",
+        long_help = "Print the current answers.json schema and exit.\n\nAgentic coding tools such as Codex and Claude should call this first to fetch the current answer schema, fill out answers.json, and replay the wizard non-interactively."
+    )]
+    pub schema: bool,
     #[arg(long, value_enum, default_value = "create")]
     pub mode: RunMode,
     #[arg(long, value_enum, default_value = "execute")]
@@ -228,6 +235,11 @@ fn run_with_context(
     legacy_new: Option<WizardLegacyNewCompat>,
 ) -> Result<()> {
     let mut args = args;
+    if args.schema {
+        let schema = serde_json::to_string_pretty(&wizard_answer_schema(&args))?;
+        println!("{schema}");
+        return Ok(());
+    }
     let interactive = is_interactive_session();
     if args.validate && args.apply {
         bail!("{}", tr("cli.wizard.result.validate_apply_conflict"));
@@ -1467,6 +1479,106 @@ fn requested_schema_version(args: &WizardArgs) -> String {
         .unwrap_or_else(|| ANSWER_DOC_SCHEMA_VERSION.to_string())
 }
 
+fn wizard_answer_schema(args: &WizardArgs) -> JsonValue {
+    let selected_mode = mode_name(args.mode).replace('_', "-");
+    let fields_schema = wizard_answer_fields_schema(args);
+    json!({
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": format!("https://greenticai.github.io/greentic-component/schemas/wizard/{selected_mode}.answers.schema.json"),
+        "title": format!("greentic-component wizard {} answers", selected_mode),
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "wizard_id": {
+                "type": "string",
+                "const": ANSWER_DOC_WIZARD_ID
+            },
+            "schema_id": {
+                "type": "string",
+                "const": ANSWER_DOC_SCHEMA_ID
+            },
+            "schema_version": {
+                "type": "string",
+                "const": requested_schema_version(args)
+            },
+            "locale": {
+                "type": ["string", "null"]
+            },
+            "answers": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "const": selected_mode
+                    },
+                    "fields": fields_schema
+                },
+                "required": ["mode", "fields"]
+            },
+            "locks": {
+                "type": "object",
+                "additionalProperties": true
+            }
+        },
+        "required": ["wizard_id", "schema_id", "schema_version", "answers"]
+    })
+}
+
+fn wizard_answer_fields_schema(args: &WizardArgs) -> JsonValue {
+    let questions = match args.mode {
+        RunMode::Create => create_questions(args, true),
+        _ => interactive_questions(args),
+    };
+    let mut properties = JsonMap::new();
+    let mut required = Vec::new();
+    for question in questions {
+        let Some(id) = question.get("id").and_then(JsonValue::as_str) else {
+            continue;
+        };
+        if question
+            .get("required")
+            .and_then(JsonValue::as_bool)
+            .unwrap_or(false)
+        {
+            required.push(JsonValue::String(id.to_string()));
+        }
+        properties.insert(id.to_string(), question_schema_property(&question));
+    }
+    JsonValue::Object(JsonMap::from_iter([
+        ("type".to_string(), JsonValue::String("object".to_string())),
+        ("additionalProperties".to_string(), JsonValue::Bool(false)),
+        ("properties".to_string(), JsonValue::Object(properties)),
+        ("required".to_string(), JsonValue::Array(required)),
+    ]))
+}
+
+fn question_schema_property(question: &JsonValue) -> JsonValue {
+    let mut property = JsonMap::new();
+    let question_type = question
+        .get("type")
+        .and_then(JsonValue::as_str)
+        .unwrap_or("string");
+    match question_type {
+        "boolean" => {
+            property.insert("type".to_string(), JsonValue::String("boolean".to_string()));
+        }
+        "enum" => {
+            property.insert("type".to_string(), JsonValue::String("string".to_string()));
+            if let Some(choices) = question.get("choices").cloned() {
+                property.insert("enum".to_string(), choices);
+            }
+        }
+        _ => {
+            property.insert("type".to_string(), JsonValue::String("string".to_string()));
+        }
+    }
+    if let Some(default) = question.get("default").cloned() {
+        property.insert("default".to_string(), default);
+    }
+    JsonValue::Object(property)
+}
+
 fn write_json_file(path: &PathBuf, payload: &str, label: &str) -> Result<()> {
     if let Some(parent) = path.parent()
         && !parent.as_os_str().is_empty()
@@ -2604,7 +2716,7 @@ mod tests {
         ExecutionMode, RunMode, WizardArgs, WizardRunAnswers, build_output_with_recovery,
         create_questions, fallback_default_for_question, load_answers_with_recovery,
         parse_main_menu_selection, render_validation_error_detail,
-        should_skip_create_advanced_question,
+        should_skip_create_advanced_question, wizard_answer_schema,
     };
 
     #[test]
@@ -2667,6 +2779,7 @@ mod tests {
         let answers_path = temp.path().join("faulty-answers.json");
         std::fs::write(&answers_path, "{ this is not valid json").expect("write malformed");
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::Execute,
             dry_run: false,
@@ -2729,6 +2842,7 @@ mod tests {
             fields,
         };
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::Execute,
             dry_run: false,
@@ -2794,6 +2908,7 @@ mod tests {
     #[test]
     fn create_questions_minimal_flow_only_asks_core_fields() {
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -2821,8 +2936,67 @@ mod tests {
     }
 
     #[test]
+    fn wizard_answer_schema_matches_create_answer_document_shape() {
+        let args = WizardArgs {
+            schema: true,
+            mode: RunMode::Create,
+            execution: super::ExecutionMode::Execute,
+            dry_run: false,
+            validate: false,
+            apply: false,
+            qa_answers: None,
+            answers: None,
+            qa_answers_out: None,
+            emit_answers: None,
+            schema_version: None,
+            migrate: false,
+            plan_out: None,
+            project_root: std::path::PathBuf::from("/tmp/demo"),
+            template: None,
+            full_tests: false,
+            json: false,
+        };
+
+        let schema = wizard_answer_schema(&args);
+        assert_eq!(
+            schema.pointer("/required"),
+            Some(&JsonValue::Array(vec![
+                JsonValue::String("wizard_id".to_string()),
+                JsonValue::String("schema_id".to_string()),
+                JsonValue::String("schema_version".to_string()),
+                JsonValue::String("answers".to_string()),
+            ]))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/mode/const"),
+            Some(&JsonValue::String("create".to_string()))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/fields/properties/component_name/type"),
+            Some(&JsonValue::String("string".to_string()))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/fields/properties/output_dir/type"),
+            Some(&JsonValue::String("string".to_string()))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/fields/properties/advanced_setup/type"),
+            Some(&JsonValue::String("boolean".to_string()))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/fields/properties/filesystem_mode/enum"),
+            Some(&JsonValue::Array(vec![
+                JsonValue::String("none".to_string()),
+                JsonValue::String("read_only".to_string()),
+                JsonValue::String("sandbox".to_string()),
+            ]))
+        );
+    }
+
+    #[test]
     fn create_flow_defaults_advanced_setup_to_false() {
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -2854,6 +3028,7 @@ mod tests {
     #[test]
     fn create_questions_advanced_flow_includes_secret_gate_before_secret_fields() {
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -2885,6 +3060,7 @@ mod tests {
     #[test]
     fn create_questions_advanced_flow_includes_messaging_and_events_fields() {
         let args = WizardArgs {
+            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,

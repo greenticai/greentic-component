@@ -317,6 +317,8 @@
   "cli.help.a016": "Cetak pesan ini atau bantuan dari subperintah yang diberikan",
   "cli.help.a017": "Cetak bantuan",
   "cli.help.a018": "Cetak versi",
+  "cli.help.a019": "Cetak skema answers.json saat ini lalu keluar",
+  "cli.help.a020": "Cetak skema answers.json saat ini lalu keluar.\n\nAlat pengodean agentik seperti Codex dan Claude harus memanggil ini terlebih dahulu untuk mengambil skema jawaban saat ini, mengisi answers.json, dan memutar ulang wizard secara non-interaktif.",
   "cli.wizard.error.add_operation_name_required": "add_operation memerlukan `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test gagal di {}",
   "cli.wizard.error.create_flow_failed": "alur pembuatan wizard gagal: {}",

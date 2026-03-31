@@ -317,6 +317,8 @@
   "cli.help.a016": "Skriv ut denne meldingen eller hjelpen for de angitte underkommandoene",
   "cli.help.a017": "Skriv ut hjelp",
   "cli.help.a018": "Skriv ut versjon",
+  "cli.help.a019": "Skriv ut gjeldende answers.json-skjema og avslutt",
+  "cli.help.a020": "Skriv ut gjeldende answers.json-skjema og avslutt.\n\nAgentbaserte kodeverktøy som Codex og Claude bør kalle dette først for å hente gjeldende svarskjema, fylle ut answers.json og kjøre veiviseren på nytt ikke-interaktivt.",
   "cli.wizard.error.add_operation_name_required": "add_operation krever `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test mislyktes i {}",
   "cli.wizard.error.create_flow_failed": "veiviserens opprettingsflyt mislyktes: {}",

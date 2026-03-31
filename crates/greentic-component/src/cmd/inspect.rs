@@ -1036,3 +1036,82 @@ impl WasiView for InspectWasi {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasmtime::component::Val;
+
+    #[test]
+    fn should_inspect_wasm_artifact_detects_wasm_and_dirs_only() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        assert!(should_inspect_wasm_artifact(&InspectArgs {
+            target: Some("component.wasm".into()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+        assert!(should_inspect_wasm_artifact(&InspectArgs {
+            target: Some(dir.path().display().to_string()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+        assert!(!should_inspect_wasm_artifact(&InspectArgs {
+            target: Some("component.manifest.json".into()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+    }
+
+    #[test]
+    fn discover_manifest_path_checks_target_and_parent_paths() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest = dir.path().join("component.manifest.json");
+        fs::write(&manifest, "{}").expect("write manifest");
+
+        let from_dir = discover_manifest_path(&dir.path().join("component.wasm"), dir.path());
+        assert_eq!(from_dir, Some(manifest.clone()));
+
+        let nested = dir.path().join("dist/component.wasm");
+        fs::create_dir_all(nested.parent().expect("parent")).expect("create dist");
+        let from_parent = discover_manifest_path(&nested, nested.parent().expect("parent"));
+        assert_eq!(from_parent, Some(manifest));
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_multiple_candidates_in_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        fs::write(dist.join("one.wasm"), b"1").expect("write first wasm");
+        fs::write(dist.join("two.wasm"), b"2").expect("write second wasm");
+
+        let err = resolve_wasm_path(dir.path().to_str().expect("utf-8"))
+            .expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn val_to_bytes_rejects_non_byte_lists() {
+        let err = val_to_bytes(&Val::List(vec![Val::String("oops".to_string())]))
+            .expect_err("non-u8 list should fail");
+        assert_eq!(err, "expected list<u8>");
+    }
+
+    #[test]
+    fn strip_self_describe_tag_removes_only_known_prefix() {
+        let tagged = [0xd9, 0xd9, 0xf7, 0x01, 0x02];
+        assert_eq!(strip_self_describe_tag(&tagged), &[0x01, 0x02]);
+        assert_eq!(strip_self_describe_tag(&[0x01, 0x02]), &[0x01, 0x02]);
+    }
+}

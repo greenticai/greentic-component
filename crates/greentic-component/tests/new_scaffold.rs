@@ -360,6 +360,7 @@ fn doctor_accepts_built_scaffold_artifact() {
     build_cmd
         .current_dir(&component_dir)
         .env("PATH", &path_env)
+        .env("CARGO_NET_OFFLINE", "true")
         .env("GREENTIC_SKIP_NODE_EXPORT_CHECK", "1")
         .arg("build")
         .arg("--no-flow")

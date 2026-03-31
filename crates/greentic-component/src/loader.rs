@@ -188,3 +188,252 @@ fn normalize_path_or_id(input: &str) -> Cow<'_, str> {
         Cow::Borrowed(input)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::sync::{Mutex, OnceLock};
+
+    fn cwd_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn manifest_json(artifact: &str, hash: &str) -> String {
+        format!(
+            r#"{{
+  "id": "com.greentic.test.component",
+  "name": "Test Component",
+  "version": "0.1.0",
+  "world": "greentic:component/component@0.6.0",
+  "describe_export": "describe",
+  "operations": [{{
+    "name": "run",
+    "input_schema": {{"type":"object","properties":{{}},"required":[],"additionalProperties":false}},
+    "output_schema": {{"type":"object","properties":{{}},"required":[],"additionalProperties":false}}
+  }}],
+  "default_operation": "run",
+  "supports": ["messaging"],
+  "profiles": {{"default": "stateless", "supported": ["stateless"]}},
+  "secret_requirements": [],
+  "capabilities": {{
+    "wasi": {{
+      "filesystem": {{"mode":"none","mounts":[]}},
+      "random": true,
+      "clocks": true
+    }},
+    "host": {{
+      "messaging": {{"inbound": true, "outbound": true}},
+      "telemetry": {{"scope": "tenant"}}
+    }}
+  }},
+  "config_schema": {{"type":"object","properties":{{}},"required":[],"additionalProperties":false}},
+  "limits": {{"memory_mb": 64, "wall_time_ms": 1000}},
+  "artifacts": {{"component_wasm": "{artifact}"}},
+  "hashes": {{"component_wasm": "{hash}"}},
+  "dev_flows": {{
+    "default": {{
+      "format": "flow-ir-json",
+      "graph": {{
+        "nodes": [{{"id":"start","type":"start"}}, {{"id":"end","type":"end"}}],
+        "edges": [{{"from":"start","to":"end"}}]
+      }}
+    }}
+  }}
+}}"#
+        )
+    }
+
+    fn write_component_fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let dir = tempfile::tempdir().expect("fixture dir");
+        let wasm_path = dir.path().join("component.wasm");
+        fs::write(&wasm_path, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = dir.path().join(MANIFEST_NAME);
+        fs::write(&manifest_path, manifest_json("component.wasm", &hash)).expect("write manifest");
+        (dir, manifest_path, wasm_path)
+    }
+
+    #[test]
+    fn normalize_path_or_id_strips_file_scheme_only() {
+        assert_eq!(
+            normalize_path_or_id("file:///tmp/component"),
+            "/tmp/component"
+        );
+        assert_eq!(normalize_path_or_id("component-id"), "component-id");
+    }
+
+    #[test]
+    fn discover_with_manifest_uses_override_before_searching_by_id() {
+        let (_dir, manifest_path, wasm_path) = write_component_fixture();
+
+        let handle =
+            discover_with_manifest("not-a-real-component", Some(&manifest_path)).expect("load");
+
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+    }
+
+    #[test]
+    fn load_from_manifest_reports_missing_artifact() {
+        let dir = tempfile::tempdir().expect("fixture dir");
+        let manifest_path = dir.path().join(MANIFEST_NAME);
+        fs::write(
+            &manifest_path,
+            manifest_json(
+                "missing/component.wasm",
+                "blake3:0000000000000000000000000000000000000000000000000000000000000000",
+            ),
+        )
+        .expect("write manifest");
+
+        let err = load_from_manifest(&manifest_path).expect_err("artifact should be missing");
+        assert!(
+            matches!(err, LoadError::MissingArtifact { path } if path.ends_with("missing/component.wasm"))
+        );
+    }
+
+    #[test]
+    fn try_explicit_discovers_manifest_next_to_wasm() {
+        let (_dir, manifest_path, wasm_path) = write_component_fixture();
+
+        let handle = try_explicit(wasm_path.to_str().expect("utf-8 path"))
+            .expect("try_explicit succeeds")
+            .expect("fixture should resolve");
+
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+    }
+
+    #[test]
+    fn try_explicit_returns_none_for_missing_paths() {
+        let missing = tempfile::tempdir()
+            .expect("tempdir")
+            .path()
+            .join("missing-component");
+
+        let resolved = try_explicit(missing.to_str().expect("utf-8")).expect("lookup succeeds");
+
+        assert!(resolved.is_none());
+    }
+
+    #[test]
+    fn try_explicit_discovers_manifest_inside_directory() {
+        let (_dir, manifest_path, wasm_path) = write_component_fixture();
+        let component_dir = manifest_path.parent().expect("manifest parent");
+
+        let handle = try_explicit(component_dir.to_str().expect("utf-8"))
+            .expect("try_explicit succeeds")
+            .expect("fixture should resolve");
+
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+    }
+
+    #[test]
+    fn discover_reports_not_found_when_no_locations_match() {
+        let err = discover("com.greentic.missing.component").expect_err("missing component");
+
+        assert!(matches!(err, LoadError::NotFound(id) if id == "com.greentic.missing.component"));
+    }
+
+    #[test]
+    fn load_from_manifest_reports_parse_errors() {
+        let dir = tempfile::tempdir().expect("fixture dir");
+        let manifest_path = dir.path().join(MANIFEST_NAME);
+        fs::write(&manifest_path, "{not valid json").expect("write invalid manifest");
+
+        let err = load_from_manifest(&manifest_path).expect_err("invalid manifest should fail");
+
+        assert!(matches!(err, LoadError::Manifest { path, .. } if path == manifest_path));
+    }
+
+    #[test]
+    fn load_from_manifest_returns_handle_for_valid_fixture() {
+        let (_dir, manifest_path, wasm_path) = write_component_fixture();
+
+        let handle = load_from_manifest(&manifest_path).expect("valid manifest should load");
+
+        assert_eq!(
+            handle.root,
+            manifest_path.parent().expect("manifest parent")
+        );
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+    }
+
+    #[test]
+    fn try_explicit_accepts_manifest_json_path_directly() {
+        let (_dir, manifest_path, wasm_path) = write_component_fixture();
+
+        let handle = try_explicit(manifest_path.to_str().expect("utf-8 path"))
+            .expect("lookup succeeds")
+            .expect("fixture should resolve");
+
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+    }
+
+    #[test]
+    fn try_explicit_returns_none_for_existing_non_manifest_path() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let existing = dir.path().join("notes.txt");
+        fs::write(&existing, b"notes").expect("write note");
+
+        let handle = try_explicit(existing.to_str().expect("utf-8")).expect("lookup succeeds");
+
+        assert!(handle.is_none());
+    }
+
+    #[test]
+    fn try_workspace_discovers_component_from_target_directory() {
+        let _guard = cwd_lock().lock().expect("cwd lock");
+        let original_cwd = std::env::current_dir().expect("cwd");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set cwd");
+
+        let profile_dir = dir.path().join("target/wasm32-wasip2/release");
+        fs::create_dir_all(&profile_dir).expect("create target dir");
+        let wasm_path = profile_dir.join("com.greentic.test.component.wasm");
+        fs::write(&wasm_path, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = profile_dir.join(MANIFEST_NAME);
+        fs::write(
+            &manifest_path,
+            manifest_json("com.greentic.test.component.wasm", &hash),
+        )
+        .expect("write manifest");
+
+        let handle = try_workspace("com.greentic.test.component")
+            .expect("workspace lookup")
+            .expect("fixture should resolve");
+
+        assert_eq!(handle.manifest_path, manifest_path);
+        assert_eq!(handle.wasm_path, wasm_path);
+
+        std::env::set_current_dir(original_cwd).expect("restore cwd");
+    }
+
+    #[test]
+    fn try_workspace_ignores_wasm_without_adjacent_manifest() {
+        let _guard = cwd_lock().lock().expect("cwd lock");
+        let original_cwd = std::env::current_dir().expect("cwd");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set cwd");
+
+        let profile_dir = dir.path().join("target/wasm32-wasip2/release");
+        fs::create_dir_all(&profile_dir).expect("create target dir");
+        fs::write(
+            profile_dir.join("com.greentic.test.component.wasm"),
+            b"fixture-wasm",
+        )
+        .expect("write wasm");
+
+        let handle = try_workspace("com.greentic.test.component").expect("workspace lookup");
+
+        assert!(handle.is_none());
+
+        std::env::set_current_dir(original_cwd).expect("restore cwd");
+    }
+}

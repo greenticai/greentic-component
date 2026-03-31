@@ -317,6 +317,8 @@
   "cli.help.a016": "打印此消息或给定子命令的帮助信息",
   "cli.help.a017": "打印帮助",
   "cli.help.a018": "打印版本",
+  "cli.help.a019": "打印当前的 answers.json 架构并退出",
+  "cli.help.a020": "打印当前的 answers.json 架构并退出。\n\nCodex 和 Claude 等智能体编程工具应首先调用此命令以获取当前答案架构，填写 answers.json，并以非交互方式重新运行向导。",
   "cli.wizard.error.add_operation_name_required": "add_operation 需要 `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test 在 {} 中失败",
   "cli.wizard.error.create_flow_failed": "向导创建流程失败：{}",

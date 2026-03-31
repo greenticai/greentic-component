@@ -317,6 +317,8 @@
   "cli.help.a016": "Atspausdinti šį pranešimą arba nurodytų pokomandžių pagalbą",
   "cli.help.a017": "Rodyti pagalbą",
   "cli.help.a018": "Spausdinti versiją",
+  "cli.help.a019": "Išspausdinti dabartinę answers.json schemą ir išeiti",
+  "cli.help.a020": "Išspausdinti dabartinę answers.json schemą ir išeiti.\n\nAgentiniai programavimo įrankiai, tokie kaip Codex ir Claude, pirmiausia turėtų iškviesti tai, kad gautų dabartinę atsakymų schemą, užpildytų answers.json ir pakartotų vedlį neinteraktyviai.",
   "cli.wizard.error.add_operation_name_required": "add_operation reikalauja `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test nepavyko {}",
   "cli.wizard.error.create_flow_failed": "vedlio kūrimo eiga nepavyko: {}",

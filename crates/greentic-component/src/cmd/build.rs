@@ -212,6 +212,7 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
             if let Some(flags) = resolved_wasm_rustflags() {
                 cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
             }
+            maybe_add_offline_flag(&mut cmd);
             let status = cmd
                 .arg("component")
                 .arg("build")
@@ -248,6 +249,7 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
     if let Some(flags) = resolved_wasm_rustflags() {
         cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
     }
+    maybe_add_offline_flag(&mut cmd);
     let status = cmd
         .arg("build")
         .arg("--target")
@@ -272,6 +274,28 @@ fn cargo_component_available(cargo_bin: &Path) -> bool {
         .arg("--version")
         .status()
         .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn maybe_add_offline_flag(cmd: &mut Command) {
+    if cargo_offline_requested() {
+        cmd.arg("--offline");
+    }
+}
+
+fn cargo_offline_requested() -> bool {
+    env_truthy(env::var_os("CARGO_NET_OFFLINE").as_deref())
+}
+
+fn env_truthy(value: Option<&std::ffi::OsStr>) -> bool {
+    value
+        .and_then(|raw| raw.to_str())
+        .map(|raw| {
+            matches!(
+                raw.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
         .unwrap_or(false)
 }
 
@@ -655,7 +679,16 @@ impl WasiView for BuildWasi {
 
 #[cfg(test)]
 mod tests {
-    use super::sanitize_name;
+    use std::ffi::OsStr;
+    use std::path::Path;
+
+    use serde_json::json;
+    use wasmtime::component::Val;
+
+    use super::{
+        env_truthy, path_string_relative, resolve_wasm_path, sanitize_name,
+        sanitize_wasm_rustflags, strip_self_describe_tag, val_to_bytes,
+    };
 
     #[test]
     fn sanitize_name_preserves_hyphens_for_dist_artifacts() {
@@ -667,5 +700,78 @@ mod tests {
             sanitize_name("wizard_smoke_advanced"),
             "wizard_smoke_advanced"
         );
+    }
+
+    #[test]
+    fn env_truthy_accepts_common_true_spellings() {
+        for value in ["1", "true", "TRUE", " yes ", "on"] {
+            assert!(
+                env_truthy(Some(OsStr::new(value))),
+                "{value} should be truthy"
+            );
+        }
+    }
+
+    #[test]
+    fn env_truthy_rejects_falsey_and_missing_values() {
+        for value in [
+            None,
+            Some(OsStr::new("0")),
+            Some(OsStr::new("false")),
+            Some(OsStr::new("")),
+        ] {
+            assert!(!env_truthy(value));
+        }
+    }
+
+    #[test]
+    fn sanitize_wasm_rustflags_drops_unsupported_linker_args() {
+        let sanitized = sanitize_wasm_rustflags(
+            "-C opt-level=z -Wl,--export-table -C link-arg=--no-keep-memory -C link-arg=--threads=1",
+        );
+
+        assert_eq!(sanitized, "-C opt-level=z --export-table");
+    }
+
+    #[test]
+    fn path_string_relative_prefers_relative_path() {
+        let base = Path::new("/tmp/project");
+        let target = Path::new("/tmp/project/dist/component.wasm");
+
+        let relative = path_string_relative(base, target).expect("relative path");
+
+        assert_eq!(relative, "dist/component.wasm");
+    }
+
+    #[test]
+    fn resolve_wasm_path_uses_default_target_location_when_manifest_omits_artifact() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let target = dir
+            .path()
+            .join("target/wasm32-wasip2/release/com_greentic_demo.wasm");
+        std::fs::create_dir_all(target.parent().expect("target parent"))
+            .expect("create target dir");
+        std::fs::write(&target, b"wasm").expect("write wasm");
+
+        let manifest = json!({
+            "id": "com.greentic.demo"
+        });
+
+        let resolved = resolve_wasm_path(dir.path(), &manifest).expect("resolve default wasm path");
+        assert_eq!(resolved, target.canonicalize().expect("canonical target"));
+    }
+
+    #[test]
+    fn val_to_bytes_rejects_non_byte_lists() {
+        let err = val_to_bytes(&Val::List(vec![Val::String("oops".to_string())]))
+            .expect_err("non-u8 list should fail");
+        assert_eq!(err, "expected list<u8>");
+    }
+
+    #[test]
+    fn strip_self_describe_tag_removes_only_known_prefix() {
+        let tagged = [0xd9, 0xd9, 0xf7, 0x01, 0x02];
+        assert_eq!(strip_self_describe_tag(&tagged), &[0x01, 0x02]);
+        assert_eq!(strip_self_describe_tag(&[0x01, 0x02]), &[0x01, 0x02]);
     }
 }

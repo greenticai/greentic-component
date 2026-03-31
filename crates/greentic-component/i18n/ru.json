@@ -317,6 +317,8 @@
   "cli.help.a016": "Показать это сообщение или справку для указанных подкоманд",
   "cli.help.a017": "Показать справку",
   "cli.help.a018": "Показать версию",
+  "cli.help.a019": "Вывести текущую схему answers.json и выйти",
+  "cli.help.a020": "Вывести текущую схему answers.json и выйти.\n\nАгентные инструменты для программирования, такие как Codex и Claude, должны сначала вызвать это, чтобы получить текущую схему ответов, заполнить answers.json и повторно воспроизвести мастер в неинтерактивном режиме.",
   "cli.wizard.error.add_operation_name_required": "для add_operation требуется `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test завершился с ошибкой в {}",
   "cli.wizard.error.create_flow_failed": "сбой потока создания мастера: {}",

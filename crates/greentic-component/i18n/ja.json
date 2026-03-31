@@ -317,6 +317,8 @@
   "cli.help.a016": "このメッセージ、または指定したサブコマンドのヘルプを表示",
   "cli.help.a017": "ヘルプを表示",
   "cli.help.a018": "バージョンを表示",
+  "cli.help.a019": "現在の answers.json スキーマを表示して終了",
+  "cli.help.a020": "現在の answers.json スキーマを表示して終了。\n\nCodex や Claude などのエージェント型コーディングツールは、まずこれを呼び出して現在の回答スキーマを取得し、answers.json を埋めて、ウィザードを非対話的に再実行する必要があります。",
   "cli.wizard.error.add_operation_name_required": "add_operation には `operation_name` が必要です",
   "cli.wizard.error.cargo_test_failed_in": "cargo test が {} で失敗しました",
   "cli.wizard.error.create_flow_failed": "wizard の create フローが失敗しました: {}",

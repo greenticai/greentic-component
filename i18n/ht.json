@@ -317,6 +317,8 @@
   "cli.help.a016": "Afiche mesaj sa a oswa èd sou soukòmand yo bay la",
   "cli.help.a017": "Afiche èd",
   "cli.help.a018": "Enprime vèsyon",
+  "cli.help.a019": "Afiche chema answers.json aktyèl la epi sòti",
+  "cli.help.a020": "Afiche chema answers.json aktyèl la epi sòti.\n\nZouti kodaj ajantik tankou Codex ak Claude ta dwe rele sa an premye pou pran chema repons aktyèl la, ranpli answers.json, epi rejwe asistan an san entèraksyon.",
   "cli.wizard.error.add_operation_name_required": "add_operation mande `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test echwe nan {}",
   "cli.wizard.error.create_flow_failed": "kreyasyon flow wizard la echwe: {}",

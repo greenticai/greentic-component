@@ -317,6 +317,8 @@
   "cli.help.a016": "Vypíše tuto zprávu nebo nápovědu pro zadaný podpříkaz(y)",
   "cli.help.a017": "Vypíše nápovědu",
   "cli.help.a018": "Vypsat verzi",
+  "cli.help.a019": "Vypíše aktuální schéma answers.json a ukončí se",
+  "cli.help.a020": "Vypíše aktuální schéma answers.json a ukončí se.\n\nAgentické nástroje pro programování, jako jsou Codex a Claude, by měly toto nejprve zavolat, aby získaly aktuální schéma odpovědí, vyplnily answers.json a znovu přehrály průvodce neinteraktivně.",
   "cli.wizard.error.add_operation_name_required": "add_operation vyžaduje `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test selhal v {}",
   "cli.wizard.error.create_flow_failed": "tok vytvoření průvodce selhal: {}",

@@ -317,6 +317,8 @@
   "cli.help.a016": "Xikchiwa impresión inin mensaje noso in ayuda para in subcomando(s) tlen omotemac",
   "cli.help.a017": "Xikchiwa impresión de ayuda",
   "cli.help.a018": "Xiknexti version",
+  "cli.help.a019": "Xikihkuilo in schema achto answers.json wan xikisā",
+  "cli.help.a020": "Xikihkuilo in schema achto answers.json wan xikisā.\n\nAgentic coding tools ken Codex wan Claude moneki kichiwaske inin achto para kikuitiske in schema tlen axkan answers.json, kimitemitiske answers.json, wan okseppa kiyolitiske in wizard ahmo non-interactively.",
   "cli.wizard.error.add_operation_name_required": "add_operation moneki `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test otlapoluh ipan {}",
   "cli.wizard.error.create_flow_failed": "wizard create flow otlapoluh: {}",

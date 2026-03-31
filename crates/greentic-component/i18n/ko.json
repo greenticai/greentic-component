@@ -317,6 +317,8 @@
   "cli.help.a016": "이 메시지 또는 지정한 하위 명령의 도움말을 출력합니다",
   "cli.help.a017": "도움말 출력",
   "cli.help.a018": "버전 출력",
+  "cli.help.a019": "현재 answers.json 스키마를 출력하고 종료합니다",
+  "cli.help.a020": "현재 answers.json 스키마를 출력하고 종료합니다.\n\nCodex 및 Claude와 같은 에이전트형 코딩 도구는 현재 답변 스키마를 가져오고, answers.json을 작성한 뒤, 마법사를 비대화형으로 다시 실행하기 위해 먼저 이를 호출해야 합니다.",
   "cli.wizard.error.add_operation_name_required": "add_operation에는 `operation_name`이 필요합니다",
   "cli.wizard.error.cargo_test_failed_in": "{}에서 cargo test가 실패했습니다",
   "cli.wizard.error.create_flow_failed": "wizard 생성 흐름 실패: {}",

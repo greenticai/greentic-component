@@ -317,6 +317,8 @@
   "cli.help.a016": "Print this message or the help of the given subcommand(s)",
   "cli.help.a017": "Print help",
   "cli.help.a018": "Print version",
+  "cli.help.a019": "Print the current answers.json schema and exit",
+  "cli.help.a020": "Print the current answers.json schema and exit.\n\nAgentic coding tools such as Codex and Claude should call this first to fetch the current answer schema, fill out answers.json, and replay the wizard non-interactively.",
   "cli.wizard.result.answers_mode_mismatch": "qa answers mode `{}` does not match requested mode `{}`",
   "cli.wizard.result.dry_run": "wizard dry-run: plan generated",
   "cli.wizard.result.execute_ok": "wizard execute: completed successfully",

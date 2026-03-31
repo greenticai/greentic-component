@@ -317,6 +317,8 @@
   "cli.help.a016": "આ સંદેશ અથવા આપેલ ઉપકમાન્ડ(ઓ)ની મદદ છાપો",
   "cli.help.a017": "મદદ છાપો",
   "cli.help.a018": "આવૃત્તિ છાપો",
+  "cli.help.a019": "વર્તમાન answers.json સ્કીમા પ્રિન્ટ કરો અને બહાર નીકળો",
+  "cli.help.a020": "વર્તમાન answers.json સ્કીમા પ્રિન્ટ કરો અને બહાર નીકળો.\n\nCodex અને Claude જેવા એજેન્ટિક કોડિંગ ટૂલ્સે વર્તમાન જવાબ સ્કીમા મેળવવા, answers.json ભરી નાખવા અને વિઝાર્ડને ઇન્ટરએક્ટિવ વિના ફરી ચલાવવા માટે પહેલા આ કૉલ કરવો જોઈએ.",
   "cli.wizard.error.add_operation_name_required": "add_operation માટે `operation_name` જરૂરી છે",
   "cli.wizard.error.cargo_test_failed_in": "{} માં cargo test નિષ્ફળ ગયું",
   "cli.wizard.error.create_flow_failed": "wizard create flow નિષ્ફળ ગયું: {}",

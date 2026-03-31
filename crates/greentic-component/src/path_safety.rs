@@ -61,3 +61,61 @@ pub fn normalize_under_root(root: &Path, candidate: &Path) -> Result<PathBuf> {
 
     Ok(canon)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn rejects_absolute_paths() {
+        let root = tempfile::tempdir().expect("root tempdir");
+        let err = normalize_under_root(root.path(), Path::new("/tmp/escape.txt"))
+            .expect_err("absolute paths must be rejected");
+        assert!(err.to_string().contains("absolute paths are not allowed"));
+    }
+
+    #[test]
+    fn preserves_missing_leaf_paths_under_root() {
+        let root = tempfile::tempdir().expect("root tempdir");
+        let nested = root.path().join("safe");
+        fs::create_dir_all(&nested).expect("create nested dir");
+
+        let resolved = normalize_under_root(root.path(), Path::new("safe/new/file.txt"))
+            .expect("missing leaf path inside root should be allowed");
+
+        assert_eq!(resolved, nested.join("new/file.txt"));
+    }
+
+    #[test]
+    fn rejects_missing_path_that_escapes_via_symlinked_ancestor() {
+        let root = tempfile::tempdir().expect("root tempdir");
+        let outside = tempfile::tempdir().expect("outside tempdir");
+        let link = root.path().join("link-out");
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(outside.path(), &link).expect("create symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(outside.path(), &link).expect("create symlink");
+
+        let err = normalize_under_root(root.path(), Path::new("link-out/new/file.txt"))
+            .expect_err("symlinked ancestor escape must be rejected");
+
+        assert!(err.to_string().contains("path escapes root"));
+    }
+
+    #[test]
+    fn rejects_parent_directory_escape_even_when_leaf_is_missing() {
+        let root = tempfile::tempdir().expect("root tempdir");
+        let outside = tempfile::tempdir().expect("outside tempdir");
+        let candidate = outside
+            .path()
+            .strip_prefix(outside.path().parent().expect("outside parent"))
+            .expect("relative outside path");
+
+        let err = normalize_under_root(root.path(), Path::new("../").join(candidate).as_path())
+            .expect_err("parent escape must be rejected");
+
+        assert!(err.to_string().contains("path escapes root"));
+    }
+}

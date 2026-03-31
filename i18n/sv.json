@@ -317,6 +317,8 @@
   "cli.help.a016": "Skriv ut detta meddelande eller hjälpen för angivna underkommandon",
   "cli.help.a017": "Skriv ut hjälp",
   "cli.help.a018": "Skriv ut version",
+  "cli.help.a019": "Skriv ut den aktuella answers.json-schemat och avsluta",
+  "cli.help.a020": "Skriv ut det aktuella answers.json-schemat och avsluta.\n\nAgentiska kodningsverktyg som Codex och Claude bör anropa detta först för att hämta det aktuella svarsschemat, fylla i answers.json och köra guiden igen utan interaktion.",
   "cli.wizard.error.add_operation_name_required": "add_operation kräver `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test misslyckades i {}",
   "cli.wizard.error.create_flow_failed": "guidens create-flöde misslyckades: {}",

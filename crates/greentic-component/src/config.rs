@@ -441,3 +441,164 @@ fn stub_schema() -> JsonValue {
         .collect(),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn write_manifest(dir: &tempfile::TempDir, manifest: &JsonValue) -> PathBuf {
+        let path = dir.path().join("component.manifest.json");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(manifest).expect("manifest json"),
+        )
+        .expect("write manifest");
+        path
+    }
+
+    #[test]
+    fn resolve_manifest_path_appends_default_for_directories() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        assert_eq!(
+            resolve_manifest_path(dir.path()),
+            dir.path().join("component.manifest.json")
+        );
+    }
+
+    #[test]
+    fn load_manifest_prefers_existing_schema_without_rewriting() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = write_manifest(
+            &dir,
+            &json!({
+                "world": "greentic:component/component@0.6.0",
+                "config_schema": {
+                    "type": "object",
+                    "properties": { "enabled": { "type": "boolean" } },
+                    "required": ["enabled"],
+                    "additionalProperties": false
+                }
+            }),
+        );
+
+        let outcome =
+            load_manifest_with_schema(&manifest_path, &ConfigInferenceOptions::default()).unwrap();
+        assert_eq!(outcome.source, ConfigSchemaSource::Manifest);
+        assert!(!outcome.schema_written);
+        assert!(outcome.persist_schema);
+    }
+
+    #[test]
+    fn load_manifest_uses_local_schema_file_when_present() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = write_manifest(
+            &dir,
+            &json!({
+                "world": "greentic:component/component@0.6.0"
+            }),
+        );
+        let schema_dir = dir.path().join("schemas");
+        fs::create_dir_all(&schema_dir).expect("schema dir");
+        let schema_path = schema_dir.join("component.schema.json");
+        fs::write(
+            &schema_path,
+            serde_json::to_string_pretty(&json!({
+                "type": "object",
+                "properties": { "name": { "type": "string" } },
+                "required": [],
+                "additionalProperties": false
+            }))
+            .unwrap(),
+        )
+        .expect("schema write");
+
+        let outcome =
+            load_manifest_with_schema(&manifest_path, &ConfigInferenceOptions::default()).unwrap();
+        assert_eq!(
+            outcome.source,
+            ConfigSchemaSource::SchemaFile { path: schema_path }
+        );
+        assert!(outcome.schema_written);
+        assert_eq!(outcome.schema["properties"]["name"]["type"], "string");
+    }
+
+    #[test]
+    fn load_manifest_falls_back_to_stub_when_inference_sources_are_missing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = write_manifest(&dir, &json!({}));
+
+        let outcome =
+            load_manifest_with_schema(&manifest_path, &ConfigInferenceOptions::default()).unwrap();
+        assert_eq!(outcome.source, ConfigSchemaSource::Stub);
+        assert_eq!(outcome.schema, stub_schema());
+    }
+
+    #[test]
+    fn load_manifest_errors_when_inference_is_disabled_and_schema_is_missing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = write_manifest(&dir, &json!({}));
+        let opts = ConfigInferenceOptions {
+            allow_infer: false,
+            ..ConfigInferenceOptions::default()
+        };
+
+        let err =
+            load_manifest_with_schema(&manifest_path, &opts).expect_err("inference should fail");
+        assert!(err.to_string().contains("--no-infer-config"));
+    }
+
+    #[test]
+    fn infer_from_wit_reads_doc_directives_and_optional_fields() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wit_dir = dir.path().join("wit");
+        fs::create_dir_all(&wit_dir).expect("wit dir");
+        fs::write(
+            wit_dir.join("component.wit"),
+            r#"
+package greentic:component@0.6.0;
+interface cfg {
+  record config {
+    /// Human description
+    /// @default("hello")
+    title: string,
+    /// Secret field
+    /// @flow:hidden
+    secret: option<string>,
+  }
+}
+world component {
+  import cfg;
+}
+"#,
+        )
+        .expect("write wit");
+
+        let inferred = infer_from_wit(dir.path(), "greentic:component/component@0.6.0")
+            .expect("infer")
+            .expect("schema present");
+
+        assert_eq!(
+            inferred.1,
+            ConfigSchemaSource::Wit {
+                path: wit_dir.clone()
+            }
+        );
+        assert_eq!(inferred.0["properties"]["title"]["default"], "hello");
+        assert_eq!(
+            inferred.0["properties"]["title"]["description"],
+            "Human description"
+        );
+        assert_eq!(inferred.0["properties"]["secret"]["x_flow_hidden"], true);
+        assert_eq!(inferred.0["required"], json!(["title"]));
+    }
+
+    #[test]
+    fn parse_world_name_extracts_name_from_world_reference() {
+        assert_eq!(
+            parse_world_name("greentic:component/component@0.6.0"),
+            Some("component".into())
+        );
+        assert_eq!(parse_world_name("component-only"), None);
+    }
+}

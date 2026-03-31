@@ -317,6 +317,8 @@
   "cli.help.a016": "Drukāt šo ziņojumu vai dotās apakškomandas palīdzību",
   "cli.help.a017": "Drukāt palīdzību",
   "cli.help.a018": "Izdrukāt versiju",
+  "cli.help.a019": "Izdrukāt pašreizējo answers.json shēmu un iziet",
+  "cli.help.a020": "Izdrukāt pašreizējo answers.json shēmu un iziet.\n\nAģentiskas kodēšanas rīkiem, piemēram, Codex un Claude, vispirms vajadzētu izsaukt šo, lai iegūtu pašreizējo atbilžu shēmu, aizpildītu answers.json un atkārtoti izpildītu vedni neinteraktīvā režīmā.",
   "cli.wizard.error.add_operation_name_required": "add_operation prasa `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test neizdevās mapē {}",
   "cli.wizard.error.create_flow_failed": "vedņa izveides plūsma neizdevās: {}",

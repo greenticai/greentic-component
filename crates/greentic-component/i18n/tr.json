@@ -317,6 +317,8 @@
   "cli.help.a016": "Bu mesajı veya verilen alt komut(lar)ın yardımını yazdır",
   "cli.help.a017": "Yardımı yazdır",
   "cli.help.a018": "Sürümü yazdır",
+  "cli.help.a019": "Geçerli answers.json şemasını yazdır ve çık",
+  "cli.help.a020": "Geçerli answers.json şemasını yazdır ve çık.\n\nCodex ve Claude gibi aracı tabanlı kodlama araçları, geçerli yanıt şemasını almak, answers.json dosyasını doldurmak ve sihirbazı etkileşimsiz olarak yeniden çalıştırmak için önce bunu çağırmalıdır.",
   "cli.wizard.error.add_operation_name_required": "add_operation, `operation_name` gerektirir",
   "cli.wizard.error.cargo_test_failed_in": "cargo test şu konumda başarısız oldu: {}",
   "cli.wizard.error.create_flow_failed": "sihirbaz oluşturma akışı başarısız oldu: {}",

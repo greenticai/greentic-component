@@ -67,10 +67,29 @@ fn truncate(value: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scaffold::engine::TemplateLocation;
 
     #[test]
     fn table_header_is_stable() {
         let templates = vec![];
         print_table(&templates);
+    }
+
+    #[test]
+    fn truncate_leaves_short_strings_and_ellipsizes_long_ones() {
+        assert_eq!(truncate("short", 10), "short");
+        assert_eq!(truncate("abcdefghijklmnopqrstuvwxyz", 8), "abcde...");
+    }
+
+    #[test]
+    fn print_json_serializes_template_fields() {
+        let templates = vec![TemplateDescriptor {
+            id: "rust-wasi".into(),
+            location: TemplateLocation::BuiltIn,
+            path: Some(std::path::PathBuf::from("/tmp/template")),
+            description: Some("A template".into()),
+            tags: vec!["wasm".into()],
+        }];
+        print_json(&templates).unwrap();
     }
 }

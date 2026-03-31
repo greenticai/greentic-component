@@ -317,6 +317,8 @@
   "cli.help.a016": "این پیام یا راهنمای زیر‌دستور(های) داده‌شده را چاپ می‌کند",
   "cli.help.a017": "چاپ راهنما",
   "cli.help.a018": "چاپ نسخه",
+  "cli.help.a019": "طرح‌وارهٔ فعلی answers.json را چاپ کن و خارج شو",
+  "cli.help.a020": "طرح‌وارهٔ فعلی answers.json را چاپ کن و خارج شو.\n\nابزارهای کدنویسی عامل‌محور مانند Codex و Claude باید ابتدا این را فراخوانی کنند تا طرح‌وارهٔ فعلی پاسخ را دریافت کنند، answers.json را پر کنند و ویزارد را به‌صورت غیرتعاملی دوباره اجرا کنند.",
   "cli.wizard.error.add_operation_name_required": "`operation_name` برای add_operation الزامی است",
   "cli.wizard.error.cargo_test_failed_in": "cargo test در {} شکست خورد",
   "cli.wizard.error.create_flow_failed": "جریان ایجاد wizard شکست خورد: {}",

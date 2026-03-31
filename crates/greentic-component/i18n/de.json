@@ -317,6 +317,8 @@
   "cli.help.a016": "Gibt diese Meldung oder die Hilfe des angegebenen Unterbefehls/der angegebenen Unterbefehle aus",
   "cli.help.a017": "Hilfe ausgeben",
   "cli.help.a018": "Version ausgeben",
+  "cli.help.a019": "Das aktuelle answers.json-Schema ausgeben und beenden",
+  "cli.help.a020": "Das aktuelle answers.json-Schema ausgeben und beenden.\n\nAgentische Coding-Tools wie Codex und Claude sollten dies zuerst aufrufen, um das aktuelle Antwortschema abzurufen, answers.json auszufüllen und den Assistenten nicht interaktiv erneut abzuspielen.",
   "cli.wizard.error.add_operation_name_required": "add_operation erfordert `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test ist fehlgeschlagen in {}",
   "cli.wizard.error.create_flow_failed": "Wizard-Erstellungsablauf fehlgeschlagen: {}",

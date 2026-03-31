@@ -317,6 +317,8 @@
   "cli.help.a016": "Emoĩ hag̃ua ko marandu térã pytyvõ subcommand(s) oñeme'ẽvape",
   "cli.help.a017": "Ehechauka pytyvõ",
   "cli.help.a018": "Emyesakã versión",
+  "cli.help.a019": "Ehechauka pe esquema ko'ág̃agua answers.json rehegua ha esẽ",
+  "cli.help.a020": "Ehechauka pe esquema ko'ág̃agua answers.json rehegua ha esẽ.\n\nTembipuru kuatia'apo agente rehegua, Codex ha Claude-icha, ohenói va'erã kóva raẽ ogueru hag̃ua pe esquema ko'ág̃agua ñembohovái rehegua, omyenyhẽ hag̃ua answers.json, ha ombohasajey hag̃ua pe asisténte jeporandu'ỹre.",
   "cli.wizard.error.add_operation_name_required": "add_operation oikoteve `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test ndoikói hag̃ua {}-pe",
   "cli.wizard.error.create_flow_failed": "wizard create flow ndoikói: {}",

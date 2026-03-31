@@ -317,6 +317,8 @@
   "cli.help.a016": "Udskriv denne besked eller hjælpen for den angivne underkommando(er)",
   "cli.help.a017": "Udskriv hjælp",
   "cli.help.a018": "Udskriv version",
+  "cli.help.a019": "Udskriv det aktuelle answers.json-skema og afslut",
+  "cli.help.a020": "Udskriv det aktuelle answers.json-skema og afslut.\n\nAgentiske kodningsværktøjer såsom Codex og Claude bør kalde dette først for at hente det aktuelle svarskema, udfylde answers.json og afspille guiden igen ikke-interaktivt.",
   "cli.wizard.error.add_operation_name_required": "add_operation kræver `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test mislykkedes i {}",
   "cli.wizard.error.create_flow_failed": "wizard create flow mislykkedes: {}",

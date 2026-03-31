@@ -317,6 +317,8 @@
   "cli.help.a016": "Vypíš túto správu alebo pomoc pre zadaný podpríkaz(y)",
   "cli.help.a017": "Vypísať pomoc",
   "cli.help.a018": "Vypísať verziu",
+  "cli.help.a019": "Vypíše aktuálnu schému answers.json a skončí",
+  "cli.help.a020": "Vypíše aktuálnu schému answers.json a skončí.\n\nAgentické nástroje na programovanie, ako sú Codex a Claude, by mali toto zavolať najprv, aby získali aktuálnu schému odpovedí, vyplnili answers.json a znovu prehrali sprievodcu neinteraktívne.",
   "cli.wizard.error.add_operation_name_required": "add_operation vyžaduje `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test zlyhal v {}",
   "cli.wizard.error.create_flow_failed": "tok vytvárania sprievodcu zlyhal: {}",

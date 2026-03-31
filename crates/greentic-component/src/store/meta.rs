@@ -164,3 +164,44 @@ fn key_as_name(key: &WorldKey) -> Option<String> {
 fn semver_major(version: &str) -> u64 {
     Version::parse(version).map(|v| v.major).unwrap_or(0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_metadata::AddMetadata;
+
+    #[test]
+    fn semver_major_extracts_major_or_defaults_to_zero() {
+        assert_eq!(semver_major("1.2.3"), 1);
+        assert_eq!(semver_major("42.0.0-beta.1"), 42);
+        assert_eq!(semver_major("not-semver"), 0);
+    }
+
+    #[tokio::test]
+    async fn compute_id_and_meta_falls_back_to_default_metadata_for_plain_bytes() {
+        let bytes = b"not a wasm module";
+        let (id, meta) = compute_id_and_meta(bytes).await.expect("meta");
+        assert!(id.0.starts_with("sha256:"));
+        assert_eq!(meta.id.0, id.0);
+        assert_eq!(meta.size, bytes.len() as u64);
+        assert_eq!(meta.abi_version, "greentic-abi-0");
+        assert!(meta.provider_name.is_none());
+        assert!(meta.provider_version.is_none());
+        assert!(meta.capabilities.is_empty());
+    }
+
+    #[tokio::test]
+    async fn compute_id_and_meta_reads_processed_by_producers_fallback() {
+        let mut metadata = AddMetadata::default();
+        metadata.processed_by = vec![("greentic-interfaces".to_string(), "2.4.1".to_string())];
+        let bytes = metadata
+            .to_wasm(b"\0asm\x01\x00\x00\x00")
+            .expect("attach producers metadata");
+
+        let (_id, meta) = compute_id_and_meta(&bytes).await.expect("meta");
+
+        assert_eq!(meta.provider_version.as_deref(), Some("2.4.1"));
+        assert_eq!(meta.abi_version, "greentic-abi-2");
+        assert!(meta.provider_name.is_some());
+    }
+}

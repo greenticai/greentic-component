@@ -317,6 +317,8 @@
   "cli.help.a016": "បោះពុម្ពសារនេះ ឬជំនួយរបស់អនុបញ្ជាដែលបានផ្តល់",
   "cli.help.a017": "បោះពុម្ពជំនួយ",
   "cli.help.a018": "បង្ហាញកំណែ",
+  "cli.help.a019": "បោះពុម្ព schema បច្ចុប្បន្នរបស់ answers.json ហើយចាកចេញ",
+  "cli.help.a020": "បោះពុម្ព schema បច្ចុប្បន្នរបស់ answers.json ហើយចាកចេញ។\n\nឧបករណ៍សរសេរកូដបែប agentic ដូចជា Codex និង Claude គួរតែហៅវាជាមុនសិន ដើម្បីទាញយក schema ចម្លើយបច្ចុប្បន្ន បំពេញ answers.json ហើយដំណើរការ wizard ឡើងវិញដោយមិនមានអន្តរកម្ម។",
   "cli.wizard.error.add_operation_name_required": "add_operation ត្រូវការ `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test បានបរាជ័យនៅក្នុង {}",
   "cli.wizard.error.create_flow_failed": "លំហូរបង្កើត wizard បានបរាជ័យ៖ {}",

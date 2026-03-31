@@ -317,6 +317,8 @@
   "cli.help.a016": "Stampa questo messaggio o l'help dei sottocomandi specificati",
   "cli.help.a017": "Stampa l'help",
   "cli.help.a018": "Stampa versione",
+  "cli.help.a019": "Stampa lo schema corrente di answers.json ed esci",
+  "cli.help.a020": "Stampa lo schema corrente di answers.json ed esci.\n\nStrumenti di programmazione agentica come Codex e Claude dovrebbero chiamare prima questo comando per recuperare lo schema corrente delle risposte, compilare answers.json e rieseguire la procedura guidata in modalità non interattiva.",
   "cli.wizard.error.add_operation_name_required": "add_operation richiede `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test non riuscito in {}",
   "cli.wizard.error.create_flow_failed": "creazione del flusso guidato non riuscita: {}",

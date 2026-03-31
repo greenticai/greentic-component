@@ -317,6 +317,8 @@
   "cli.help.a016": "Отпечатва това съобщение или помощта за дадените подкоманди",
   "cli.help.a017": "Отпечатва помощ",
   "cli.help.a018": "Покажи версията",
+  "cli.help.a019": "Отпечатва текущата схема на answers.json и излиза",
+  "cli.help.a020": "Отпечатва текущата схема на answers.json и излиза.\n\nАгентни инструменти за програмиране като Codex и Claude трябва първо да извикат това, за да извлекат текущата схема за отговори, да попълнят answers.json и да възпроизведат съветника в неинтерактивен режим.",
   "cli.wizard.error.add_operation_name_required": "add_operation изисква `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test неуспешен в {}",
   "cli.wizard.error.create_flow_failed": "потокът за създаване на wizard е неуспешен: {}",

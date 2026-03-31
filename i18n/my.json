@@ -317,6 +317,8 @@
   "cli.help.a016": "ဤမက်ဆေ့ခ်ျ သို့မဟုတ် သတ်မှတ်ထားသော subcommand(s) ၏ အကူအညီကို ပြပါ",
   "cli.help.a017": "အကူအညီပြပါ",
   "cli.help.a018": "version ကိုပြပါ",
+  "cli.help.a019": "လက်ရှိ answers.json schema ကို ပုံနှိပ်ပြီး ထွက်ပါ",
+  "cli.help.a020": "လက်ရှိ answers.json schema ကို ပုံနှိပ်ပြီး ထွက်ပါ။\n\nCodex နှင့် Claude ကဲ့သို့ agentic coding tools များသည် လက်ရှိ answer schema ကို ရယူရန် ဤအရာကို အရင်ခေါ်သင့်ပြီး၊ answers.json ကို ဖြည့်သွင်းကာ wizard ကို အပြန်အလှန်မလိုဘဲ ပြန်လည်လုပ်ဆောင်သင့်သည်။",
   "cli.wizard.error.add_operation_name_required": "`operation_name` ကို add_operation အတွက် လိုအပ်သည်",
   "cli.wizard.error.cargo_test_failed_in": "{} တွင် cargo test မအောင်မြင်ပါ",
   "cli.wizard.error.create_flow_failed": "wizard create flow မအောင်မြင်ပါ: {}",

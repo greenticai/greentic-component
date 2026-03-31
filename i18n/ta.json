@@ -317,6 +317,8 @@
   "cli.help.a016": "இந்த செய்தியை அல்லது கொடுக்கப்பட்ட துணைக் கட்டளை(கள்)க்கான உதவியை அச்சிடு",
   "cli.help.a017": "உதவியை அச்சிடு",
   "cli.help.a018": "பதிப்பை அச்சிடு",
+  "cli.help.a019": "தற்போதைய answers.json ஸ்கீமாவை அச்சிட்டு வெளியேறு",
+  "cli.help.a020": "தற்போதைய answers.json ஸ்கீமாவை அச்சிட்டு வெளியேறு.\n\nCodex மற்றும் Claude போன்ற ஏஜென்டிக் கோடிங் கருவிகள் தற்போதைய பதில் ஸ்கீமாவைப் பெற, answers.json-ஐ நிரப்ப, மற்றும் விஸார்டை இடையூறு இல்லாமல் மீண்டும் இயக்க இதை முதலில் அழைக்க வேண்டும்.",
   "cli.wizard.error.add_operation_name_required": "add_operation-க்கு `operation_name` தேவை",
   "cli.wizard.error.cargo_test_failed_in": "cargo test இதில் தோல்வியடைந்தது: {}",
   "cli.wizard.error.create_flow_failed": "wizard create flow தோல்வியடைந்தது: {}",

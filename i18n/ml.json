@@ -317,6 +317,8 @@
   "cli.help.a016": "ഈ സന്ദേശമോ നൽകിയിരിക്കുന്ന ഉപകമാൻഡ്(കൾ)ന്റെ സഹായമോ പ്രിന്റ് ചെയ്യുക",
   "cli.help.a017": "സഹായം പ്രിന്റ് ചെയ്യുക",
   "cli.help.a018": "പതിപ്പ് പ്രിന്റ് ചെയ്യുക",
+  "cli.help.a019": "നിലവിലെ answers.json സ്കീമ അച്ചടിച്ച് പുറത്തുകടക്കുക",
+  "cli.help.a020": "നിലവിലെ answers.json സ്കീമ അച്ചടിച്ച് പുറത്തുകടക്കുക.\n\nCodex, Claude പോലുള്ള ഏജന്റിക് കോഡിംഗ് ഉപകരണങ്ങൾ നിലവിലെ answer schema ലഭ്യമാക്കാൻ ഇത് ആദ്യം വിളിക്കണം, answers.json പൂരിപ്പിക്കണം, കൂടാതെ വിസാർഡ് non-interactively ആയി വീണ്ടും പ്രവർത്തിപ്പിക്കണം.",
   "cli.wizard.error.add_operation_name_required": "add_operation-ന് `operation_name` ആവശ്യമാണ്",
   "cli.wizard.error.cargo_test_failed_in": "{}-ൽ cargo test പരാജയപ്പെട്ടു",
   "cli.wizard.error.create_flow_failed": "wizard create flow പരാജയപ്പെട്ടു: {}",

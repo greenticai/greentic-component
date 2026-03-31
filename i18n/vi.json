@@ -317,6 +317,8 @@
   "cli.help.a016": "In thông báo này hoặc trợ giúp của (các) lệnh con được chỉ định",
   "cli.help.a017": "In trợ giúp",
   "cli.help.a018": "In phiên bản",
+  "cli.help.a019": "In lược đồ answers.json hiện tại và thoát",
+  "cli.help.a020": "In lược đồ answers.json hiện tại và thoát.\n\nCác công cụ lập trình tác tử như Codex và Claude nên gọi lệnh này trước để lấy lược đồ câu trả lời hiện tại, điền answers.json, và chạy lại trình hướng dẫn mà không cần tương tác.",
   "cli.wizard.error.add_operation_name_required": "add_operation yêu cầu `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test thất bại trong {}",
   "cli.wizard.error.create_flow_failed": "luồng tạo wizard thất bại: {}",

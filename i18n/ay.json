@@ -317,6 +317,8 @@
   "cli.help.a016": "Aka yatiyawi jan ukax churata subcomando(s) yanapt’apa imprimiña",
   "cli.help.a017": "Yanapa imprimiña",
   "cli.help.a018": "Versión uñacht'ayaña",
+  "cli.help.a019": "Jichha answers.json esquema uñt'ayaña ukat mistuña",
+  "cli.help.a020": "Jichha answers.json esquema uñt'ayaña ukat mistuña.\n\nCodex ukhamarak Claude ukanakjam agentic coding herramientas ukanakax nayraqat aka jawsapxañapawa jichha respuesta esquema apthapiñataki, answers.json phuqhachañataki, ukat asistente jan interactivoki mayampi sarayañataki.",
   "cli.wizard.error.add_operation_name_required": "add_operation ukax `operation_name` munaraki",
   "cli.wizard.error.cargo_test_failed_in": "cargo test ukax {} ukan pantjawayi",
   "cli.wizard.error.create_flow_failed": "wizard create flow ukax pantjawayi: {}",

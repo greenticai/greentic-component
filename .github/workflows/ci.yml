@@ -158,7 +158,9 @@ jobs:
 
   publish:
     name: publish
-    needs: [lint, test]
+    # Publish crates only after every binstall archive has been built and uploaded
+    # to the GitHub release for this version.
+    needs: [lint, test, binstall-release]
     if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ubuntu-latest
     concurrency:

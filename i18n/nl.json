@@ -317,6 +317,8 @@
   "cli.help.a016": "Toon dit bericht of de hulp van de opgegeven subopdracht(en)",
   "cli.help.a017": "Toon hulp",
   "cli.help.a018": "Versie afdrukken",
+  "cli.help.a019": "Druk het huidige answers.json-schema af en sluit af",
+  "cli.help.a020": "Druk het huidige answers.json-schema af en sluit af.\n\nAgentische codeertools zoals Codex en Claude moeten dit eerst aanroepen om het huidige antwoordschema op te halen, answers.json in te vullen en de wizard niet-interactief opnieuw af te spelen.",
   "cli.wizard.error.add_operation_name_required": "add_operation vereist `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test mislukt in {}",
   "cli.wizard.error.create_flow_failed": "wizard-aanmaakstroom mislukt: {}",

@@ -317,6 +317,8 @@
   "cli.help.a016": "اطبع هاد الرسالة أو المساعدة ديال الأوامر الفرعية المعطاة",
   "cli.help.a017": "اطبع المساعدة",
   "cli.help.a018": "طبع النسخة",
+  "cli.help.a019": "طبع مخطط answers.json الحالي والخروج",
+  "cli.help.a020": "طبع مخطط answers.json الحالي والخروج.\n\nخص أدوات البرمجة الوكيلة مثل Codex وClaude خاصها تعيط لهاد الشي اللول باش تجيب مخطط الأجوبة الحالي، تعمر answers.json، وتعاود تشغيل المعالج بشكل غير تفاعلي.",
   "cli.wizard.error.add_operation_name_required": "add_operation كيتطلب `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test فشل ف {}",
   "cli.wizard.error.create_flow_failed": "فشل مسار إنشاء المعالج: {}",

@@ -354,6 +354,7 @@ pub fn make_component_tenant_ctx(tenant: &TenantCtx) -> node::TenantCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use greentic_types::{EnvId, TenantId};
     use std::io::{ErrorKind, Read, Write};
     use std::net::TcpListener;
     use std::thread;
@@ -460,5 +461,85 @@ mod tests {
 
         let read = StateStoreHost::read(&mut host, "demo".into(), None).expect("state read");
         assert_eq!(read, expected);
+    }
+
+    #[test]
+    fn state_store_denies_read_and_delete_when_disabled() {
+        let mut host = host_state(false, false, true, false);
+        let write = StateStoreHost::write(&mut host, "demo".into(), b"data".to_vec(), None);
+        assert!(matches!(write, Ok(OpAck::Ok)));
+
+        let read = StateStoreHost::read(&mut host, "demo".into(), None);
+        assert!(matches!(read, Err(err) if err.code == "state.read.denied"));
+
+        let delete = StateStoreHost::delete(&mut host, "demo".into(), None);
+        assert!(matches!(delete, Err(err) if err.code == "state.delete.denied"));
+    }
+
+    #[test]
+    fn kv_get_and_put_follow_state_policy_and_utf8_rules() {
+        let mut denied = host_state(false, false, false, false);
+        RunnerHost::kv_put(
+            &mut denied.runner,
+            "ns".into(),
+            "key".into(),
+            "value".into(),
+        )
+        .expect("denied writes become no-ops");
+        assert_eq!(
+            RunnerHost::kv_get(&mut denied.runner, "ns".into(), "key".into())
+                .expect("denied reads return none"),
+            None
+        );
+
+        let mut allowed = host_state(false, true, true, false);
+        RunnerHost::kv_put(
+            &mut allowed.runner,
+            "ns".into(),
+            "key".into(),
+            "value".into(),
+        )
+        .expect("write");
+        assert_eq!(
+            RunnerHost::kv_get(&mut allowed.runner, "ns".into(), "key".into()).expect("read"),
+            Some("value".into())
+        );
+
+        allowed
+            .policy
+            .state_store
+            .lock()
+            .expect("lock")
+            .insert("ns:binary".into(), vec![0xff, 0xfe]);
+        let err = RunnerHost::kv_get(&mut allowed.runner, "ns".into(), "binary".into())
+            .expect_err("non-utf8 values should fail");
+        assert!(err.to_string().contains("invalid utf-8"));
+    }
+
+    #[test]
+    fn invocation_context_uses_tenant_and_fallback_values() {
+        let mut tenant = TenantCtx::new(EnvId("dev".into()), TenantId("tenant".into()));
+        tenant.attempt = 3;
+        let ctx = make_component_tenant_ctx(&tenant);
+        assert_eq!(ctx.env_id, "dev");
+        assert_eq!(ctx.tenant_id, "tenant");
+        assert_eq!(ctx.trace_id, "trace-local");
+        assert_eq!(ctx.correlation_id, "corr-local");
+        assert_eq!(ctx.i18n_id, "en");
+        assert_eq!(ctx.attempt, 3);
+
+        let envelope = make_invocation_envelope(
+            &ComponentRef {
+                name: "fixture".into(),
+                locator: "file:///tmp/component.wasm".into(),
+            },
+            &tenant,
+            "handle_message",
+            vec![1, 2, 3],
+        );
+        assert_eq!(envelope.flow_id, "fixture");
+        assert_eq!(envelope.step_id, "handle_message");
+        assert_eq!(envelope.component_id, "component");
+        assert_eq!(envelope.payload_cbor, vec![1, 2, 3]);
     }
 }

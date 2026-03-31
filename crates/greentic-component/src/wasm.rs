@@ -60,3 +60,39 @@ pub fn decode_world(bytes: &[u8]) -> Result<DecodedWorld> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn decode_world_rejects_invalid_binary_with_combined_error() {
+        match decode_world(b"not a wasm") {
+            Ok(_) => panic!("invalid input should fail"),
+            Err(err) => {
+                let message = err.to_string();
+                assert!(
+                    message.contains("failed to decode")
+                        || message.contains("unexpected end-of-file")
+                        || message.contains("invalid")
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn decode_world_accepts_contract_fixture_component() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("contract")
+            .join("fixtures")
+            .join("component_v0_6_0")
+            .join("component.wasm");
+        let bytes = std::fs::read(path).expect("read contract fixture");
+
+        let decoded = decode_world(&bytes).expect("decode fixture component");
+
+        assert_eq!(decoded.source, WorldSource::Component);
+    }
+}
