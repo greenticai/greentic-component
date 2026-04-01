@@ -1,1 +1,9 @@
-.github/workflows/dependency-review.yml
+.github/workflows/perf.yml
+Cargo.lock
+Cargo.toml
+crates/greentic-component/Cargo.toml
+crates/greentic-component/benches/perf.rs
+crates/greentic-component/src/prepare.rs
+crates/greentic-component/src/schema.rs
+crates/greentic-component/tests/perf_scaling.rs
+crates/greentic-component/tests/perf_timeout.rs
