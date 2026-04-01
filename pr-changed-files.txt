@@ -1,9 +1,8 @@
-<<<<<<< feature/wizard-schema-semver-fix-v2
+SECURITY_FIX_REPORT.md
+all-code-scanning-alerts.json
 crates/greentic-component/src/cli.rs
 crates/greentic-component/src/cmd/wizard.rs
 crates/greentic-component/tests/cli_tests.rs
 crates/greentic-component/tests/doctor_wizard_tests.rs
 crates/greentic-component/tests/wizard_tests.rs
-=======
-.github/workflows/codex-semver-fix.yml
->>>>>>> main
+pr-changed-files.txt
