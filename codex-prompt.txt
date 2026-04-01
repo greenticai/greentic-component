@@ -10,3 +10,19 @@ Security alerts JSON:
   "dependabot": [],
   "code_scanning": []
 }
+
+CodeQL Code Scanning Alerts (filtered to files changed in this PR):
+The following alerts were found by CodeQL static analysis in files touched by this PR.
+Each alert includes the file path, line range, rule ID, and description.
+Please review and fix these issues in the relevant files.
+[
+  {
+    "rule": "rust/cleartext-logging",
+    "severity": "high",
+    "description": "Cleartext logging of sensitive information",
+    "file": "crates/greentic-component/src/cmd/inspect.rs",
+    "start_line": 457,
+    "end_line": 457,
+    "message": "This operation writes ... .len() to a log file."
+  }
+]

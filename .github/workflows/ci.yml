@@ -22,6 +22,31 @@ on:
         default: false
 
 jobs:
+  semver-checks:
+    name: semver-checks
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-semver
+      cancel-in-progress: true
+    env:
+      CARGO_TERM_COLOR: always
+      TARGET_DIR: target/linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust environment
+        uses: ./.github/actions/rust-setup
+        with:
+          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          target-dir: ${{ env.TARGET_DIR }}
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: |
+            wasm32-wasip2
+            x86_64-unknown-linux-gnu
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          rust-toolchain: manual
+          package: "greentic-component,greentic-component-manifest,greentic-component-store,greentic-component-runtime"
+
   lint:
     name: lint
     runs-on: ubuntu-latest
