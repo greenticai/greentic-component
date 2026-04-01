@@ -117,6 +117,7 @@ assert_cmd = { workspace = true }
 predicates = { workspace = true }
 insta = { workspace = true }
 greentic-interfaces-guest = { workspace = true }
+criterion = "0.5"
 
 [[example]]
 name = "gen_fixture"
@@ -125,3 +126,8 @@ required-features = ["abi"]
 [[example]]
 name = "gen_contract_fixture"
 required-features = ["abi"]
+
+[[bench]]
+name = "perf"
+harness = false
+required-features = ["cli"]
