@@ -1,27 +1,25 @@
-# Semver Fix Report
+# SEMVER Fix Report
 
 ## Scope
-- Reviewed cargo-semver-checks output for `greentic-component v0.4.74 -> v0.4.75`.
-- Reported failure:
-  - `constructible_struct_adds_field` on `WizardArgs.schema` in `crates/greentic-component/src/cmd/wizard.rs`.
+- Crate: `greentic-component`
+- Baseline: `v0.4.74`
+- Current: `v0.4.75`
+- Reported violation count: `1`
+
+## Reported Violation
+1. `struct_marked_non_exhaustive`
+- Item: `WizardArgs`
+- Location: `crates/greentic-component/src/cmd/wizard.rs:59`
+- Meaning: the public struct became `#[non_exhaustive]`, which prevents external struct-literal construction and is semver-breaking.
 
 ## Fix Applied
-1. Added `#[non_exhaustive]` to the public struct `WizardArgs`.
-
-### File Changes
-- `crates/greentic-component/src/cmd/wizard.rs`
-  - Added `#[non_exhaustive]` above:
-    - `pub struct WizardArgs`
+- Removed `#[non_exhaustive]` from `WizardArgs` in:
+  - `crates/greentic-component/src/cmd/wizard.rs`
 
 ## Why This Fix
-- The semver violation is caused by adding a new public field to an externally constructible public struct.
-- Marking the struct `#[non_exhaustive]` prevents downstream exhaustive struct literal construction assumptions, which is the preferred minimal semver-safe remediation.
-- No runtime behavior or CLI logic was changed.
+- This restores the previous public API behavior (external construction via struct literal remains allowed).
+- It is the minimal, behavior-preserving change and avoids a version bump.
 
-## Match/Wildcard Follow-up
-- No additional wildcard match-arm updates were required for this change.
-- `#[non_exhaustive]` was applied to a struct (not an enum), and no same-crate match exhaustiveness adjustments were needed.
-
-## Versioning Decision
-- No crate version bump was applied.
-- The violation was resolved via attribute hardening (`#[non_exhaustive]`), per preferred strategy.
+## Additional Notes
+- No logic or runtime behavior was changed.
+- No tests were modified.

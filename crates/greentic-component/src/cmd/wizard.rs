@@ -55,7 +55,6 @@ pub struct WizardLegacyNewArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-#[non_exhaustive]
 pub struct WizardArgs {
     #[arg(
         long = "schema",
