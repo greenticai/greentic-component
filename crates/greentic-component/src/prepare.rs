@@ -72,11 +72,9 @@ pub fn prepare_component_with_manifest(
     let mut redactions = Vec::new();
     let mut defaults = Vec::new();
     for version in &describe_payload.versions {
-        let schema_str = serde_json::to_string(&version.schema)
-            .expect("describe schema serialization never fails");
-        let mut hits = schema::try_collect_redactions(&schema_str)?;
+        let (mut hits, defaults_hits) =
+            schema::collect_redactions_and_defaults_from_value(&version.schema);
         redactions.append(&mut hits);
-        let defaults_hits = schema::collect_default_annotations(&schema_str)?;
         defaults.extend(
             defaults_hits
                 .into_iter()
