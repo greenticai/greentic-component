@@ -2,20 +2,30 @@
 
 ## Summary
 - Dependabot alerts provided: `0`
-- Code scanning alerts provided: `0`
-- New PR dependency vulnerabilities provided: `0`
+- Code scanning alerts provided: `1`
+- Remediated alerts: `1`
 
-No vulnerabilities were identified from the supplied security inputs.
+Fixed CodeQL alert `rust/cleartext-logging` in `crates/greentic-component/src/cmd/inspect.rs` by removing logging of secret-related metadata derived from `manifest.secret_requirements`.
 
-## PR Dependency Review
-- Checked repository dependency manifests (`Cargo.toml`/`Cargo.lock` and crate manifests).
-- Checked working-tree diffs for dependency file modifications.
-- Result: no dependency file changes detected in this PR context.
+## Alert Triage
+1. `rust/cleartext-logging` (high)
+- File: `crates/greentic-component/src/cmd/inspect.rs:457`
+- Finding: logging `manifest.secret_requirements.len()` was flagged as sensitive-data cleartext logging.
+- Risk: even aggregate secret metadata should not be emitted to logs/stdout in security-sensitive paths.
 
-## Remediation Actions
-- No remediation patches were required.
-- No dependency upgrades or code fixes were applied.
+## Remediation Applied
+- Replaced:
+  - `println!("  secret requirements: {}", manifest.secret_requirements.len());`
+- With:
+  - `println!("  secret requirements: [redacted]");`
 
-## Notes
-- `cargo-audit` is not available in this CI environment, so no local advisory DB audit was executed.
-- Based on provided alert feeds and current diff state, there are no actionable security fixes in this run.
+This is a minimal, behavior-preserving safety fix that keeps inspect output structure while preventing exposure of secret-derived information.
+
+## Verification
+- Attempted: `cargo check -p greentic-component`
+- Result: could not run in this CI sandbox due to Rustup temp-file write restrictions:
+  - `could not create temp file /home/runner/.rustup/tmp/...: Read-only file system (os error 30)`
+
+## Files Changed
+- `crates/greentic-component/src/cmd/inspect.rs`
+- `SECURITY_FIX_REPORT.md`
