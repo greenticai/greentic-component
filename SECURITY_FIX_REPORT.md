@@ -1,17 +1,28 @@
 # SECURITY_FIX_REPORT
 
-## Security Alert Analysis
-- Input payload reviewed:
+## Scope
+- Review date (UTC): 2026-04-01
+- Input analyzed:
   - Dependabot alerts: `0`
   - Code scanning alerts: `0`
-- Source: `security-alerts.json` (as provided in this CI task)
+- Source payload:
 
-## Remediation Performed
-- No actionable vulnerabilities were present in the supplied alert payload.
-- No code changes were required to remediate security findings.
-- No dependency updates were required.
+```json
+{
+  "dependabot": [],
+  "code_scanning": []
+}
+```
 
-## Validation Notes
-- Confirmed `dependabot-alerts.json` is empty (`[]`).
-- Confirmed `code-scanning-alerts.json` is empty (`[]`).
-- Left unrelated pre-existing working tree changes untouched.
+## Findings
+- No security vulnerabilities were reported in the provided Dependabot data.
+- No security vulnerabilities were reported in the provided code scanning data.
+
+## Remediation Actions
+- No code or dependency changes were required because there were no actionable alerts.
+- Repository contents were left unchanged except for this report update.
+
+## Verification
+- `dependabot-alerts.json` verified as `[]`.
+- `code-scanning-alerts.json` verified as `[]`.
+- `security-alerts.json` verified with both alert arrays empty.

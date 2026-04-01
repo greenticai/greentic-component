@@ -1,8 +1,1 @@
-SECURITY_FIX_REPORT.md
-all-code-scanning-alerts.json
-crates/greentic-component/src/cli.rs
-crates/greentic-component/src/cmd/wizard.rs
-crates/greentic-component/tests/cli_tests.rs
-crates/greentic-component/tests/doctor_wizard_tests.rs
-crates/greentic-component/tests/wizard_tests.rs
-pr-changed-files.txt
+.github/workflows/dependency-review.yml
