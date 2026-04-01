@@ -1,27 +1,26 @@
 # Security Fix Report
 
 ## Scope
-- Reviewed CodeQL alert `rust/cleartext-logging` (high) in:
-  - `crates/greentic-component/src/cmd/inspect.rs` (line 457 in alert context)
-
-## Findings
-- The alert targets logging related to secret requirements metadata in the inspect command output.
-- Even redacted/derived secret-related output is unnecessary for this command and can increase exposure risk in CI logs.
+- Processed provided security alerts JSON.
+- `dependabot`: no alerts.
+- `code_scanning`: 1 open alert (`rust/cleartext-logging`) in `crates/greentic-component/src/cmd/inspect.rs`.
 
 ## Remediation Applied
-- Removed the secret-related log line from inspect output:
-  - Deleted `println!("  secret requirements: [redacted]");`
-  - File: `crates/greentic-component/src/cmd/inspect.rs`
+### Alert #10: `rust/cleartext-logging`
+- File: `crates/greentic-component/src/cmd/inspect.rs`
+- Location: line 457
+- Issue: cleartext logging of potentially sensitive profile data via debug formatting.
 
-## Why This Is Safe and Minimal
-- No functional behavior change to artifact inspection logic.
-- Only output text was reduced.
-- Eliminates any chance of secret requirement data or derived metadata being emitted to logs for this path.
+### Change made
+- Replaced direct cleartext output of profiles:
+  - From: `println!("  profiles: {:?}", manifest.profiles);`
+  - To: `println!("  profiles count: {}", manifest.profiles.len());`
 
-## Validation
-- Confirmed patch via diff:
-  - `git diff -- crates/greentic-component/src/cmd/inspect.rs`
-- Confirmed updated section no longer logs secret requirements.
+## Security Impact
+- Eliminates direct emission of profile contents to logs/stdout.
+- Preserves useful operational visibility by reporting only count metadata.
+- Change is minimal and low-risk, limited to output formatting.
 
-## Notes
-- No Dependabot alerts were provided in this input.
+## Files Modified
+- `crates/greentic-component/src/cmd/inspect.rs`
+- `SECURITY_FIX_REPORT.md`
