@@ -1154,7 +1154,6 @@ fn wizard_add_operation_updates_manifest_and_lib() {
     create_answers(&create_answers_path, "op-edit-component");
 
     run(WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
