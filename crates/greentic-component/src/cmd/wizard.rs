@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result, anyhow, bail};
-use clap::{Args, Subcommand, ValueEnum};
+use clap::{ArgMatches, Args, Subcommand, ValueEnum};
 use greentic_qa_lib::QaLibError;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map as JsonMap, Value as JsonValue, json};
@@ -56,13 +56,6 @@ pub struct WizardLegacyNewArgs {
 
 #[derive(Args, Debug, Clone)]
 pub struct WizardArgs {
-    #[arg(
-        long = "schema",
-        default_value_t = false,
-        help = "Print the current answers.json schema and exit",
-        long_help = "Print the current answers.json schema and exit.\n\nAgentic coding tools such as Codex and Claude should call this first to fetch the current answer schema, fill out answers.json, and replay the wizard non-interactively."
-    )]
-    pub schema: bool,
     #[arg(long, value_enum, default_value = "create")]
     pub mode: RunMode,
     #[arg(long, value_enum, default_value = "execute")]
@@ -212,6 +205,50 @@ pub fn run(args: WizardArgs) -> Result<()> {
     run_with_context(args, None, None)
 }
 
+pub(crate) fn maybe_run_schema_from_matches(matches: &ArgMatches) -> Option<Result<()>> {
+    let (subcommand, wizard_matches) = matches.subcommand()?;
+    if subcommand != "wizard" {
+        return None;
+    }
+    if !wizard_matches.get_flag("schema") {
+        return None;
+    }
+
+    let args = WizardArgs {
+        mode: wizard_matches
+            .get_one::<RunMode>("mode")
+            .copied()
+            .unwrap_or(RunMode::Create),
+        execution: wizard_matches
+            .get_one::<ExecutionMode>("execution")
+            .copied()
+            .unwrap_or(ExecutionMode::Execute),
+        dry_run: wizard_matches.get_flag("dry_run"),
+        validate: wizard_matches.get_flag("validate"),
+        apply: wizard_matches.get_flag("apply"),
+        qa_answers: wizard_matches.get_one::<PathBuf>("qa_answers").cloned(),
+        answers: wizard_matches.get_one::<PathBuf>("answers").cloned(),
+        qa_answers_out: wizard_matches.get_one::<PathBuf>("qa_answers_out").cloned(),
+        emit_answers: wizard_matches.get_one::<PathBuf>("emit_answers").cloned(),
+        schema_version: wizard_matches.get_one::<String>("schema_version").cloned(),
+        migrate: wizard_matches.get_flag("migrate"),
+        plan_out: wizard_matches.get_one::<PathBuf>("plan_out").cloned(),
+        project_root: wizard_matches
+            .get_one::<PathBuf>("project_root")
+            .cloned()
+            .unwrap_or_else(|| PathBuf::from(".")),
+        template: wizard_matches.get_one::<String>("template").cloned(),
+        full_tests: wizard_matches.get_flag("full_tests"),
+        json: wizard_matches.get_flag("json"),
+    };
+
+    let schema =
+        serde_json::to_string_pretty(&wizard_answer_schema(&args)).map_err(anyhow::Error::from);
+    Some(schema.map(|schema| {
+        println!("{schema}");
+    }))
+}
+
 fn is_interactive_session() -> bool {
     if std::env::var_os("GREENTIC_FORCE_NONINTERACTIVE").is_some() {
         return false;
@@ -235,11 +272,6 @@ fn run_with_context(
     legacy_new: Option<WizardLegacyNewCompat>,
 ) -> Result<()> {
     let mut args = args;
-    if args.schema {
-        let schema = serde_json::to_string_pretty(&wizard_answer_schema(&args))?;
-        println!("{schema}");
-        return Ok(());
-    }
     let interactive = is_interactive_session();
     if args.validate && args.apply {
         bail!("{}", tr("cli.wizard.result.validate_apply_conflict"));
@@ -2779,7 +2811,6 @@ mod tests {
         let answers_path = temp.path().join("faulty-answers.json");
         std::fs::write(&answers_path, "{ this is not valid json").expect("write malformed");
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::Execute,
             dry_run: false,
@@ -2842,7 +2873,6 @@ mod tests {
             fields,
         };
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::Execute,
             dry_run: false,
@@ -2908,7 +2938,6 @@ mod tests {
     #[test]
     fn create_questions_minimal_flow_only_asks_core_fields() {
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -2938,7 +2967,6 @@ mod tests {
     #[test]
     fn wizard_answer_schema_matches_create_answer_document_shape() {
         let args = WizardArgs {
-            schema: true,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -2996,7 +3024,6 @@ mod tests {
     #[test]
     fn create_flow_defaults_advanced_setup_to_false() {
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -3028,7 +3055,6 @@ mod tests {
     #[test]
     fn create_questions_advanced_flow_includes_secret_gate_before_secret_fields() {
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,
@@ -3060,7 +3086,6 @@ mod tests {
     #[test]
     fn create_questions_advanced_flow_includes_messaging_and_events_fields() {
         let args = WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: super::ExecutionMode::Execute,
             dry_run: false,

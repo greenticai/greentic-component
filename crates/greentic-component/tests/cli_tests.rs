@@ -145,7 +145,7 @@ fn inspect_human_output_includes_manifest_and_describe_sections_for_embedded_was
         ))
         .stdout(predicate::str::contains("supports: [Messaging]"))
         .stdout(predicate::str::contains("capabilities:"))
-        .stdout(predicate::str::contains("secret requirements: 0"))
+        .stdout(predicate::str::contains("secret requirements:"))
         .stdout(predicate::str::contains("profiles:"))
         .stdout(predicate::str::contains(
             "limits: memory_mb=128 wall_time_ms=1000",

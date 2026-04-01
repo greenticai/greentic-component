@@ -375,7 +375,6 @@ fn wizard_schema_validates_answer_document_and_replays_component() {
     .unwrap();
 
     run(WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -423,7 +422,6 @@ fn wizard_create_execute_creates_template_files() {
     create_answers(&answers_path, "demo-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -473,7 +471,6 @@ fn wizard_create_supports_multiple_user_operations() {
     );
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -512,7 +509,6 @@ fn wizard_create_supports_comma_separated_operation_names() {
     create_answers_with_operation_names(&answers_path, "csv-op-component", "render, summarize");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -547,7 +543,6 @@ fn wizard_create_writes_runtime_capability_fields() {
     create_answers_with_runtime_capabilities(&answers_path, "capability-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -590,7 +585,6 @@ fn wizard_create_writes_concrete_qa_operation_schemas() {
     create_answers(&answers_path, "qa-schema-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -655,7 +649,6 @@ fn wizard_create_ignores_filesystem_mounts_when_mode_is_none() {
     create_answers_with_no_filesystem_mounts(&answers_path, "no-fs-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -698,7 +691,6 @@ fn wizard_create_writes_config_schema_fields() {
     create_answers_with_config_fields(&answers_path, "config-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -743,7 +735,6 @@ fn wizard_create_writes_answers_out_when_requested() {
     create_answers(&answers_path, "answers-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -773,7 +764,6 @@ fn wizard_create_dry_run_does_not_write_files() {
     create_answers(&answers_path, "component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -807,7 +797,6 @@ fn wizard_validate_flag_behaves_like_dry_run() {
     create_answers(&answers_path, "component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -841,7 +830,6 @@ fn wizard_validate_command_alias_behaves_like_dry_run() {
     create_answers(&answers_path, "component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -863,7 +851,6 @@ fn wizard_validate_command_alias_behaves_like_dry_run() {
     run_cli(WizardCliArgs {
         command: Some(WizardSubcommand::Validate(args)),
         args: WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::Execute,
             dry_run: false,
@@ -898,7 +885,6 @@ fn wizard_answers_aliases_work() {
     create_answers(&answers_path, "answers-alias-component");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -939,7 +925,6 @@ fn wizard_answer_document_requires_migrate_for_schema_version_change() {
     create_answer_document(&answers_path, "doc-component", "0.9.0");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -974,7 +959,6 @@ fn wizard_answer_document_migrates_with_flag() {
     create_answer_document(&answers_path, "doc-component", "0.9.0");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -1010,7 +994,6 @@ fn wizard_apply_command_alias_with_migrate_executes_side_effects() {
     create_answer_document(&answers_path, "apply-doc-component", "0.9.0");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -1032,7 +1015,6 @@ fn wizard_apply_command_alias_with_migrate_executes_side_effects() {
     run_cli(WizardCliArgs {
         command: Some(WizardSubcommand::Apply(args)),
         args: WizardArgs {
-            schema: false,
             mode: RunMode::Create,
             execution: ExecutionMode::DryRun,
             dry_run: false,
@@ -1063,7 +1045,6 @@ fn wizard_replay_answers_mode_build_test_overrides_default_create_mode() {
     create_answers_with_mode(&answers_path, "build-test");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -1101,7 +1082,6 @@ fn wizard_replay_answers_mode_doctor_overrides_default_create_mode() {
     create_answers_with_mode(&answers_path, "doctor");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -1139,7 +1119,6 @@ fn wizard_emit_answers_preserves_replayed_mode() {
     create_answers_with_mode(&answers_path, "build-test");
 
     let args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::DryRun,
         dry_run: false,
@@ -1200,7 +1179,6 @@ fn wizard_add_operation_updates_manifest_and_lib() {
     create_add_operation_answers(&add_answers, &project_root, "render");
 
     run(WizardArgs {
-        schema: false,
         mode: RunMode::AddOperation,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -1236,7 +1214,6 @@ fn wizard_update_operation_renames_manifest_and_lib() {
     create_answers(&create_answers_path, "rename-op-component");
 
     run(WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -1261,7 +1238,6 @@ fn wizard_update_operation_renames_manifest_and_lib() {
     create_update_operation_answers(&update_answers, &project_root, "handle_message", "render");
 
     run(WizardArgs {
-        schema: false,
         mode: RunMode::UpdateOperation,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -1303,7 +1279,6 @@ fn wizard_full_chain_dry_run_emit_validate_replay_execute() {
     create_answers(&answers_in, component_name);
 
     let validate_args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -1355,7 +1330,6 @@ fn wizard_full_chain_dry_run_emit_validate_replay_execute() {
     );
 
     let replay_validate_args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
@@ -1380,7 +1354,6 @@ fn wizard_full_chain_dry_run_emit_validate_replay_execute() {
     );
 
     let execute_args = WizardArgs {
-        schema: false,
         mode: RunMode::Create,
         execution: ExecutionMode::Execute,
         dry_run: false,
