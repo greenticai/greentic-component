@@ -317,6 +317,8 @@
   "cli.help.a016": "พิมพ์ข้อความนี้หรือความช่วยเหลือของคำสั่งย่อยที่ระบุ",
   "cli.help.a017": "แสดงความช่วยเหลือ",
   "cli.help.a018": "พิมพ์เวอร์ชัน",
+  "cli.help.a019": "พิมพ์สคีมาปัจจุบันของ answers.json แล้วออก",
+  "cli.help.a020": "พิมพ์สคีมาปัจจุบันของ answers.json แล้วออก\n\nเครื่องมือเขียนโค้ดแบบเอเจนต์ เช่น Codex และ Claude ควรเรียกใช้สิ่งนี้ก่อนเพื่อดึงสคีมาคำตอบปัจจุบัน กรอก answers.json และเล่นวิซาร์ดซ้ำในโหมดไม่โต้ตอบ",
   "cli.wizard.error.add_operation_name_required": "add_operation ต้องมี `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test ล้มเหลวใน {}",
   "cli.wizard.error.create_flow_failed": "โฟลว์สร้างของวิซาร์ดล้มเหลว: {}",

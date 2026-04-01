@@ -317,6 +317,8 @@
   "cli.help.a016": "اطبع هذه الرسالة أو مساعدة الأمر الفرعي/الأوامر الفرعية المحددة",
   "cli.help.a017": "اطبع المساعدة",
   "cli.help.a018": "طباعة الإصدار",
+  "cli.help.a019": "اطبع مخطط answers.json الحالي ثم اخرج",
+  "cli.help.a020": "اطبع مخطط answers.json الحالي ثم اخرج.\n\nيجب على أدوات البرمجة المعتمدة على الوكلاء مثل Codex وClaude استدعاء هذا أولاً لجلب مخطط الإجابات الحالي، ثم ملء answers.json، وإعادة تشغيل المعالج بشكل غير تفاعلي.",
   "cli.wizard.error.add_operation_name_required": "يتطلب add_operation `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "فشل cargo test في {}",
   "cli.wizard.error.create_flow_failed": "فشل تدفق إنشاء المعالج: {}",

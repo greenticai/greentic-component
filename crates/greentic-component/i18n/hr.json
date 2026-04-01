@@ -317,6 +317,8 @@
   "cli.help.a016": "Ispiši ovu poruku ili pomoć za zadanu podnaredbu(e)",
   "cli.help.a017": "Ispiši pomoć",
   "cli.help.a018": "Ispiši verziju",
+  "cli.help.a019": "Ispiši trenutačnu shemu answers.json i izađi",
+  "cli.help.a020": "Ispiši trenutačnu shemu answers.json i izađi.\n\nAgentski alati za programiranje kao što su Codex i Claude trebaju prvo pozvati ovo kako bi dohvatili trenutačnu shemu odgovora, ispunili answers.json i ponovno pokrenuli čarobnjak bez interakcije.",
   "cli.wizard.error.add_operation_name_required": "add_operation zahtijeva `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test nije uspio u {}",
   "cli.wizard.error.create_flow_failed": "stvaranje tijeka čarobnjaka nije uspjelo: {}",

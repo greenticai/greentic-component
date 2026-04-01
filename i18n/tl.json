@@ -317,6 +317,8 @@
   "cli.help.a016": "I-print ang mensaheng ito o ang help ng ibinigay na (mga) subcommand",
   "cli.help.a017": "I-print ang help",
   "cli.help.a018": "I-print ang bersyon",
+  "cli.help.a019": "I-print ang kasalukuyang schema ng answers.json at lumabas",
+  "cli.help.a020": "I-print ang kasalukuyang schema ng answers.json at lumabas.\n\nAng mga agentic coding tool tulad ng Codex at Claude ay dapat tawagin muna ito upang kunin ang kasalukuyang schema ng sagot, punan ang answers.json, at ulitin ang wizard nang hindi interaktibo.",
   "cli.wizard.error.add_operation_name_required": "kinakailangan ng add_operation ang `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "nabigo ang cargo test sa {}",
   "cli.wizard.error.create_flow_failed": "nabigo ang wizard create flow: {}",

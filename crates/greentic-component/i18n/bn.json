@@ -317,6 +317,8 @@
   "cli.help.a016": "এই বার্তা বা প্রদত্ত subcommand(গুলো)-এর help দেখান",
   "cli.help.a017": "help দেখান",
   "cli.help.a018": "ভার্সন প্রিন্ট করুন",
+  "cli.help.a019": "বর্তমান answers.json স্কিমা প্রিন্ট করে প্রস্থান করুন",
+  "cli.help.a020": "বর্তমান answers.json স্কিমা প্রিন্ট করে প্রস্থান করুন।\n\nCodex এবং Claude-এর মতো agentic coding tools-গুলোকে বর্তমান answer schema আনতে, answers.json পূরণ করতে, এবং wizard-টি non-interactively পুনরায় চালাতে এটি প্রথমে কল করা উচিত।",
   "cli.wizard.error.add_operation_name_required": "add_operation-এর জন্য `operation_name` প্রয়োজন",
   "cli.wizard.error.cargo_test_failed_in": "{}-এ cargo test ব্যর্থ হয়েছে",
   "cli.wizard.error.create_flow_failed": "wizard create flow ব্যর্থ হয়েছে: {}",

@@ -317,6 +317,8 @@
   "cli.help.a016": "यह संदेश या दिए गए subcommand(s) की सहायता प्रिंट करें",
   "cli.help.a017": "सहायता प्रिंट करें",
   "cli.help.a018": "संस्करण प्रिंट करें",
+  "cli.help.a019": "वर्तमान answers.json स्कीमा प्रिंट करें और बाहर निकलें",
+  "cli.help.a020": "वर्तमान answers.json स्कीमा प्रिंट करें और बाहर निकलें।\n\nCodex और Claude जैसे Agentic coding tools को वर्तमान answer schema प्राप्त करने, answers.json भरने, और wizard को non-interactively फिर से चलाने के लिए इसे पहले कॉल करना चाहिए।",
   "cli.wizard.error.add_operation_name_required": "add_operation के लिए `operation_name` आवश्यक है",
   "cli.wizard.error.cargo_test_failed_in": "cargo test {} में विफल हुआ",
   "cli.wizard.error.create_flow_failed": "wizard create flow विफल हुआ: {}",

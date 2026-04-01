@@ -2008,4 +2008,338 @@ mod tests {
         assert!(combined.contains("describe_hash="));
         assert!(combined.contains("schema_hashes=[run="));
     }
+
+    #[test]
+    fn discover_manifest_path_prefers_explicit_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let explicit = dir.path().join("custom.manifest.json");
+        let inferred = dir.path().join("component.manifest.json");
+        fs::write(&inferred, "{}").expect("write inferred manifest");
+
+        let discovered = discover_manifest_path(
+            &dir.path().join("component.wasm"),
+            dir.path(),
+            Some(&explicit),
+        );
+
+        assert_eq!(discovered, Some(explicit));
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_explicit_wasm_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let resolved = resolve_wasm_path(wasm.to_str().expect("utf-8"), &wasm, None)
+            .expect("resolve wasm file");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_multiple_candidates_in_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        fs::write(dist.join("one.wasm"), b"1").expect("write first wasm");
+        fs::write(dist.join("two.wasm"), b"2").expect("write second wasm");
+
+        let err = resolve_wasm_path(dir.path().to_str().expect("utf-8"), dir.path(), None)
+            .expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn qa_modes_include_all_supported_modes_in_order() {
+        let modes = qa_modes();
+        assert_eq!(modes[0], (QaMode::Default, "default"));
+        assert_eq!(modes[1], (QaMode::Setup, "setup"));
+        assert_eq!(modes[2], (QaMode::Update, "update"));
+        assert_eq!(modes[3], (QaMode::Remove, "remove"));
+    }
+
+    #[test]
+    fn decode_cbor_accepts_self_describe_tagged_payloads() {
+        let payload =
+            canonical::to_canonical_cbor_allow_floats(&json!({"ok": true})).expect("encode cbor");
+        let tagged = [[0xd9, 0xd9, 0xf7].as_slice(), payload.as_slice()].concat();
+
+        let value: serde_json::Value = decode_cbor(&tagged).expect("decode tagged cbor");
+
+        assert_eq!(value, json!({"ok": true}));
+    }
+
+    #[test]
+    fn discover_manifest_path_finds_manifest_in_wasm_parent_chain() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        let wasm = dist.join("component.wasm");
+        fs::write(dir.path().join("component.manifest.json"), "{}").expect("write manifest");
+
+        let discovered = discover_manifest_path(&wasm, &wasm, None);
+
+        assert_eq!(discovered, Some(dir.path().join("component.manifest.json")));
+    }
+
+    #[test]
+    fn discover_manifest_path_returns_none_when_no_candidate_exists() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+
+        let discovered = discover_manifest_path(&wasm, &wasm, None);
+
+        assert!(discovered.is_none());
+    }
+
+    #[test]
+    fn discover_manifest_path_prefers_target_directory_manifest_over_ancestor() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        let wasm = dist.join("component.wasm");
+        fs::write(dir.path().join("component.manifest.json"), "{}").expect("write ancestor");
+        fs::write(dist.join("component.manifest.json"), "{}").expect("write target");
+
+        let discovered = discover_manifest_path(&wasm, dist.as_path(), None);
+
+        assert_eq!(discovered, Some(dist.join("component.manifest.json")));
+    }
+
+    #[test]
+    fn find_wasm_in_dir_returns_none_when_no_candidates_exist() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let found = find_wasm_in_dir(dir.path()).expect("scan directory");
+
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn find_wasm_in_dir_prefers_single_release_candidate() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let release = dir.path().join("target/wasm32-wasip2/release");
+        fs::create_dir_all(&release).expect("create release dir");
+        let wasm = release.join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let found = find_wasm_in_dir(dir.path()).expect("scan directory");
+
+        assert_eq!(found, Some(wasm));
+    }
+
+    #[test]
+    fn find_wasm_in_dir_reports_multiple_candidates_across_profiles() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let release = dir.path().join("target/wasm32-wasip2/release");
+        let debug = dir.path().join("target/wasm32-wasip2/debug");
+        fs::create_dir_all(&release).expect("create release dir");
+        fs::create_dir_all(&debug).expect("create debug dir");
+        fs::write(release.join("component.wasm"), b"release").expect("write release wasm");
+        fs::write(debug.join("component.wasm"), b"debug").expect("write debug wasm");
+
+        let err = find_wasm_in_dir(dir.path()).expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn collect_wasm_files_ignores_non_wasm_entries() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        fs::write(dir.path().join("component.wasm"), b"wasm").expect("write wasm");
+        fs::write(dir.path().join("notes.txt"), b"text").expect("write text");
+        let mut out = Vec::new();
+
+        collect_wasm_files(dir.path(), &mut out).expect("collect wasm files");
+
+        assert_eq!(out, vec![dir.path().join("component.wasm")]);
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_manifest_json_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "id": "com.greentic.test.component",
+                "name": "Test Component",
+                "version": "0.1.0",
+                "world": "greentic:component/component@0.6.0",
+                "describe_export": "describe",
+                "operations": [{
+                    "name": "run",
+                    "input_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                    "output_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false}
+                }],
+                "default_operation": "run",
+                "supports": ["messaging"],
+                "profiles": {"default": "stateless", "supported": ["stateless"]},
+                "secret_requirements": [],
+                "capabilities": {
+                    "wasi": {
+                        "filesystem": {"mode":"none","mounts":[]},
+                        "random": true,
+                        "clocks": true
+                    },
+                    "host": {
+                        "messaging": {"inbound": true, "outbound": true},
+                        "telemetry": {"scope": "tenant"}
+                    }
+                },
+                "config_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                "limits": {"memory_mb": 64, "wall_time_ms": 1000},
+                "artifacts": {"component_wasm": "component.wasm"},
+                "hashes": {"component_wasm": hash},
+                "dev_flows": {
+                    "default": {
+                        "format": "flow-ir-json",
+                        "graph": {
+                            "nodes": [{"id":"start","type":"start"}, {"id":"end","type":"end"}],
+                            "edges": [{"from":"start","to":"end"}]
+                        }
+                    }
+                }
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let resolved =
+            resolve_wasm_path(manifest_path.to_str().expect("utf-8"), &manifest_path, None)
+                .expect("resolve manifest json");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_explicit_manifest_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "id": "com.greentic.test.component",
+                "name": "Test Component",
+                "version": "0.1.0",
+                "world": "greentic:component/component@0.6.0",
+                "describe_export": "describe",
+                "operations": [{
+                    "name": "run",
+                    "input_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                    "output_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false}
+                }],
+                "default_operation": "run",
+                "supports": ["messaging"],
+                "profiles": {"default": "stateless", "supported": ["stateless"]},
+                "secret_requirements": [],
+                "capabilities": {
+                    "wasi": {
+                        "filesystem": {"mode":"none","mounts":[]},
+                        "random": true,
+                        "clocks": true
+                    },
+                    "host": {
+                        "messaging": {"inbound": true, "outbound": true},
+                        "telemetry": {"scope": "tenant"}
+                    }
+                },
+                "config_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                "limits": {"memory_mb": 64, "wall_time_ms": 1000},
+                "artifacts": {"component_wasm": "component.wasm"},
+                "hashes": {"component_wasm": hash},
+                "dev_flows": {
+                    "default": {
+                        "format": "flow-ir-json",
+                        "graph": {
+                            "nodes": [{"id":"start","type":"start"}, {"id":"end","type":"end"}],
+                            "edges": [{"from":"start","to":"end"}]
+                        }
+                    }
+                }
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let resolved = resolve_wasm_path("fixture", dir.path(), Some(&manifest_path))
+            .expect("resolve explicit manifest");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_errors_when_target_cannot_be_resolved() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let err = resolve_wasm_path("missing-target", dir.path(), None)
+            .expect_err("missing target should fail");
+
+        assert!(err.contains("unable to resolve wasm"));
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_manifest_load_error_for_explicit_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = dir.path().join("missing.manifest.json");
+
+        let err = resolve_wasm_path("fixture", dir.path(), Some(&manifest_path))
+            .expect_err("missing manifest should fail");
+
+        assert!(err.contains("failed to load manifest"));
+    }
+
+    #[test]
+    fn collect_wasm_files_reports_read_errors() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let missing = dir.path().join("missing");
+        let mut out = Vec::new();
+
+        let err = collect_wasm_files(&missing, &mut out).expect_err("missing dir should fail");
+
+        assert!(err.contains("failed to read"));
+        assert!(err.contains("missing"));
+    }
+
+    #[test]
+    fn run_returns_doctor_error_when_target_is_missing() {
+        let err = run(DoctorArgs {
+            target: "missing-target".to_string(),
+            manifest: None,
+            format: DoctorFormat::Human,
+        })
+        .expect_err("missing target should fail");
+
+        match err {
+            ComponentError::Doctor(message) => assert!(message.contains("unable to resolve wasm")),
+            other => panic!("unexpected error: {other}"),
+        }
+    }
+
+    #[test]
+    fn run_emits_json_and_reports_failed_checks_for_fixture_without_embedded_manifest() {
+        let fixture_dir =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/fixtures/component_v0_6_0");
+        let wasm = fixture_dir.join("component.wasm");
+
+        let err = run(DoctorArgs {
+            target: wasm.to_string_lossy().to_string(),
+            manifest: None,
+            format: DoctorFormat::Json,
+        })
+        .expect_err("fixture should fail doctor checks");
+
+        match err {
+            ComponentError::Doctor(message) => assert!(message.contains("doctor checks failed")),
+            other => panic!("unexpected error: {other}"),
+        }
+    }
 }

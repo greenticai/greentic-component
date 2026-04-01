@@ -317,6 +317,8 @@
   "cli.help.a016": "Afficher ce message ou l'aide de la ou des sous-commandes données",
   "cli.help.a017": "Afficher l'aide",
   "cli.help.a018": "Afficher la version",
+  "cli.help.a019": "Afficher le schéma actuel de answers.json et quitter",
+  "cli.help.a020": "Afficher le schéma actuel de answers.json et quitter.\n\nLes outils de codage agentiques tels que Codex et Claude doivent d'abord appeler ceci pour récupérer le schéma de réponse actuel, remplir answers.json et rejouer l'assistant de manière non interactive.",
   "cli.wizard.error.add_operation_name_required": "add_operation nécessite `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test a échoué dans {}",
   "cli.wizard.error.create_flow_failed": "le flux de création de l'assistant a échoué : {}",

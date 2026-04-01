@@ -42,3 +42,41 @@ impl InMemorySecretsStore {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store(allow: bool) -> InMemorySecretsStore {
+        InMemorySecretsStore::new(allow, HashSet::from(["API_TOKEN".to_string()])).with_secrets(
+            HashMap::from([("API_TOKEN".to_string(), "secret".to_string())]),
+        )
+    }
+
+    #[test]
+    fn get_respects_permission_and_key_validation() {
+        assert!(matches!(
+            store(false).get("API_TOKEN"),
+            Err(SecretsError::Denied)
+        ));
+        assert!(matches!(
+            store(true).get("OTHER"),
+            Err(SecretsError::InvalidKey)
+        ));
+    }
+
+    #[test]
+    fn get_returns_not_found_for_missing_allowed_secret() {
+        let store = InMemorySecretsStore::new(true, HashSet::from(["API_TOKEN".to_string()]));
+        assert!(matches!(
+            store.get("API_TOKEN"),
+            Err(SecretsError::NotFound)
+        ));
+    }
+
+    #[test]
+    fn get_returns_secret_bytes_for_present_allowed_secret() {
+        let bytes = store(true).get("API_TOKEN").unwrap().expect("secret bytes");
+        assert_eq!(bytes, b"secret");
+    }
+}

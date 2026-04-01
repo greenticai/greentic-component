@@ -147,3 +147,73 @@ pub enum VerificationError {
 fn equal_digest(expected: &str, actual: &str) -> bool {
     expected.eq_ignore_ascii_case(actual)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const HELLO_SHA256: &str = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+
+    #[test]
+    fn digest_policy_reports_missing_expected_digest_when_required() {
+        let err = DigestPolicy::sha256(None, true)
+            .verify(b"hello")
+            .expect_err("missing digest should fail when required");
+        assert!(matches!(err, VerificationError::DigestMissing));
+    }
+
+    #[test]
+    fn digest_policy_accepts_expected_digest_case_insensitively() {
+        let digest = DigestPolicy::sha256(Some(HELLO_SHA256.to_uppercase()), true)
+            .verify(b"hello")
+            .expect("digest should match case-insensitively");
+        assert_eq!(digest.algorithm, DigestAlgorithm::Sha256);
+        assert_eq!(digest.value, HELLO_SHA256);
+    }
+
+    #[test]
+    fn digest_policy_reports_actual_digest_on_mismatch() {
+        let err = DigestPolicy::sha256(Some("deadbeef".into()), true)
+            .verify(b"hello")
+            .expect_err("mismatch should fail");
+        assert!(matches!(
+            err,
+            VerificationError::DigestMismatch { ref expected, ref actual }
+                if expected == "deadbeef" && actual == HELLO_SHA256
+        ));
+    }
+
+    #[test]
+    fn signature_policy_only_fails_when_cosign_is_required() {
+        let optional = SignaturePolicy::cosign_optional()
+            .verify(b"hello")
+            .expect("optional cosign should be skipped");
+        assert!(matches!(optional, VerifiedSignature::Skipped));
+
+        let required = SignaturePolicy::cosign_required()
+            .verify(b"hello")
+            .expect_err("required cosign should fail until implemented");
+        assert!(matches!(
+            required,
+            VerificationError::SignatureNotImplemented(message)
+                if message.contains("cosign")
+        ));
+    }
+
+    #[test]
+    fn verification_policy_combines_digest_and_signature_results() {
+        let policy = VerificationPolicy {
+            digest: Some(DigestPolicy::sha256(Some(HELLO_SHA256.into()), true)),
+            signature: Some(SignaturePolicy::Disabled),
+        };
+
+        let report = policy
+            .verify(b"hello")
+            .expect("verification should succeed");
+        assert_eq!(report.digest.expect("digest report").value, HELLO_SHA256);
+        assert!(matches!(
+            report.signature.expect("signature report"),
+            VerifiedSignature::Skipped
+        ));
+    }
+}

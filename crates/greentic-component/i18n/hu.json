@@ -317,6 +317,8 @@
   "cli.help.a016": "Kiírja ezt az üzenetet vagy a megadott alparancs(ok) súgóját",
   "cli.help.a017": "Súgó kiírása",
   "cli.help.a018": "Verzió kiírása",
+  "cli.help.a019": "Kiírja az aktuális answers.json sémát, majd kilép",
+  "cli.help.a020": "Kiírja az aktuális answers.json sémát, majd kilép.\n\nAz olyan agentikus kódoló eszközöknek, mint a Codex és a Claude, ezt kell először meghívniuk, hogy lekérjék az aktuális válaszsémát, kitöltsék az answers.json fájlt, és nem interaktív módon újrajátsszák a varázslót.",
   "cli.wizard.error.add_operation_name_required": "az add_operation megköveteli az `operation_name` értéket",
   "cli.wizard.error.cargo_test_failed_in": "a cargo test meghiúsult itt: {}",
   "cli.wizard.error.create_flow_failed": "a varázsló létrehozási folyamata meghiúsult: {}",

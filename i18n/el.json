@@ -317,6 +317,8 @@
   "cli.help.a016": "Εκτύπωση αυτού του μηνύματος ή της βοήθειας του/των δοθέντος/δοθέντων υποεντολής(ών)",
   "cli.help.a017": "Εκτύπωση βοήθειας",
   "cli.help.a018": "Εκτύπωση έκδοσης",
+  "cli.help.a019": "Εκτύπωση του τρέχοντος σχήματος answers.json και έξοδος",
+  "cli.help.a020": "Εκτύπωση του τρέχοντος σχήματος answers.json και έξοδος.\n\nΕργαλεία agentic προγραμματισμού όπως τα Codex και Claude θα πρέπει να καλέσουν πρώτα αυτό για να ανακτήσουν το τρέχον σχήμα απαντήσεων, να συμπληρώσουν το answers.json και να επαναλάβουν τον οδηγό χωρίς αλληλεπίδραση.",
   "cli.wizard.error.add_operation_name_required": "το add_operation απαιτεί `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "το cargo test απέτυχε στο {}",
   "cli.wizard.error.create_flow_failed": "η ροή δημιουργίας του wizard απέτυχε: {}",

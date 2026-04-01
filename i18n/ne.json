@@ -317,6 +317,8 @@
   "cli.help.a016": "यो सन्देश वा दिइएको उपआदेश(हरू) को मद्दत छाप्नुहोस्",
   "cli.help.a017": "मद्दत छाप्नुहोस्",
   "cli.help.a018": "संस्करण प्रिन्ट गर्नुहोस्",
+  "cli.help.a019": "हालको answers.json स्किमा प्रिन्ट गरेर बाहिर निस्कनुहोस्",
+  "cli.help.a020": "हालको answers.json स्किमा प्रिन्ट गरेर बाहिर निस्कनुहोस्।\n\nCodex र Claude जस्ता एजेन्टिक कोडिङ उपकरणहरूले हालको answer स्किमा प्राप्त गर्न, answers.json भर्न, र विजार्डलाई non-interactively पुन: चलाउन पहिले यही कल गर्नुपर्छ।",
   "cli.wizard.error.add_operation_name_required": "add_operation लाई `operation_name` आवश्यक छ",
   "cli.wizard.error.cargo_test_failed_in": "cargo test {} मा असफल भयो",
   "cli.wizard.error.create_flow_failed": "wizard create flow असफल भयो: {}",

@@ -317,6 +317,8 @@
   "cli.help.a016": "Kuva see teade või antud alamkäsu(de) abi",
   "cli.help.a017": "Kuva abi",
   "cli.help.a018": "Kuva versioon",
+  "cli.help.a019": "Prindi praegune answers.json skeem ja välju",
+  "cli.help.a020": "Prindi praegune answers.json skeem ja välju.\n\nAgentipõhised kodeerimistööriistad nagu Codex ja Claude peaksid selle esmalt käivitama, et hankida praegune vastuste skeem, täita answers.json ja esitada viisard mitteinteraktiivselt uuesti.",
   "cli.wizard.error.add_operation_name_required": "add_operation nõuab `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test nurjus asukohas {}",
   "cli.wizard.error.create_flow_failed": "viisardi loomise voog nurjus: {}",

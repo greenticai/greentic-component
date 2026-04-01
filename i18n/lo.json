@@ -317,6 +317,8 @@
   "cli.help.a016": "ພິມຂໍ້ຄວາມນີ້ ຫຼື ຄູ່ມືຂອງ subcommand ທີ່ລະບຸ",
   "cli.help.a017": "ພິມຄູ່ມື",
   "cli.help.a018": "ພິມເວີຊັນ",
+  "cli.help.a019": "ພິມ schema ປັດຈຸບັນຂອງ answers.json ແລະອອກ",
+  "cli.help.a020": "ພິມ schema ປັດຈຸບັນຂອງ answers.json ແລະອອກ.\n\nເຄື່ອງມືຂຽນໂຄ້ດແບບ agentic ເຊັ່ນ Codex ແລະ Claude ຄວນເອີ້ນໃຊ້ອັນນີ້ກ່ອນ ເພື່ອດຶງ schema ຄໍາຕອບປັດຈຸບັນ, ຕື່ມ answers.json, ແລະຫຼິ້ນຊ້ຳ wizard ແບບບໍ່ໂຕ້ຕອບ.",
   "cli.wizard.error.add_operation_name_required": "add_operation ຕ້ອງການ `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test ລົ້ມເຫຼວໃນ {}",
   "cli.wizard.error.create_flow_failed": "ການສ້າງ flow ຂອງ wizard ລົ້ມເຫຼວ: {}",

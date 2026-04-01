@@ -317,6 +317,8 @@
   "cli.help.a016": "Kay willakuyta utaq qusqa subcomando(kuna)pa yanapayninta imprimiy",
   "cli.help.a017": "Yanapayta imprimiy",
   "cli.help.a018": "Versiónta qillqay",
+  "cli.help.a019": "Kunan answers.json schema nisqata qillqay hinaspa lluqsiy",
+  "cli.help.a020": "Kunan answers.json schema nisqata qillqay hinaspa lluqsiy.\n\nCodex hinallataq Claude hina agentic coding tools nisqakuna kayta ñawpaqta waqyayta tiyan kunan answer schema apamunankupaq, answers.json hunt'achinankupaq, hinaspa wizard nisqata mana rimanakuspa kutichinankupaq.",
   "cli.wizard.error.add_operation_name_required": "add_operationqa `operation_name` nisqa munakun",
   "cli.wizard.error.cargo_test_failed_in": "cargo test pantarqan {}pi",
   "cli.wizard.error.create_flow_failed": "wizard paqariy puriy pantarqan: {}",

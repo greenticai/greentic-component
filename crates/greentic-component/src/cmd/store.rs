@@ -215,3 +215,125 @@ fn resolve_output_paths(out: &std::path::Path) -> Result<(PathBuf, Option<PathBu
 
     Ok((out.to_path_buf(), None))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn resolve_output_paths_treats_existing_directory_as_output_dir() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let (out_dir, wasm) = resolve_output_paths(dir.path()).unwrap();
+        assert_eq!(out_dir, dir.path());
+        assert_eq!(wasm, None);
+    }
+
+    #[test]
+    fn resolve_output_paths_treats_file_like_path_as_wasm_override() {
+        let out = PathBuf::from("dist/component.wasm");
+        let (out_dir, wasm) = resolve_output_paths(&out).unwrap();
+        assert_eq!(out_dir, PathBuf::from("dist"));
+        assert_eq!(wasm, Some(out));
+    }
+
+    #[test]
+    fn resolve_source_prefers_manifest_artifact_inside_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let nested = dir.path().join("dist");
+        fs::create_dir_all(&nested).expect("dist dir");
+        let wasm = nested.join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+        fs::write(
+            dir.path().join("component.manifest.json"),
+            serde_json::to_string_pretty(&json!({
+                "artifacts": { "component_wasm": "dist/component.wasm" }
+            }))
+            .unwrap(),
+        )
+        .expect("write manifest");
+
+        let resolved = resolve_source(dir.path().to_str().unwrap()).unwrap();
+        assert!(resolved.ends_with("dist/component.wasm"));
+    }
+
+    #[test]
+    fn resolve_source_falls_back_to_component_wasm_in_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let resolved = resolve_source(dir.path().to_str().unwrap()).unwrap();
+        assert!(resolved.ends_with("component.wasm"));
+    }
+
+    #[test]
+    fn resolve_source_rejects_empty_directory_without_component_files() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let err = resolve_source(dir.path().to_str().unwrap()).expect_err("should fail");
+        assert!(
+            err.to_string()
+                .contains("does not contain component.manifest.json or component.wasm")
+        );
+    }
+
+    #[test]
+    fn resolve_source_passthroughs_non_directory_references() {
+        let source = "oci://registry.example.com/component:1.0.0";
+        assert_eq!(resolve_source(source).unwrap(), source);
+    }
+
+    #[test]
+    fn resolve_source_preserves_file_scheme_for_directory_inputs() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+        let source = format!("file://{}", dir.path().display());
+
+        let resolved = resolve_source(&source).expect("resolve file dir");
+
+        assert!(resolved.starts_with("file://"));
+        assert!(resolved.ends_with("component.wasm"));
+    }
+
+    #[test]
+    fn resolve_source_rejects_manifest_artifact_that_escapes_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("component.manifest.json"),
+            serde_json::to_string_pretty(&json!({
+                "artifacts": { "component_wasm": "../escape.wasm" }
+            }))
+            .unwrap(),
+        )
+        .expect("write manifest");
+
+        let err = resolve_source(dir.path().to_str().unwrap()).expect_err("escape should fail");
+
+        assert!(
+            err.to_string()
+                .contains("invalid artifacts.component_wasm path")
+        );
+    }
+
+    #[test]
+    fn resolve_output_paths_treats_existing_file_as_override_in_parent_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = dir.path().join("downloaded.wasm");
+        fs::write(&out, b"old").expect("write existing output");
+
+        let (out_dir, wasm) = resolve_output_paths(&out).expect("resolve output paths");
+
+        assert_eq!(out_dir, dir.path());
+        assert_eq!(wasm, Some(out));
+    }
+
+    #[test]
+    fn resolve_output_paths_treats_extensionless_missing_path_as_directory() {
+        let out = PathBuf::from("dist/component");
+        let (out_dir, wasm) = resolve_output_paths(&out).expect("resolve output paths");
+
+        assert_eq!(out_dir, out);
+        assert_eq!(wasm, None);
+    }
+}

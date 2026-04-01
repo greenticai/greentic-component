@@ -317,6 +317,8 @@
   "cli.help.a016": "Afișează acest mesaj sau ajutorul subcomenzii (subcomenzilor) date",
   "cli.help.a017": "Afișează ajutorul",
   "cli.help.a018": "Afișează versiunea",
+  "cli.help.a019": "Afișează schema curentă answers.json și ieși",
+  "cli.help.a020": "Afișează schema curentă answers.json și ieși.\n\nInstrumentele de programare agentică precum Codex și Claude ar trebui să apeleze mai întâi aceasta pentru a prelua schema curentă de răspuns, să completeze answers.json și să ruleze din nou expertul în mod neinteractiv.",
   "cli.wizard.error.add_operation_name_required": "add_operation necesită `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test a eșuat în {}",
   "cli.wizard.error.create_flow_failed": "fluxul de creare al asistentului a eșuat: {}",

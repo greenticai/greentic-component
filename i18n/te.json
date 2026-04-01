@@ -317,6 +317,8 @@
   "cli.help.a016": "ఈ సందేశాన్ని లేదా ఇచ్చిన ఉపకమాండ్(ల) సహాయాన్ని ముద్రించు",
   "cli.help.a017": "సహాయాన్ని ముద్రించు",
   "cli.help.a018": "వర్షన్ ముద్రించు",
+  "cli.help.a019": "ప్రస్తుత answers.json స్కీమాను ముద్రించి నిష్క్రమించండి",
+  "cli.help.a020": "ప్రస్తుత answers.json స్కీమాను ముద్రించి నిష్క్రమించండి.\n\nCodex మరియు Claude వంటి ఏజెంటిక్ కోడింగ్ సాధనాలు ప్రస్తుత సమాధాన స్కీమాను పొందడానికి, answers.json ను పూరించడానికి, మరియు విజార్డ్‌ను నాన్-ఇంటరాక్టివ్‌గా మళ్లీ నడపడానికి ముందుగా దీన్ని పిలవాలి.",
   "cli.wizard.error.add_operation_name_required": "add_operation కి `operation_name` అవసరం",
   "cli.wizard.error.cargo_test_failed_in": "{} లో cargo test విఫలమైంది",
   "cli.wizard.error.create_flow_failed": "wizard create flow విఫలమైంది: {}",

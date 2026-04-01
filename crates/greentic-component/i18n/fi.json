@@ -317,6 +317,8 @@
   "cli.help.a016": "Tulosta tämä viesti tai annetun alikomennon ohje",
   "cli.help.a017": "Tulosta ohje",
   "cli.help.a018": "Tulosta versio",
+  "cli.help.a019": "Tulosta nykyinen answers.json-skeema ja poistu",
+  "cli.help.a020": "Tulosta nykyinen answers.json-skeema ja poistu.\n\nAgenttipohjaisten koodaustyökalujen, kuten Codexin ja Clauden, tulee kutsua tätä ensin hakeakseen nykyisen vastausskeeman, täyttääkseen answers.json-tiedoston ja suorittaakseen ohjatun toiminnon uudelleen ilman vuorovaikutusta.",
   "cli.wizard.error.add_operation_name_required": "add_operation vaatii `operation_name`-arvon",
   "cli.wizard.error.cargo_test_failed_in": "cargo test epäonnistui kohteessa {}",
   "cli.wizard.error.create_flow_failed": "ohjatun luontiprosessin virtaus epäonnistui: {}",

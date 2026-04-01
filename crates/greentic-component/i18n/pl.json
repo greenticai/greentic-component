@@ -317,6 +317,8 @@
   "cli.help.a016": "Wyświetl ten komunikat lub pomoc dla podanego podpolecenia (podpoleceń)",
   "cli.help.a017": "Wyświetl pomoc",
   "cli.help.a018": "Wyświetl wersję",
+  "cli.help.a019": "Wyświetl bieżący schemat answers.json i zakończ",
+  "cli.help.a020": "Wyświetl bieżący schemat answers.json i zakończ.\n\nAgentowe narzędzia do kodowania, takie jak Codex i Claude, powinny najpierw wywołać to polecenie, aby pobrać bieżący schemat odpowiedzi, wypełnić answers.json i ponownie odtworzyć kreator w trybie nieinteraktywnym.",
   "cli.wizard.error.add_operation_name_required": "add_operation wymaga `operation_name`",
   "cli.wizard.error.cargo_test_failed_in": "cargo test nie powiodło się w {}",
   "cli.wizard.error.create_flow_failed": "przepływ tworzenia kreatora nie powiódł się: {}",

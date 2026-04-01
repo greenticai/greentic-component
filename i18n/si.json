@@ -317,6 +317,8 @@
   "cli.help.a016": "මෙම පණිවිඩය හෝ ලබාදී ඇති උපවිධාන(ය) සඳහා උපකාරය මුද්‍රණය කරන්න",
   "cli.help.a017": "උපකාරය මුද්‍රණය කරන්න",
   "cli.help.a018": "අනුවාදය මුද්‍රණය කරන්න",
+  "cli.help.a019": "වර්තමාන answers.json ස්කීමාව මුද්‍රණය කර පිටවන්න",
+  "cli.help.a020": "වර්තමාන answers.json ස්කීමාව මුද්‍රණය කර පිටවන්න.\n\nCodex සහ Claude වැනි agentic coding tools වර්තමාන පිළිතුරු ස්කීමාව ලබාගැනීමට, answers.json පුරවා ගැනීමට, සහ wizard එක අන්තර්ක්‍රියාකාරී නොවන ආකාරයෙන් නැවත ධාවනය කිරීමට පළමුව මෙය කැඳවිය යුතුය.",
   "cli.wizard.error.add_operation_name_required": "add_operation සඳහා `operation_name` අවශ්‍යයි",
   "cli.wizard.error.cargo_test_failed_in": "cargo test {} හි අසාර්ථක විය",
   "cli.wizard.error.create_flow_failed": "wizard create flow අසාර්ථක විය: {}",

@@ -317,6 +317,8 @@
   "cli.help.a016": "یہ پیغام یا دیے گئے ذیلی کمانڈ(ز) کی مدد پرنٹ کریں",
   "cli.help.a017": "مدد پرنٹ کریں",
   "cli.help.a018": "ورژن پرنٹ کریں",
+  "cli.help.a019": "موجودہ answers.json اسکیما پرنٹ کریں اور باہر نکلیں",
+  "cli.help.a020": "موجودہ answers.json اسکیما پرنٹ کریں اور باہر نکلیں۔\n\nCodex اور Claude جیسے ایجنٹک کوڈنگ ٹولز کو موجودہ جوابی اسکیما حاصل کرنے، answers.json بھرنے، اور وزرڈ کو غیر تعاملی طور پر دوبارہ چلانے کے لیے پہلے یہ کال کرنی چاہیے۔",
   "cli.wizard.error.add_operation_name_required": "add_operation کے لیے `operation_name` درکار ہے",
   "cli.wizard.error.cargo_test_failed_in": "cargo test {} میں ناکام ہو گیا",
   "cli.wizard.error.create_flow_failed": "wizard create flow ناکام ہو گیا: {}",

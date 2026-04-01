@@ -192,3 +192,98 @@ impl core::fmt::Display for CapabilityError {
 }
 
 impl std::error::Error for CapabilityError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use greentic_types::{
+        SecretFormat, SecretKey, SecretRequirement, SecretScope, component::ComponentCapabilities,
+    };
+
+    fn baseline_caps() -> Capabilities {
+        ComponentCapabilities {
+            wasi: WasiCapabilities {
+                filesystem: None,
+                env: None,
+                random: false,
+                clocks: false,
+            },
+            host: HostCapabilities {
+                messaging: None,
+                events: None,
+                http: None,
+                secrets: None,
+                state: None,
+                telemetry: None,
+                iac: None,
+            },
+        }
+    }
+
+    fn secret_requirement(key: &str) -> SecretRequirement {
+        let mut requirement = SecretRequirement::default();
+        requirement.key = SecretKey::new(key).expect("valid secret key");
+        requirement.required = true;
+        requirement.scope = Some(SecretScope {
+            env: "dev".into(),
+            tenant: "tenant-a".into(),
+            team: None,
+        });
+        requirement.format = Some(SecretFormat::Text);
+        requirement
+    }
+
+    #[test]
+    fn rejects_filesystem_access_without_mounts() {
+        let mut caps = baseline_caps();
+        caps.wasi.filesystem = Some(FilesystemCapabilities {
+            mode: FilesystemMode::ReadOnly,
+            mounts: vec![],
+        });
+
+        let err = validate_capabilities(&caps).expect_err("filesystem policy should be invalid");
+        assert_eq!(err.path, "wasi.filesystem.mounts");
+    }
+
+    #[test]
+    fn rejects_duplicate_secret_requirements() {
+        let mut caps = baseline_caps();
+        caps.host.secrets = Some(SecretsCapabilities {
+            required: vec![
+                secret_requirement("API_TOKEN"),
+                secret_requirement("API_TOKEN"),
+            ],
+        });
+
+        let err = validate_capabilities(&caps).expect_err("duplicate secrets should be rejected");
+        assert_eq!(err.path, "host.secrets.required");
+        assert!(err.message.contains("API_TOKEN"));
+    }
+
+    #[test]
+    fn rejects_blank_secret_team_when_present() {
+        let mut requirement = secret_requirement("API_TOKEN");
+        requirement.scope.as_mut().expect("scope").team = Some("   ".into());
+
+        let mut caps = baseline_caps();
+        caps.host.secrets = Some(SecretsCapabilities {
+            required: vec![requirement],
+        });
+
+        let err =
+            validate_capabilities(&caps).expect_err("blank team should be structurally invalid");
+        assert_eq!(err.path, "host.secrets.required.scope.team");
+    }
+
+    #[test]
+    fn rejects_iac_capability_with_no_enabled_actions() {
+        let mut caps = baseline_caps();
+        caps.host.iac = Some(IaCCapabilities {
+            write_templates: false,
+            execute_plans: false,
+        });
+
+        let err = validate_capabilities(&caps).expect_err("iac must enable something");
+        assert_eq!(err.path, "host.iac");
+    }
+}

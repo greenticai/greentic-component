@@ -317,6 +317,8 @@
   "cli.help.a016": "ਇਹ ਸੁਨੇਹਾ ਜਾਂ ਦਿੱਤੇ ਗਏ subcommand(s) ਦੀ ਮਦਦ ਪ੍ਰਿੰਟ ਕਰੋ",
   "cli.help.a017": "ਮਦਦ ਪ੍ਰਿੰਟ ਕਰੋ",
   "cli.help.a018": "ਵਰਜਨ ਪ੍ਰਿੰਟ ਕਰੋ",
+  "cli.help.a019": "ਮੌਜੂਦਾ answers.json ਸਕੀਮਾ ਪ੍ਰਿੰਟ ਕਰੋ ਅਤੇ ਬਾਹਰ ਨਿਕਲੋ",
+  "cli.help.a020": "ਮੌਜੂਦਾ answers.json ਸਕੀਮਾ ਪ੍ਰਿੰਟ ਕਰੋ ਅਤੇ ਬਾਹਰ ਨਿਕਲੋ।\n\nCodex ਅਤੇ Claude ਵਰਗੇ ਏਜੈਂਟਿਕ ਕੋਡਿੰਗ ਟੂਲਜ਼ ਨੂੰ ਮੌਜੂਦਾ answer schema ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਪਹਿਲਾਂ ਇਹ ਕਾਲ ਕਰਨੀ ਚਾਹੀਦੀ ਹੈ, answers.json ਭਰਨਾ ਚਾਹੀਦਾ ਹੈ, ਅਤੇ ਵਿਜ਼ਾਰਡ ਨੂੰ ਬਿਨਾਂ ਇੰਟਰਐਕਟਿਵ ਤਰੀਕੇ ਨਾਲ ਮੁੜ ਚਲਾਉਣਾ ਚਾਹੀਦਾ ਹੈ।",
   "cli.wizard.error.add_operation_name_required": "add_operation ਲਈ `operation_name` ਲਾਜ਼ਮੀ ਹੈ",
   "cli.wizard.error.cargo_test_failed_in": "cargo test {} ਵਿੱਚ ਅਸਫਲ ਰਿਹਾ",
   "cli.wizard.error.create_flow_failed": "wizard create flow ਅਸਫਲ ਰਹੀ: {}",

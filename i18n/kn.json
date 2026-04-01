@@ -317,6 +317,8 @@
   "cli.help.a016": "ಈ ಸಂದೇಶವನ್ನು ಅಥವಾ ನೀಡಿದ ಉಪಆಜ್ಞೆ(ಗಳು)ದ ಸಹಾಯವನ್ನು ಮುದ್ರಿಸಿ",
   "cli.help.a017": "ಸಹಾಯ ಮುದ್ರಿಸಿ",
   "cli.help.a018": "ಆವೃತ್ತಿಯನ್ನು ಮುದ್ರಿಸಿ",
+  "cli.help.a019": "ಪ್ರಸ್ತುತ answers.json ಸ್ಕೀಮಾವನ್ನು ಮುದ್ರಿಸಿ ಮತ್ತು ನಿರ್ಗಮಿಸಿ",
+  "cli.help.a020": "ಪ್ರಸ್ತುತ answers.json ಸ್ಕೀಮಾವನ್ನು ಮುದ್ರಿಸಿ ಮತ್ತು ನಿರ್ಗಮಿಸಿ.\n\nCodex ಮತ್ತು Claude ಮುಂತಾದ ಏಜೆಂಟಿಕ್ ಕೋಡಿಂಗ್ ಸಾಧನಗಳು ಪ್ರಸ್ತುತ ಉತ್ತರ ಸ್ಕೀಮಾವನ್ನು ಪಡೆಯಲು, answers.json ಅನ್ನು ಭರ್ತಿ ಮಾಡಲು, ಮತ್ತು ವಿಜಾರ್ಡ್ ಅನ್ನು ಪರಸ್ಪರ ಕ್ರಿಯೆಯಿಲ್ಲದೆ ಮರುಚಲಾಯಿಸಲು ಮೊದಲು ಇದನ್ನು ಕರೆ ಮಾಡಬೇಕು.",
   "cli.wizard.error.add_operation_name_required": "add_operation ಗೆ `operation_name` ಅಗತ್ಯವಿದೆ",
   "cli.wizard.error.cargo_test_failed_in": "{} ನಲ್ಲಿ cargo test ವಿಫಲವಾಗಿದೆ",
   "cli.wizard.error.create_flow_failed": "wizard create flow ವಿಫಲವಾಗಿದೆ: {}",
