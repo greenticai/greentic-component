@@ -67,6 +67,9 @@ pub fn main() -> Result<()> {
         Ok(matches) => matches,
         Err(err) => err.exit(),
     };
+    if let Some(result) = cmd::wizard::maybe_run_schema_from_matches(&matches) {
+        return result;
+    }
     let cli = Cli::from_arg_matches(&matches).map_err(|err| Error::msg(err.to_string()))?;
     cmd::i18n::init(cli.locale.clone());
     let engine = ScaffoldEngine::new();
@@ -151,6 +154,21 @@ fn localize_help(mut command: clap::Command, is_root: bool) -> clap::Command {
         .map(|sub| sub.get_name().to_string())
         .collect::<Vec<_>>();
     for name in sub_names {
+        if name == "wizard" {
+            command = command.mut_subcommand(name.clone(), |sub| {
+                sub.arg(
+                    Arg::new("schema")
+                        .long("schema")
+                        .action(ArgAction::SetTrue)
+                        .help(cmd::i18n::tr_lit(
+                            "Print the current answers.json schema and exit",
+                        ))
+                        .long_help(cmd::i18n::tr_lit(
+                            "Print the current answers.json schema and exit.\n\nAgentic coding tools such as Codex and Claude should call this first to fetch the current answer schema, fill out answers.json, and replay the wizard non-interactively.",
+                        )),
+                )
+            });
+        }
         command = command.mut_subcommand(name, |sub| localize_help(sub, false));
     }
     command
