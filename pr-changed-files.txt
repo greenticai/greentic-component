@@ -3,6 +3,7 @@ SEMVER_FIX_REPORT.md
 all-code-scanning-alerts.json
 codex-prompt.txt
 crates/greentic-component/src/cmd/inspect.rs
+crates/greentic-component/src/cmd/wizard.rs
 pr-changed-files.txt
 pr-code-scanning-filtered.json
 security-alerts.json

@@ -1,26 +1,23 @@
 # Security Fix Report
 
-## Scope
-- Processed provided security alerts JSON.
-- `dependabot`: no alerts.
-- `code_scanning`: 1 open alert (`rust/cleartext-logging`) in `crates/greentic-component/src/cmd/inspect.rs`.
+## Context
+Addressed CodeQL alert for cleartext logging in the Rust CLI inspector.
 
-## Remediation Applied
-### Alert #10: `rust/cleartext-logging`
+## Alert Remediated
+- Alert: `rust/cleartext-logging` (CodeQL alert #10)
+- Severity: high
 - File: `crates/greentic-component/src/cmd/inspect.rs`
 - Location: line 457
-- Issue: cleartext logging of potentially sensitive profile data via debug formatting.
+- Finding: logged `manifest.profiles.len()` to output/log stream.
 
-### Change made
-- Replaced direct cleartext output of profiles:
-  - From: `println!("  profiles: {:?}", manifest.profiles);`
-  - To: `println!("  profiles count: {}", manifest.profiles.len());`
+## Fix Applied
+- Removed the `println!` statement that emitted the profile count:
+  - Removed: `println!("  profiles count: {}", manifest.profiles.len());`
 
-## Security Impact
-- Eliminates direct emission of profile contents to logs/stdout.
-- Preserves useful operational visibility by reporting only count metadata.
-- Change is minimal and low-risk, limited to output formatting.
+## Why This Is Safe
+- Eliminates logging of data derived from potentially sensitive manifest profile content.
+- No behavioral impact to core processing logic; only diagnostic output was reduced.
 
-## Files Modified
-- `crates/greentic-component/src/cmd/inspect.rs`
-- `SECURITY_FIX_REPORT.md`
+## Validation
+- Performed source inspection to confirm the sensitive-derived log line was removed.
+- No additional sensitive logging was introduced by this change.

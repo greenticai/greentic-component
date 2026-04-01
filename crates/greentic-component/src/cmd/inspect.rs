@@ -454,7 +454,6 @@ fn inspect_artifact(args: &InspectArgs) -> Result<InspectResult, ComponentError>
                 println!("  supports: {:?}", manifest.supports);
             }
             println!("  capabilities: {:?}", manifest.capabilities);
-            println!("  profiles count: {}", manifest.profiles.len());
             if let Some(limits) = &manifest.limits {
                 println!(
                     "  limits: memory_mb={} wall_time_ms={} fuel={:?} files={:?}",
