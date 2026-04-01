@@ -1,59 +1,59 @@
 [1m[32m    Building[0m greentic-component v0.4.75 (current)
-[1m[32m       Built[0m [ 152.986s] (current)
+[1m[32m       Built[0m [ 139.049s] (current)
 [1m[32m     Parsing[0m greentic-component v0.4.75 (current)
-[1m[32m      Parsed[0m [   0.101s] (current)
+[1m[32m      Parsed[0m [   0.092s] (current)
 [1m[32m    Building[0m greentic-component v0.4.74 (baseline)
-[1m[32m       Built[0m [ 154.312s] (baseline)
+[1m[32m       Built[0m [ 138.680s] (baseline)
 [1m[32m     Parsing[0m greentic-component v0.4.74 (baseline)
-[1m[32m      Parsed[0m [   0.093s] (baseline)
+[1m[32m      Parsed[0m [   0.090s] (baseline)
 [1m[32m    Checking[0m greentic-component v0.4.74 -> v0.4.75 (minor change)
-[1m[31m     Checked[0m [   0.102s] 196 checks: 195 pass, 1 fail, 0 warn, 56 skip
+[1m[31m     Checked[0m [   0.104s] 196 checks: 195 pass, 1 fail, 0 warn, 56 skip
 
---- failure struct_marked_non_exhaustive: struct marked #[non_exhaustive] ---
+--- failure constructible_struct_adds_field: externally-constructible struct adds field ---
 
 [1mDescription:[0m
-A public struct has been marked #[non_exhaustive], which will prevent it from being constructed using a struct literal outside of its crate. It previously had no private fields, so a struct literal could be used to construct it outside its crate.
-        ref: https://doc.rust-lang.org/cargo/reference/semver.html#attr-adding-non-exhaustive
-       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.47.0/src/lints/struct_marked_non_exhaustive.ron
+A pub struct constructible with a struct literal has a new pub field. Existing struct literals must be updated to include the new field.
+        ref: https://doc.rust-lang.org/reference/expressions/struct-expr.html
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.47.0/src/lints/constructible_struct_adds_field.ron
 
 [1mFailed in:[0m
-  struct WizardArgs in /home/runner/work/greentic-component/greentic-component/crates/greentic-component/src/cmd/wizard.rs:59
+  field WizardArgs.schema in /home/runner/work/greentic-component/greentic-component/crates/greentic-component/src/cmd/wizard.rs:65
 
 [1m[31m     Summary[0m semver requires new major version: 1 major and 0 minor checks failed
-[1m[32m    Finished[0m [ 313.111s] greentic-component
+[1m[32m    Finished[0m [ 283.193s] greentic-component
 [1m[32m    Building[0m greentic-component-manifest v0.4.75 (current)
-[1m[32m       Built[0m [  45.857s] (current)
+[1m[32m       Built[0m [  42.860s] (current)
 [1m[32m     Parsing[0m greentic-component-manifest v0.4.75 (current)
-[1m[32m      Parsed[0m [   0.007s] (current)
+[1m[32m      Parsed[0m [   0.008s] (current)
 [1m[32m    Building[0m greentic-component-manifest v0.4.74 (baseline)
-[1m[32m       Built[0m [  45.932s] (baseline)
+[1m[32m       Built[0m [  42.440s] (baseline)
 [1m[32m     Parsing[0m greentic-component-manifest v0.4.74 (baseline)
 [1m[32m      Parsed[0m [   0.007s] (baseline)
 [1m[32m    Checking[0m greentic-component-manifest v0.4.74 -> v0.4.75 (minor change)
-[1m[32m     Checked[0m [   0.020s] 196 checks: 196 pass, 56 skip
+[1m[32m     Checked[0m [   0.019s] 196 checks: 196 pass, 56 skip
 [1m[32m     Summary[0m no semver update required
-[1m[32m    Finished[0m [  93.990s] greentic-component-manifest
+[1m[32m    Finished[0m [  87.371s] greentic-component-manifest
 [1m[32m    Building[0m greentic-component-runtime v0.4.75 (current)
-[1m[32m       Built[0m [ 136.835s] (current)
+[1m[32m       Built[0m [ 123.145s] (current)
 [1m[32m     Parsing[0m greentic-component-runtime v0.4.75 (current)
-[1m[32m      Parsed[0m [   0.015s] (current)
+[1m[32m      Parsed[0m [   0.016s] (current)
 [1m[32m    Building[0m greentic-component-runtime v0.4.74 (baseline)
-[1m[32m       Built[0m [ 127.010s] (baseline)
+[1m[32m       Built[0m [ 122.376s] (baseline)
 [1m[32m     Parsing[0m greentic-component-runtime v0.4.74 (baseline)
-[1m[32m      Parsed[0m [   0.013s] (baseline)
+[1m[32m      Parsed[0m [   0.015s] (baseline)
 [1m[32m    Checking[0m greentic-component-runtime v0.4.74 -> v0.4.75 (minor change)
 [1m[32m     Checked[0m [   0.016s] 196 checks: 196 pass, 56 skip
 [1m[32m     Summary[0m no semver update required
-[1m[32m    Finished[0m [ 267.511s] greentic-component-runtime
+[1m[32m    Finished[0m [ 248.845s] greentic-component-runtime
 [1m[32m    Building[0m greentic-component-store v0.4.75 (current)
-[1m[32m       Built[0m [  30.585s] (current)
+[1m[32m       Built[0m [  31.790s] (current)
 [1m[32m     Parsing[0m greentic-component-store v0.4.75 (current)
-[1m[32m      Parsed[0m [   0.005s] (current)
+[1m[32m      Parsed[0m [   0.006s] (current)
 [1m[32m    Building[0m greentic-component-store v0.4.74 (baseline)
-[1m[32m       Built[0m [  31.377s] (baseline)
+[1m[32m       Built[0m [  32.077s] (baseline)
 [1m[32m     Parsing[0m greentic-component-store v0.4.74 (baseline)
 [1m[32m      Parsed[0m [   0.005s] (baseline)
 [1m[32m    Checking[0m greentic-component-store v0.4.74 -> v0.4.75 (minor change)
-[1m[32m     Checked[0m [   0.018s] 196 checks: 196 pass, 56 skip
+[1m[32m     Checked[0m [   0.019s] 196 checks: 196 pass, 56 skip
 [1m[32m     Summary[0m no semver update required
-[1m[32m    Finished[0m [  63.254s] greentic-component-store
+[1m[32m    Finished[0m [  65.828s] greentic-component-store
