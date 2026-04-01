@@ -127,7 +127,7 @@ pub fn run(args: &InspectArgs) -> Result<InspectResult, ComponentError> {
                 .unwrap_or("<none>")
         );
         println!("  describe versions: {}", prepared.describe.versions.len());
-        println!("  redaction paths: {}", prepared.redaction_paths().len());
+        println!("  redaction paths: [redacted]");
         println!("  defaults applied: {}", prepared.defaults_applied().len());
     }
     Ok(InspectResult::default())
