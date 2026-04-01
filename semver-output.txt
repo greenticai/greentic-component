@@ -1,24 +1,3 @@
-You are operating in a CI environment as a Rust Semver Reviewer.
-
-Task:
-1) Analyze the cargo-semver-checks violations listed below.
-2) Apply minimal, safe fixes to resolve each violation.
-3) Write SEMVER_FIX_REPORT.md summarizing your actions.
-
-Fix strategies (in order of preference):
-- For "enum variant added on exhaustive enum": add #[non_exhaustive] to the enum.
-- For "constructible struct adds field": add #[non_exhaustive] to the struct.
-- For "enum variant discriminant changed": add explicit discriminant values to preserve the original ordering, OR add #[non_exhaustive].
-- For removed/renamed public items: restore the old item as a deprecated alias if possible.
-- As a last resort: bump the crate version (minor for 0.x crates, major for 1.x+).
-
-Important rules:
-- Do NOT change any logic or behavior — only add attributes or version bumps.
-- Do NOT modify test files unless a test directly asserts on a removed item.
-- Prefer #[non_exhaustive] over version bumps — it is the least disruptive fix.
-- If adding #[non_exhaustive], also ensure existing match arms have a wildcard `_ => {}` catch-all where needed in the same crate.
-
-cargo-semver-checks output:
 [1m[32m    Building[0m greentic-component v0.4.75 (current)
 [1m[32m       Built[0m [ 148.386s] (current)
 [1m[32m     Parsing[0m greentic-component v0.4.75 (current)
