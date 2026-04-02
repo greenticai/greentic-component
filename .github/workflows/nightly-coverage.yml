@@ -3,8 +3,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: nightly-coverage
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   RUST_VERSION: "1.91.0"
