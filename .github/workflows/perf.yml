@@ -3,7 +3,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: perf-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
