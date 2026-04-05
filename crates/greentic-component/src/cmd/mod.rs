@@ -5,6 +5,7 @@ pub mod flow;
 pub mod hash;
 pub mod i18n;
 pub mod inspect;
+pub mod manifest;
 pub mod new;
 pub mod path;
 pub mod post;

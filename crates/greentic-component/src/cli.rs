@@ -7,8 +7,8 @@ use clap::{Arg, ArgAction, CommandFactory, FromArgMatches, Parser, Subcommand};
 use crate::cmd::store::StoreCommand;
 use crate::cmd::{
     self, build::BuildArgs, doctor::DoctorArgs, flow::FlowCommand, hash::HashArgs,
-    inspect::InspectArgs, new::NewArgs, templates::TemplatesArgs, test::TestArgs,
-    wizard::WizardCliArgs,
+    inspect::InspectArgs, manifest::ManifestArgs, new::NewArgs, templates::TemplatesArgs,
+    test::TestArgs, wizard::WizardCliArgs,
 };
 use crate::scaffold::engine::ScaffoldEngine;
 
@@ -43,6 +43,8 @@ enum Commands {
     Hash(HashArgs),
     /// Build component wasm + update config flows
     Build(BuildArgs),
+    /// Generate component.manifest.json from a WASM component's describe() export
+    Manifest(ManifestArgs),
     /// Invoke a component locally with an in-memory state/secrets harness
     #[command(
         long_about = "Invoke a component locally with in-memory state/secrets. \
@@ -91,6 +93,7 @@ pub fn main() -> Result<()> {
         }
         Commands::Hash(args) => cmd::hash::run(args),
         Commands::Build(args) => cmd::build::run(args),
+        Commands::Manifest(args) => cmd::manifest::run(args),
         Commands::Test(args) => cmd::test::run(*args),
         Commands::Flow(flow_cmd) => cmd::flow::run(flow_cmd),
         #[cfg(feature = "store")]
