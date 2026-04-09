@@ -75,3 +75,63 @@ impl ComponentError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn code_maps_key_error_variants_to_stable_strings() {
+        assert_eq!(
+            ComponentError::Doctor("oops".into()).code(),
+            "doctor-failure"
+        );
+        assert_eq!(
+            ComponentError::SchemaQualityEmpty {
+                component: "demo".into(),
+                operation: "run".into(),
+                direction: "input",
+                suggestion: "add fields".into(),
+            }
+            .code(),
+            "E_OP_SCHEMA_EMPTY"
+        );
+        assert_eq!(
+            ComponentError::Capability(CapabilityError::invalid("host.http", "denied")).code(),
+            "capability-error"
+        );
+        assert_eq!(
+            ComponentError::Signing(SigningError::HashMismatch {
+                expected: "a".into(),
+                found: "b".into(),
+            })
+            .code(),
+            "hash-mismatch"
+        );
+    }
+
+    #[test]
+    fn code_distinguishes_abi_and_describe_subclasses() {
+        #[cfg(feature = "abi")]
+        {
+            assert_eq!(
+                ComponentError::Abi(AbiError::MissingWasiTarget).code(),
+                "wasi-target-missing"
+            );
+        }
+        #[cfg(feature = "describe")]
+        {
+            assert_eq!(
+                ComponentError::Describe(DescribeError::NotFound("describe".into())).code(),
+                "describe-missing"
+            );
+        }
+        #[cfg(feature = "loader")]
+        {
+            assert_eq!(
+                ComponentError::Load(LoadError::NotFound("demo".into())).code(),
+                "component-load"
+            );
+        }
+    }
+}

@@ -109,23 +109,17 @@ fn minimal_manifest() -> JsonValue {
 fn build_emits_pack_valid_config_flow() {
     let temp = TempDir::new().expect("tempdir");
     let manifest_path = temp.path().join("component.manifest.json");
-    let manifest = minimal_manifest();
+    let mut manifest = minimal_manifest();
+    manifest["operations"][0]["input_schema"] = serde_json::json!({
+        "type": "object",
+        "properties": { "title": { "type": "string", "default": "Hi" } },
+        "required": ["title"]
+    });
     fs::write(
         &manifest_path,
         serde_json::to_string_pretty(&manifest).unwrap(),
     )
     .expect("write manifest");
-    let schema_dir = temp.path().join("schemas/io");
-    fs::create_dir_all(&schema_dir).expect("schema dir");
-    fs::write(
-        schema_dir.join("input.schema.json"),
-        r#"{
-  "type": "object",
-  "properties": { "title": { "type": "string", "default": "Hi" } },
-  "required": ["title"]
-}"#,
-    )
-    .expect("write input schema");
 
     write_component_wasm(temp.path(), "component.wasm");
     let fake_cargo = write_fake_cargo(temp.path());

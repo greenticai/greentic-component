@@ -21,6 +21,8 @@ use crate::cmd::i18n;
 use crate::config::{
     ConfigInferenceOptions, ConfigSchemaSource, load_manifest_with_schema, resolve_manifest_path,
 };
+use crate::describe::{DescribePayload, from_wit_world};
+use crate::embedded_descriptor::embed_and_verify_wasm;
 use crate::parse_manifest;
 use crate::path_safety::normalize_under_root;
 use crate::schema_quality::{SchemaQualityMode, validate_operation_schemas};
@@ -133,10 +135,18 @@ pub fn run(args: BuildArgs) -> Result<()> {
         .as_ref()
         .map(|outcome| outcome.manifest.clone())
         .unwrap_or_else(|| config.manifest.clone());
+    let canonical_manifest = parse_manifest(
+        &serde_json::to_string(&manifest_to_write)
+            .context("failed to serialize manifest for embedded descriptor")?,
+    )
+    .context("failed to parse canonical manifest for embedded descriptor")?;
 
     let manifest_dir = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     build_wasm(manifest_dir, &cargo_bin, &manifest_to_write)?;
     check_canonical_world_export(manifest_dir, &manifest_to_write)?;
+    let wasm_path_for_embedding = resolve_wasm_path(manifest_dir, &manifest_to_write)?;
+    embed_and_verify_wasm(&wasm_path_for_embedding, &canonical_manifest)
+        .context("failed to embed canonical manifest into built wasm")?;
 
     if !config.persist_schema {
         manifest_to_write
@@ -202,6 +212,7 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
             if let Some(flags) = resolved_wasm_rustflags() {
                 cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
             }
+            maybe_add_offline_flag(&mut cmd);
             let status = cmd
                 .arg("component")
                 .arg("build")
@@ -238,6 +249,7 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
     if let Some(flags) = resolved_wasm_rustflags() {
         cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
     }
+    maybe_add_offline_flag(&mut cmd);
     let status = cmd
         .arg("build")
         .arg("--target")
@@ -262,6 +274,28 @@ fn cargo_component_available(cargo_bin: &Path) -> bool {
         .arg("--version")
         .status()
         .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn maybe_add_offline_flag(cmd: &mut Command) {
+    if cargo_offline_requested() {
+        cmd.arg("--offline");
+    }
+}
+
+fn cargo_offline_requested() -> bool {
+    env_truthy(env::var_os("CARGO_NET_OFFLINE").as_deref())
+}
+
+fn env_truthy(value: Option<&std::ffi::OsStr>) -> bool {
+    value
+        .and_then(|raw| raw.to_str())
+        .map(|raw| {
+            matches!(
+                raw.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
         .unwrap_or(false)
 }
 
@@ -400,12 +434,35 @@ fn emit_describe_artifacts(
 ) -> Result<()> {
     let abi_version = read_abi_version(manifest_dir);
     let require_describe = abi_version.as_deref() == Some("0.6.0");
+    let manifest_model = parse_manifest(
+        &serde_json::to_string(manifest).context("failed to serialize manifest for describe")?,
+    )
+    .context("failed to parse manifest for describe")?;
 
     let describe_bytes = match call_describe(wasm_path) {
         Ok(bytes) => bytes,
         Err(err) => {
             if require_describe {
-                return Err(anyhow!("describe failed: {err}"));
+                match from_wit_world(wasm_path, manifest_model.world.as_str()) {
+                    Ok(payload) => {
+                        write_wit_describe_artifacts(
+                            manifest_dir,
+                            manifest,
+                            wasm_path,
+                            abi_version.as_deref(),
+                            &payload,
+                        )?;
+                        eprintln!(
+                            "warning: describe export unavailable, emitted WIT-derived describe.json instead ({err})"
+                        );
+                        return Ok(());
+                    }
+                    Err(wit_err) => {
+                        return Err(anyhow!(
+                            "describe failed: {err}; WIT fallback failed: {wit_err}"
+                        ));
+                    }
+                }
             }
             eprintln!("warning: skipping describe artifacts ({err})");
             return Ok(());
@@ -430,6 +487,38 @@ fn emit_describe_artifacts(
 
     let describe_json_path = dist_dir.join(format!("{base}.describe.json"));
     let json = serde_json::to_string_pretty(&describe)?;
+    fs::write(&describe_json_path, json + "\n")
+        .with_context(|| format!("failed to write {}", describe_json_path.display()))?;
+
+    let wasm_out = dist_dir.join(format!("{base}.wasm"));
+    if wasm_out != wasm_path {
+        let _ = fs::copy(wasm_path, &wasm_out);
+    }
+
+    Ok(())
+}
+
+fn write_wit_describe_artifacts(
+    manifest_dir: &Path,
+    manifest: &JsonValue,
+    wasm_path: &Path,
+    abi_version: Option<&str>,
+    payload: &DescribePayload,
+) -> Result<()> {
+    let dist_dir = manifest_dir.join("dist");
+    fs::create_dir_all(&dist_dir)
+        .with_context(|| format!("failed to create {}", dist_dir.display()))?;
+
+    let (name, abi_underscore) = artifact_basename(manifest, wasm_path, abi_version);
+    let base = format!("{name}__{abi_underscore}");
+    let describe_cbor_path = dist_dir.join(format!("{base}.describe.cbor"));
+    let cbor = canonical::to_canonical_cbor_allow_floats(payload)
+        .map_err(|err| anyhow!("describe fallback canonicalization failed: {err}"))?;
+    fs::write(&describe_cbor_path, cbor)
+        .with_context(|| format!("failed to write {}", describe_cbor_path.display()))?;
+
+    let describe_json_path = dist_dir.join(format!("{base}.describe.json"));
+    let json = serde_json::to_string_pretty(payload)?;
     fs::write(&describe_json_path, json + "\n")
         .with_context(|| format!("failed to write {}", describe_json_path.display()))?;
 
@@ -476,7 +565,13 @@ fn artifact_basename(
 
 fn sanitize_name(raw: &str) -> String {
     raw.chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' {
+                ch
+            } else {
+                '_'
+            }
+        })
         .collect::<String>()
         .trim_matches('_')
         .to_string()
@@ -579,5 +674,104 @@ impl WasiView for BuildWasi {
             ctx: &mut self.ctx,
             table: &mut self.table,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+    use std::path::Path;
+
+    use serde_json::json;
+    use wasmtime::component::Val;
+
+    use super::{
+        env_truthy, path_string_relative, resolve_wasm_path, sanitize_name,
+        sanitize_wasm_rustflags, strip_self_describe_tag, val_to_bytes,
+    };
+
+    #[test]
+    fn sanitize_name_preserves_hyphens_for_dist_artifacts() {
+        assert_eq!(
+            sanitize_name("wizard-smoke-advanced"),
+            "wizard-smoke-advanced"
+        );
+        assert_eq!(
+            sanitize_name("wizard_smoke_advanced"),
+            "wizard_smoke_advanced"
+        );
+    }
+
+    #[test]
+    fn env_truthy_accepts_common_true_spellings() {
+        for value in ["1", "true", "TRUE", " yes ", "on"] {
+            assert!(
+                env_truthy(Some(OsStr::new(value))),
+                "{value} should be truthy"
+            );
+        }
+    }
+
+    #[test]
+    fn env_truthy_rejects_falsey_and_missing_values() {
+        for value in [
+            None,
+            Some(OsStr::new("0")),
+            Some(OsStr::new("false")),
+            Some(OsStr::new("")),
+        ] {
+            assert!(!env_truthy(value));
+        }
+    }
+
+    #[test]
+    fn sanitize_wasm_rustflags_drops_unsupported_linker_args() {
+        let sanitized = sanitize_wasm_rustflags(
+            "-C opt-level=z -Wl,--export-table -C link-arg=--no-keep-memory -C link-arg=--threads=1",
+        );
+
+        assert_eq!(sanitized, "-C opt-level=z --export-table");
+    }
+
+    #[test]
+    fn path_string_relative_prefers_relative_path() {
+        let base = Path::new("/tmp/project");
+        let target = Path::new("/tmp/project/dist/component.wasm");
+
+        let relative = path_string_relative(base, target).expect("relative path");
+
+        assert_eq!(relative, "dist/component.wasm");
+    }
+
+    #[test]
+    fn resolve_wasm_path_uses_default_target_location_when_manifest_omits_artifact() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let target = dir
+            .path()
+            .join("target/wasm32-wasip2/release/com_greentic_demo.wasm");
+        std::fs::create_dir_all(target.parent().expect("target parent"))
+            .expect("create target dir");
+        std::fs::write(&target, b"wasm").expect("write wasm");
+
+        let manifest = json!({
+            "id": "com.greentic.demo"
+        });
+
+        let resolved = resolve_wasm_path(dir.path(), &manifest).expect("resolve default wasm path");
+        assert_eq!(resolved, target.canonicalize().expect("canonical target"));
+    }
+
+    #[test]
+    fn val_to_bytes_rejects_non_byte_lists() {
+        let err = val_to_bytes(&Val::List(vec![Val::String("oops".to_string())]))
+            .expect_err("non-u8 list should fail");
+        assert_eq!(err, "expected list<u8>");
+    }
+
+    #[test]
+    fn strip_self_describe_tag_removes_only_known_prefix() {
+        let tagged = [0xd9, 0xd9, 0xf7, 0x01, 0x02];
+        assert_eq!(strip_self_describe_tag(&tagged), &[0x01, 0x02]);
+        assert_eq!(strip_self_describe_tag(&[0x01, 0x02]), &[0x01, 0x02]);
     }
 }

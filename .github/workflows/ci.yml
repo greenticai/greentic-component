@@ -3,7 +3,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -11,7 +11,7 @@ env:
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -22,6 +22,31 @@ on:
         default: false
 
 jobs:
+  semver-checks:
+    name: semver-checks
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-semver
+      cancel-in-progress: true
+    env:
+      CARGO_TERM_COLOR: always
+      TARGET_DIR: target/linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust environment
+        uses: ./.github/actions/rust-setup
+        with:
+          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          target-dir: ${{ env.TARGET_DIR }}
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: |
+            wasm32-wasip2
+            x86_64-unknown-linux-gnu
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          rust-toolchain: manual
+          package: "greentic-component,greentic-component-manifest,greentic-component-store,greentic-component-runtime"
+
   lint:
     name: lint
     runs-on: ubuntu-latest
@@ -158,8 +183,10 @@ jobs:
 
   publish:
     name: publish
-    needs: [lint, test]
-    if: github.ref == 'refs/heads/master' || inputs.publish == true
+    # Publish crates only after every binstall archive has been built and uploaded
+    # to the GitHub release for this version.
+    needs: [lint, test, binstall-release]
+    if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ubuntu-latest
     concurrency:
       group: publish-${{ github.workflow }}-${{ github.ref }}
@@ -246,7 +273,7 @@ jobs:
   binstall-release:
     name: binstall release
     needs: [lint, test]
-    if: github.ref == 'refs/heads/master' || inputs.publish == true
+    if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write

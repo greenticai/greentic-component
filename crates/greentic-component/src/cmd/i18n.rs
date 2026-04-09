@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsString;
-use std::path::Path;
 use std::sync::OnceLock;
 
+use include_dir::{Dir, include_dir};
 use unic_langid::LanguageIdentifier;
 
 const SUPPORTED_LOCALES: &[&str] = &[
@@ -18,11 +18,16 @@ static EN_MESSAGES: OnceLock<BTreeMap<String, String>> = OnceLock::new();
 static SELECTED_LOCALE: OnceLock<String> = OnceLock::new();
 static LOCALE_MESSAGES: OnceLock<BTreeMap<String, String>> = OnceLock::new();
 static EN_VALUE_TO_KEY: OnceLock<BTreeMap<String, String>> = OnceLock::new();
+static EMBEDDED_I18N_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/i18n");
 
 fn en_messages() -> &'static BTreeMap<String, String> {
     EN_MESSAGES.get_or_init(|| {
-        serde_json::from_str(include_str!("../../i18n/en.json"))
-            .expect("parse embedded i18n/en.json catalog")
+        let raw = EMBEDDED_I18N_DIR
+            .get_file("en.json")
+            .expect("embedded i18n/en.json catalog")
+            .contents_utf8()
+            .expect("embedded i18n/en.json must be UTF-8");
+        serde_json::from_str(raw).expect("parse embedded i18n/en.json catalog")
     })
 }
 
@@ -108,14 +113,13 @@ fn load_locale_messages(locale: &str) -> BTreeMap<String, String> {
     if locale == "en" {
         return en_messages().clone();
     }
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("i18n")
-        .join(format!("{locale}.json"));
-    let Ok(raw) = std::fs::read_to_string(path) else {
+    let Some(file) = EMBEDDED_I18N_DIR.get_file(format!("{locale}.json")) else {
         return en_messages().clone();
     };
-    let Ok(locale_map) = serde_json::from_str::<BTreeMap<String, String>>(&raw) else {
+    let Some(raw) = file.contents_utf8() else {
+        return en_messages().clone();
+    };
+    let Ok(locale_map) = serde_json::from_str::<BTreeMap<String, String>>(raw) else {
         return en_messages().clone();
     };
     let mut merged = en_messages().clone();

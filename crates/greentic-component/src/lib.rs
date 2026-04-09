@@ -7,6 +7,10 @@ pub mod capabilities;
 pub mod config;
 #[cfg(feature = "describe")]
 pub mod describe;
+#[cfg(feature = "cli")]
+pub mod embedded_compare;
+#[cfg(any(feature = "cli", feature = "abi", feature = "prepare"))]
+pub mod embedded_descriptor;
 pub mod error;
 pub mod lifecycle;
 pub mod limits;
@@ -50,6 +54,22 @@ pub use capabilities::{Capabilities, CapabilityError};
 pub use describe::{
     DescribeError, DescribePayload, DescribeVersion, from_embedded, from_exported_func,
     from_wit_world, load as load_describe,
+};
+#[cfg(feature = "cli")]
+pub use embedded_compare::{
+    ComparisonStatus, DescribeProjection, EmbeddedManifestComparisonReport, FieldComparison,
+    build_describe_projection, compare_embedded_with_describe, compare_embedded_with_manifest,
+};
+#[cfg(any(feature = "cli", feature = "abi", feature = "prepare"))]
+pub use embedded_descriptor::{
+    EMBEDDED_COMPONENT_MANIFEST_SECTION_V1, EmbeddedComponentDescriptorEnvelopeV1,
+    EmbeddedComponentManifestV1, VerifiedEmbeddedDescriptorV1,
+    append_embedded_component_manifest_section_v1, build_embedded_manifest_projection,
+    decode_embedded_component_descriptor_v1, embed_and_verify_wasm,
+    encode_embedded_component_descriptor_v1,
+    read_and_verify_embedded_component_manifest_section_v1,
+    read_embedded_component_manifest_section_v1, verify_embedded_component_descriptor_v1,
+    verify_embedded_projection_matches_canonical_manifest,
 };
 pub use error::ComponentError;
 pub use lifecycle::Lifecycle;

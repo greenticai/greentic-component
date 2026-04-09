@@ -58,13 +58,13 @@ pub fn from_exported_func(
     read_payload(&candidate)
 }
 
-pub fn from_wit_world(wasm_path: &Path, _world: &str) -> Result<DescribePayload, DescribeError> {
+pub fn from_wit_world(wasm_path: &Path, world: &str) -> Result<DescribePayload, DescribeError> {
     let bytes = fs::read(wasm_path).map_err(|source| DescribeError::Io {
         path: wasm_path.to_path_buf(),
         source,
     })?;
     let decoded = wasm::decode_world(&bytes).map_err(DescribeError::Metadata)?;
-    build_payload_from_world(&decoded.resolve, decoded.world)
+    build_payload_from_world(&decoded.resolve, decoded.world, Some(world))
 }
 
 pub fn from_embedded(manifest_dir: &Path) -> Option<DescribePayload> {
@@ -117,14 +117,24 @@ fn read_payload(path: &Path) -> Result<DescribePayload, DescribeError> {
 fn build_payload_from_world(
     resolve: &Resolve,
     world_id: WorldId,
+    preferred_world: Option<&str>,
 ) -> Result<DescribePayload, DescribeError> {
     let world = &resolve.worlds[world_id];
-    let world_ref = format_world(resolve, world_id);
-    let version = world
+    let resolved_world_ref = format_world(resolve, world_id);
+    let resolved_version = world
         .package
         .and_then(|pkg_id| resolve.packages[pkg_id].name.version.clone())
         .map(|ver| Version::new(ver.major, ver.minor, ver.patch))
         .unwrap_or_else(|| Version::new(0, 0, 0));
+    let (world_ref, name, version) = preferred_world
+        .and_then(|preferred_world| parse_preferred_world_ref(preferred_world, &resolved_version))
+        .unwrap_or_else(|| {
+            (
+                resolved_world_ref.clone(),
+                world.name.clone(),
+                resolved_version.clone(),
+            )
+        });
 
     let mut functions = Vec::new();
     for (key, item) in &world.exports {
@@ -162,7 +172,7 @@ fn build_payload_from_world(
     });
 
     Ok(DescribePayload {
-        name: world.name.clone(),
+        name,
         schema_id: Some(world_ref.clone()),
         versions: vec![DescribeVersion {
             version,
@@ -170,6 +180,21 @@ fn build_payload_from_world(
             defaults: None,
         }],
     })
+}
+
+fn parse_preferred_world_ref(
+    world_ref: &str,
+    fallback_version: &Version,
+) -> Option<(String, String, Version)> {
+    if world_ref.trim().is_empty() {
+        return None;
+    }
+    let (name_part, version) = match world_ref.rsplit_once('@') {
+        Some((name_part, version_part)) => (name_part, Version::parse(version_part).ok()?),
+        None => (world_ref, fallback_version.clone()),
+    };
+    let name = name_part.rsplit('/').next()?.to_string();
+    Some((world_ref.to_string(), name, version))
 }
 
 fn format_world(resolve: &Resolve, world_id: WorldId) -> String {

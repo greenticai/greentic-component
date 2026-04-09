@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use greentic_types::cbor::canonical;
 use greentic_types::i18n_text::I18nText;
-use greentic_types::schemas::component::v0_6_0::{ComponentQaSpec, QaMode, Question, QuestionKind};
-use serde_json::Value as JsonValue;
+use greentic_types::schemas::component::v0_6_0::{ComponentQaSpec, QaMode, Question};
+use serde_json::{Value as JsonValue, json};
 
 const DEFAULT_PREFILLED_ANSWERS_CBOR: &[u8] = &[];
 const SETUP_PREFILLED_ANSWERS_CBOR: &[u8] = &[];
@@ -82,15 +82,16 @@ fn qa_spec(mode: Mode) -> ComponentQaSpec {
 }
 
 fn question_enabled(label_key: &str, help_key: &str) -> Question {
-    Question {
-        id: "enabled".to_string(),
-        label: I18nText::new(label_key, None),
-        help: Some(I18nText::new(help_key, None)),
-        error: None,
-        kind: QuestionKind::Bool,
-        required: true,
-        default: None,
-    }
+    serde_json::from_value(json!({
+        "id": "enabled",
+        "label": I18nText::new(label_key, None),
+        "help": I18nText::new(help_key, None),
+        "error": null,
+        "kind": { "type": "bool" },
+        "required": true,
+        "default": null
+    }))
+    .expect("question should deserialize")
 }
 
 fn decode_map(bytes: &[u8]) -> BTreeMap<String, JsonValue> {

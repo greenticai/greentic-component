@@ -33,12 +33,20 @@
 - Templates and docs target `greentic:component/component@0.5.0` and accept expanded `supports` (`messaging`, `event`, `component_config`, `job`, `http`); keep downstream references in sync if interfaces bump again.
 - Config inference + flow regeneration is integrated into `greentic-component build`; flows are embedded into `dev_flows` (FlowIR JSON) and manifests are updated with inferred `config_schema` when missing.
 - Downstream consumers (packc/runner/deployer) must read `secret_requirements` from component manifests/metadata; this repo only validates and emits it.
+- Component authoring now has clearer scope split:
+  - `greentic-component new` can scaffold one or more canonical user operations at creation time via `--operation` and `--default-operation`.
+  - `greentic-component wizard` remains the richer edit surface for existing wizard-generated components (`create`, `add_operation`, `update_operation`).
+  - Interactive `wizard create` now starts with a minimal prompt set (name, output directory, advanced-setup yes/no) and only asks the richer authoring questions when advanced setup is enabled.
+- Runtime capability authoring is now aligned with the canonical manifest model:
+  - `greentic-component new` can scaffold filesystem/HTTP/state/telemetry/secret declarations directly into `component.manifest.json`.
+  - `greentic-component wizard --mode create` accepts the same capability areas through answer fields/prompts.
+  - Authoring writes `secret_requirements` and mirrors them into `capabilities.host.secrets.required`; telemetry permission and top-level telemetry config remain separate.
+- Config schema authoring now has a shared scaffold path too:
+  - `greentic-component new --config-field ...` and `greentic-component wizard --mode create` `config_fields` answers both write the same config shape into manifest `config_schema`, `schemas/component.schema.json`, and generated Rust `config_schema()`.
+  - Supported scaffold field types are intentionally narrow (`string`, `bool`, `integer`, `number`) so the manifest JSON and exported `SchemaIr` stay aligned.
 
 ## 4. Broken, Failing, or Conflicting Areas
-- `ci/local_check.sh` currently reports failures unrelated to this PR surface:
-  - lockfile drift with `--locked` steps (local branch has dependency/version churn),
-  - `cargo fmt --check` diffs in pre-existing files (including `crates/greentic-component/src/test_harness/mod.rs`),
-  - upstream `greentic-interfaces-guest` resolution error in local/crates.io contexts (`greentic_component_0_6_0_component` missing in generated `bindings`).
+- No repo-wide failures are currently known from the checked surfaces; `cargo test -p greentic-component` and `ci/local_check.sh` passed after the latest authoring/runtime-capability updates.
 
 ## 5. Notes for Future Work
 - If crates.io remains unreachable, publishing/packaging steps will continue to skip/fail; rerun when network is available.

@@ -444,3 +444,104 @@ impl HostMonotonicClock for FixedMonotonicClock {
         self.now
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use greentic_interfaces_wasmtime::host_helpers::v1::state_store::TenantCtx as WitTenantCtx;
+    use std::collections::{HashMap, HashSet};
+
+    fn base_scope() -> StateScope {
+        StateScope {
+            env: "dev".into(),
+            tenant: "tenant-a".into(),
+            team: None,
+            user: None,
+            prefix: "test".into(),
+        }
+    }
+
+    #[test]
+    fn runner_host_returns_config_json_and_denies_http_when_disabled() {
+        let mut runner = RunnerHostImpl::new(false, Some("{\"enabled\":true}".into()));
+        assert_eq!(
+            RunnerHost::kv_get(&mut runner, "config".into(), "json".into()).unwrap(),
+            Some("{\"enabled\":true}".into())
+        );
+        assert!(matches!(
+            RunnerHost::http_request(
+                &mut runner,
+                "GET".into(),
+                "http://localhost".into(),
+                vec![],
+                None
+            ),
+            Ok(Err(message)) if message.contains("denied")
+        ));
+    }
+
+    #[test]
+    fn state_scope_overrides_from_tenant_context() {
+        let state = StateStoreHostImpl::new(
+            base_scope(),
+            Arc::new(InMemoryStateStore::new()),
+            true,
+            true,
+            true,
+        );
+        let ctx = WitTenantCtx {
+            env: "prod".into(),
+            tenant: "tenant-b".into(),
+            tenant_id: "tenant-b".into(),
+            team: Some("ops".into()),
+            team_id: Some("ops".into()),
+            user: Some("alice".into()),
+            user_id: Some("alice".into()),
+            trace_id: None,
+            i18n_id: None,
+            correlation_id: None,
+            session_id: None,
+            flow_id: None,
+            node_id: None,
+            provider_id: None,
+            deadline_ms: None,
+            attempt: 0,
+            idempotency_key: None,
+            impersonation: None,
+            attributes: vec![],
+        };
+
+        let scope = state.scope_for_ctx(Some(&ctx));
+        assert_eq!(scope.env, "prod");
+        assert_eq!(scope.tenant, "tenant-b");
+        assert_eq!(scope.team.as_deref(), Some("ops"));
+        assert_eq!(scope.user.as_deref(), Some("alice"));
+        assert_eq!(scope.prefix, "test");
+    }
+
+    #[test]
+    fn host_limits_track_memory_limit_hits() {
+        let hit = Arc::new(AtomicBool::new(false));
+        let mut limits = HostLimits::new(64, hit.clone());
+        assert!(limits.memory_growing(0, 32, None).unwrap());
+        let err = limits
+            .memory_growing(32, 128, None)
+            .expect_err("should exceed limit");
+        assert!(err.to_string().contains("memory limit exceeded"));
+        assert!(hit.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn secrets_store_host_delegates_to_in_memory_store() {
+        let secrets = Arc::new(
+            InMemorySecretsStore::new(true, HashSet::from(["API_TOKEN".to_string()])).with_secrets(
+                HashMap::from([("API_TOKEN".to_string(), "secret".to_string())]),
+            ),
+        );
+        let mut host = SecretsStoreHostImpl::new(secrets);
+        let bytes = SecretsStoreHost::get(&mut host, "API_TOKEN".into())
+            .unwrap()
+            .expect("secret");
+        assert_eq!(bytes, b"secret");
+    }
+}

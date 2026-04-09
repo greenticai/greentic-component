@@ -7,6 +7,7 @@ use insta::assert_snapshot;
 use predicates::prelude::PredicateBooleanExt;
 use serde_json::Value as JsonValue;
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
@@ -14,6 +15,95 @@ use tempfile::TempDir;
 mod snapshot_util;
 
 use snapshot_util::normalize_text;
+
+fn cargo_component_available() -> bool {
+    Command::new("cargo")
+        .args(["component", "--version"])
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+fn wasm_target_available() -> bool {
+    Command::new("rustup")
+        .args(["target", "list", "--installed"])
+        .output()
+        .is_ok_and(|output| {
+            output.status.success()
+                && String::from_utf8_lossy(&output.stdout).contains("wasm32-wasip2")
+        })
+}
+
+fn cratesio_canonical_aux_exports_available() -> bool {
+    std::env::var_os("GREENTIC_CANONICAL_AUX_EXPORTS_CRATESIO").is_some()
+}
+
+fn install_cargo_wrapper(root: &Path) -> std::path::PathBuf {
+    let bin_dir = root.join("test-bin");
+    fs::create_dir_all(&bin_dir).expect("create test bin");
+    let wrapper_path = bin_dir.join("cargo");
+    let greentic_component_path = bin_dir.join("greentic-component");
+    let real_cargo = Command::new("rustup")
+        .args(["which", "cargo"])
+        .output()
+        .or_else(|_| {
+            Command::new("bash")
+                .args(["-lc", "command -v cargo"])
+                .output()
+        })
+        .expect("locate cargo");
+    assert!(real_cargo.status.success(), "cargo should be available");
+    let real_cargo = String::from_utf8(real_cargo.stdout)
+        .expect("cargo path utf8")
+        .trim()
+        .to_string();
+    let real_component = Command::new("bash")
+        .args(["-lc", "command -v cargo-component"])
+        .output()
+        .expect("locate cargo-component");
+    assert!(
+        real_component.status.success(),
+        "cargo-component should be available for scaffold smoke test"
+    );
+    let real_component = String::from_utf8(real_component.stdout)
+        .expect("cargo-component path utf8")
+        .trim()
+        .to_string();
+    fs::write(
+        &wrapper_path,
+        format!(
+            "#!/bin/sh\nset -eu\nif [ \"${{1:-}}\" = \"component\" ]; then\n  shift\n  exec \"{real_component}\" \"$@\"\nfi\nexec \"{real_cargo}\" \"$@\"\n"
+        ),
+    )
+    .expect("write cargo wrapper");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&wrapper_path)
+            .expect("cargo wrapper metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&wrapper_path, perms).expect("chmod cargo wrapper");
+    }
+    fs::write(
+        &greentic_component_path,
+        format!(
+            "#!/bin/sh\nset -eu\nexec \"{}\" \"$@\"\n",
+            assert_cmd::cargo::cargo_bin!("greentic-component").display()
+        ),
+    )
+    .expect("write greentic-component wrapper");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&greentic_component_path)
+            .expect("greentic-component wrapper metadata")
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&greentic_component_path, perms)
+            .expect("chmod greentic-component wrapper");
+    }
+    bin_dir
+}
 
 #[test]
 fn scaffold_rust_wasi_template() {
@@ -48,15 +138,7 @@ fn scaffold_rust_wasi_template() {
     let locales_json =
         fs::read_to_string(component_dir.join("assets/i18n/locales.json")).expect("locales.json");
     let i18n_tool = component_dir.join("tools/i18n.sh");
-    let input_schema = fs::read_to_string(
-        component_dir
-            .join("schemas")
-            .join("io")
-            .join("input.schema.json"),
-    )
-    .expect("input schema");
-    let input_schema_json: JsonValue =
-        serde_json::from_str(&input_schema).expect("input schema json");
+    let i18n_tool_contents = fs::read_to_string(&i18n_tool).expect("read scaffolded tools/i18n.sh");
     let manifest_json: JsonValue = serde_json::from_str(&manifest).expect("manifest json");
     let operations = manifest_json["operations"]
         .as_array()
@@ -91,6 +173,18 @@ fn scaffold_rust_wasi_template() {
     assert!(component_dir.join("assets/i18n/locales.json").exists());
     assert!(component_dir.join("tools/i18n.sh").exists());
     assert!(
+        i18n_tool_contents.contains("--skip-git-repo-check"),
+        "tools/i18n.sh should wrap codex exec with --skip-git-repo-check"
+    );
+    assert!(
+        i18n_tool_contents.contains("greentic-i18n-translator"),
+        "tools/i18n.sh should call greentic-i18n-translator directly"
+    );
+    assert!(
+        i18n_tool_contents.contains("cargo binstall -y greentic-i18n-translator"),
+        "tools/i18n.sh should install greentic-i18n-translator with cargo-binstall when missing"
+    );
+    assert!(
         qa_rs.contains("\"qa.field.api_key.label\"")
             && !qa_rs.contains("Provide values for initial provider setup."),
         "QA code path should use i18n keys, not raw user-facing strings"
@@ -121,7 +215,7 @@ fn scaffold_rust_wasi_template() {
     assert_snapshot!("scaffold_manifest", normalize_text(manifest.trim()));
     assert_snapshot!("scaffold_lib", normalize_text(lib_rs.trim()));
     assert_eq!(
-        input_schema_json["properties"]["input"]["default"]
+        first_op["input_schema"]["properties"]["input"]["default"]
             .as_str()
             .expect("input default"),
         "Hello from demo-component!"
@@ -137,66 +231,37 @@ fn scaffold_rust_wasi_template() {
         status.success(),
         "scaffolded project should pass host tests"
     );
-    let cargo_wrapper = component_dir.join("fake_cargo.sh");
-    std::fs::write(
-        &cargo_wrapper,
-        r#"#!/bin/sh
-set -e
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "--version" ]; then
-  echo "cargo-component-component 0.21.1"
-  exit 0
-fi
-
-wasm_path=$(python3 - <<'PY'
-import json, os
-path=os.path.join(os.getcwd(),"component.manifest.json")
-try:
-    with open(path, "r") as f:
-        data=json.load(f)
-    print(data.get("artifacts", {}).get("component_wasm") or "target/wasm32-wasip2/release/component.wasm")
-except Exception:
-    print("target/wasm32-wasip2/release/component.wasm")
-PY
-)
-mkdir -p "$(dirname "$wasm_path")"
-printf '\0' > "$wasm_path"
-
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "build" ]; then
-  exit 0
-fi
-
-if [ "${1:-}" = "build" ]; then
-  exit 0
-fi
-
-REAL_CARGO="$(command -v cargo)"
-"$REAL_CARGO" "$@"
-"#,
-    )
-    .expect("write cargo wrapper");
-    let mut perms = std::fs::metadata(&cargo_wrapper)
-        .expect("metadata")
-        .permissions();
-    #[cfg(unix)]
+    // The scaffold intentionally emits `greentic-interfaces-guest = "0.4"` so
+    // it will pick up the new canonical QA/i18n exports once published. Until
+    // that crates.io release lands, keep this smoke test on host-only checks.
+    if cargo_component_available()
+        && wasm_target_available()
+        && cratesio_canonical_aux_exports_available()
     {
-        use std::os::unix::fs::PermissionsExt;
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&cargo_wrapper, perms).expect("chmod");
+        let cargo_wrapper_dir = install_cargo_wrapper(temp.path());
+        let path_env = format!(
+            "{}:{}",
+            cargo_wrapper_dir.display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        let mut build = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+        build
+            .current_dir(&component_dir)
+            .env("PATH", &path_env)
+            .env("CARGO_NET_OFFLINE", "true")
+            .arg("build");
+        build.assert().success();
+
+        let mut doctor = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+        doctor
+            .current_dir(&component_dir)
+            .env("PATH", &path_env)
+            .arg("doctor")
+            .arg("--manifest")
+            .arg("component.manifest.json")
+            .arg(".");
+        doctor.assert().success();
     }
-    let mut build = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    build
-        .current_dir(&component_dir)
-        .env("CARGO", &cargo_wrapper)
-        .env("CARGO_NET_OFFLINE", "true")
-        .env("GREENTIC_SKIP_NODE_EXPORT_CHECK", "1")
-        .arg("build");
-    build.assert().success();
-    let mut doctor = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
-    doctor.current_dir(&component_dir).arg("doctor").arg(".");
-    doctor.assert().failure().stderr(
-        predicates::str::contains("unable to resolve wasm")
-            .or(predicates::str::contains("failed to load component")),
-    );
     assert!(
         component_dir.join(".git").exists(),
         "post-render hook should initialize git"
@@ -253,8 +318,20 @@ fn doctor_validates_canonical_worlds_for_scaffold() {
 
 #[test]
 fn doctor_accepts_built_scaffold_artifact() {
+    if !cargo_component_available() || !wasm_target_available() {
+        eprintln!(
+            "skipping built scaffold doctor smoke test: cargo-component or wasm32-wasip2 missing"
+        );
+        return;
+    }
     let temp = TempDir::new().expect("temp dir");
     let component_dir = temp.path().join("artifact-component");
+    let cargo_wrapper_dir = install_cargo_wrapper(temp.path());
+    let path_env = format!(
+        "{}:{}",
+        cargo_wrapper_dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let mut new_cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
     new_cmd
         .arg("new")
@@ -268,67 +345,22 @@ fn doctor_accepts_built_scaffold_artifact() {
         .env("HOME", temp.path())
         .env("GREENTIC_TEMPLATE_YEAR", "2030")
         .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
-        .env("GREENTIC_DEP_MODE", "cratesio")
+        .env("GREENTIC_DEP_MODE", "local")
         .env("GIT_AUTHOR_NAME", "Greentic Labs")
         .env("GIT_AUTHOR_EMAIL", "greentic-labs@example.com")
         .env("GIT_COMMITTER_NAME", "Greentic Labs")
         .env("GIT_COMMITTER_EMAIL", "greentic-labs@example.com")
+        .env("PATH", &path_env)
         .env("CARGO_NET_OFFLINE", "true")
         .env_remove("USER")
         .env_remove("USERNAME");
     new_cmd.assert().success();
 
-    let cargo_wrapper = component_dir.join("fake_cargo.sh");
-    std::fs::write(
-        &cargo_wrapper,
-        r#"#!/bin/sh
-set -e
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "--version" ]; then
-  echo "cargo-component-component 0.21.1"
-  exit 0
-fi
-
-wasm_path=$(python3 - <<'PY'
-import json, os
-path=os.path.join(os.getcwd(),"component.manifest.json")
-try:
-    with open(path, "r") as f:
-        data=json.load(f)
-    print(data.get("artifacts", {}).get("component_wasm") or "target/wasm32-wasip2/release/component.wasm")
-except Exception:
-    print("target/wasm32-wasip2/release/component.wasm")
-PY
-)
-mkdir -p "$(dirname "$wasm_path")"
-printf '\0' > "$wasm_path"
-
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "build" ]; then
-  exit 0
-fi
-
-if [ "${1:-}" = "build" ]; then
-  exit 0
-fi
-
-REAL_CARGO="$(command -v cargo)"
-"$REAL_CARGO" "$@"
-"#,
-    )
-    .expect("write cargo wrapper");
-    let mut perms = std::fs::metadata(&cargo_wrapper)
-        .expect("metadata")
-        .permissions();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&cargo_wrapper, perms).expect("chmod");
-    }
-
     let mut build_cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
     build_cmd
         .current_dir(&component_dir)
-        .env("CARGO", &cargo_wrapper)
+        .env("PATH", &path_env)
+        .env("CARGO_NET_OFFLINE", "true")
         .env("GREENTIC_SKIP_NODE_EXPORT_CHECK", "1")
         .arg("build")
         .arg("--no-flow")
@@ -357,10 +389,184 @@ REAL_CARGO="$(command -v cargo)"
     doctor
         .current_dir(&component_dir)
         .arg(wasm_uri)
+        .arg("--manifest")
+        .arg("component.manifest.json")
+        .env("PATH", &path_env)
         .env("CARGO_NET_OFFLINE", "true");
-    doctor.assert().failure().stderr(
-        predicates::str::contains("doctor checks failed")
-            .or(predicates::str::contains("unable to resolve wasm"))
-            .or(predicates::str::contains("failed to load component")),
+    doctor.assert().success();
+}
+
+#[test]
+fn scaffold_new_accepts_custom_user_operations() {
+    let temp = TempDir::new().expect("temp dir");
+    let component_dir = temp.path().join("custom-ops-component");
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+    cmd.arg("new")
+        .arg("--name")
+        .arg("custom-ops-component")
+        .arg("--org")
+        .arg("ai.greentic")
+        .arg("--path")
+        .arg(&component_dir)
+        .arg("--operation")
+        .arg("render,sync-state")
+        .arg("--default-operation")
+        .arg("sync-state")
+        .arg("--no-check")
+        .arg("--no-git")
+        .env("HOME", temp.path())
+        .env("GREENTIC_TEMPLATE_YEAR", "2030")
+        .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
+        .env("GREENTIC_DEP_MODE", "cratesio");
+    cmd.assert().success();
+
+    let manifest = fs::read_to_string(component_dir.join("component.manifest.json"))
+        .expect("custom ops manifest");
+    let manifest_json: JsonValue = serde_json::from_str(&manifest).expect("manifest json");
+    let operations = manifest_json["operations"]
+        .as_array()
+        .expect("operations array in scaffold");
+    let user_operation_names = operations
+        .iter()
+        .filter_map(|op| op["name"].as_str())
+        .filter(|name| !matches!(*name, "qa-spec" | "apply-answers" | "i18n-keys"))
+        .collect::<Vec<_>>();
+    assert_eq!(user_operation_names, vec!["render", "sync-state"]);
+    assert_eq!(
+        manifest_json["default_operation"].as_str(),
+        Some("sync-state")
     );
+
+    let lib_rs = fs::read_to_string(component_dir.join("src/lib.rs")).expect("lib.rs");
+    assert!(lib_rs.contains("name: \"render\".to_string()"));
+    assert!(lib_rs.contains("name: \"sync-state\".to_string()"));
+}
+
+#[test]
+fn scaffold_new_writes_runtime_capability_fields() {
+    let temp = TempDir::new().expect("temp dir");
+    let component_dir = temp.path().join("runtime-capability-component");
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+    cmd.arg("new")
+        .arg("--name")
+        .arg("runtime-capability-component")
+        .arg("--org")
+        .arg("ai.greentic")
+        .arg("--path")
+        .arg(&component_dir)
+        .arg("--filesystem-mode")
+        .arg("read_only")
+        .arg("--filesystem-mount")
+        .arg("assets:assets:/assets")
+        .arg("--http-client")
+        .arg("--state-read")
+        .arg("--telemetry-scope")
+        .arg("pack")
+        .arg("--telemetry-span-prefix")
+        .arg("component.runtime")
+        .arg("--telemetry-attribute")
+        .arg("component=runtime")
+        .arg("--secret-key")
+        .arg("API_TOKEN")
+        .arg("--secret-env")
+        .arg("prod")
+        .arg("--secret-tenant")
+        .arg("acme")
+        .arg("--secret-format")
+        .arg("text")
+        .arg("--no-check")
+        .arg("--no-git")
+        .env("HOME", temp.path())
+        .env("GREENTIC_TEMPLATE_YEAR", "2030")
+        .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
+        .env("GREENTIC_DEP_MODE", "cratesio");
+    cmd.assert().success();
+
+    let manifest = fs::read_to_string(component_dir.join("component.manifest.json")).unwrap();
+    assert!(manifest.contains("\"mode\": \"read_only\""));
+    assert!(manifest.contains("\"guest_path\": \"/assets\""));
+    assert!(manifest.contains("\"client\": true"));
+    assert!(manifest.contains("\"read\": true"));
+    assert!(manifest.contains("\"scope\": \"pack\""));
+    assert!(manifest.contains("\"span_prefix\": \"component.runtime\""));
+    assert!(manifest.contains("\"component\": \"runtime\""));
+    assert!(manifest.contains("\"key\": \"API_TOKEN\""));
+}
+
+#[test]
+fn scaffold_new_ignores_filesystem_mounts_when_mode_is_none() {
+    let temp = TempDir::new().expect("temp dir");
+    let component_dir = temp.path().join("no-fs-component");
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+    cmd.arg("new")
+        .arg("--name")
+        .arg("no-fs-component")
+        .arg("--org")
+        .arg("ai.greentic")
+        .arg("--path")
+        .arg(&component_dir)
+        .arg("--filesystem-mode")
+        .arg("none")
+        .arg("--filesystem-mount")
+        .arg("assets:assets:/assets")
+        .arg("--no-check")
+        .arg("--no-git")
+        .env("HOME", temp.path())
+        .env("GREENTIC_TEMPLATE_YEAR", "2030")
+        .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
+        .env("GREENTIC_DEP_MODE", "cratesio");
+    cmd.assert().success();
+
+    let manifest = fs::read_to_string(component_dir.join("component.manifest.json")).unwrap();
+    let manifest_json: JsonValue = serde_json::from_str(&manifest).expect("manifest json");
+    assert_eq!(
+        manifest_json["capabilities"]["wasi"]["filesystem"]["mode"].as_str(),
+        Some("none")
+    );
+    assert_eq!(
+        manifest_json["capabilities"]["wasi"]["filesystem"]["mounts"]
+            .as_array()
+            .map(Vec::len),
+        Some(0)
+    );
+}
+
+#[test]
+fn scaffold_new_writes_config_schema_fields() {
+    let temp = TempDir::new().expect("temp dir");
+    let component_dir = temp.path().join("config-component");
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("greentic-component"));
+    cmd.arg("new")
+        .arg("--name")
+        .arg("config-component")
+        .arg("--org")
+        .arg("ai.greentic")
+        .arg("--path")
+        .arg(&component_dir)
+        .arg("--config-field")
+        .arg("enabled:bool:required")
+        .arg("--config-field")
+        .arg("api_key:string")
+        .arg("--no-check")
+        .arg("--no-git")
+        .env("HOME", temp.path())
+        .env("GREENTIC_TEMPLATE_YEAR", "2030")
+        .env("GREENTIC_TEMPLATE_ROOT", temp.path().join("templates"))
+        .env("GREENTIC_DEP_MODE", "cratesio");
+    cmd.assert().success();
+
+    let manifest = fs::read_to_string(component_dir.join("component.manifest.json")).unwrap();
+    assert!(manifest.contains("\"enabled\""));
+    assert!(manifest.contains("\"boolean\""));
+    assert!(manifest.contains("\"api_key\""));
+
+    let lib_rs = fs::read_to_string(component_dir.join("src/lib.rs")).unwrap();
+    assert!(lib_rs.contains("\"enabled\".to_string()"));
+    assert!(lib_rs.contains("SchemaIr::Bool"));
+    assert!(lib_rs.contains("\"api_key\".to_string()"));
+
+    let schema_file =
+        fs::read_to_string(component_dir.join("schemas/component.schema.json")).unwrap();
+    assert!(schema_file.contains("\"enabled\""));
+    assert!(schema_file.contains("\"api_key\""));
 }

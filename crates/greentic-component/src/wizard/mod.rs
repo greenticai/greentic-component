@@ -6,16 +6,68 @@ use anyhow::{Context, Result, anyhow, bail};
 use ciborium::Value as CborValue;
 use greentic_types::cbor::canonical;
 use greentic_types::i18n_text::I18nText;
-use greentic_types::schemas::component::v0_6_0::{
-    ChoiceOption, ComponentQaSpec, QaMode, Question, QuestionKind,
-};
+use greentic_types::schemas::component::v0_6_0::{ChoiceOption, ComponentQaSpec, QaMode, Question};
 use serde::Serialize;
 use serde_json::Map as JsonMap;
 use serde_json::Value as JsonValue;
+use serde_json::json;
+
+use crate::scaffold::config_schema::ConfigSchemaInput;
+use crate::scaffold::deps::{DependencyMode, DependencyTemplates, resolve_dependency_templates};
+use crate::scaffold::runtime_capabilities::RuntimeCapabilitiesInput;
 
 pub const PLAN_VERSION: u32 = 1;
 pub const TEMPLATE_VERSION: &str = "component-scaffold-v0.6.0";
 pub const GENERATOR_ID: &str = "greentic-component/wizard-provider";
+
+fn question(id: &str, label_key: &str, help_key: &str, required: bool) -> Question {
+    question_json(json!({
+        "id": id,
+        "label": I18nText::new(label_key, None),
+        "help": I18nText::new(help_key, None),
+        "error": null,
+        "kind": { "type": "text" },
+        "required": required,
+        "default": null
+    }))
+}
+
+fn question_bool(id: &str, label_key: &str, help_key: &str, required: bool) -> Question {
+    question_json(json!({
+        "id": id,
+        "label": I18nText::new(label_key, None),
+        "help": I18nText::new(help_key, None),
+        "error": null,
+        "kind": { "type": "bool" },
+        "required": required,
+        "default": null
+    }))
+}
+
+fn question_choice(
+    id: &str,
+    label_key: &str,
+    help_key: &str,
+    required: bool,
+    options: Vec<ChoiceOption>,
+) -> Question {
+    question_json(json!({
+        "id": id,
+        "label": I18nText::new(label_key, None),
+        "help": I18nText::new(help_key, None),
+        "error": null,
+        "kind": {
+            "type": "choice",
+            "options": options
+        },
+        "required": required,
+        "default": null
+    }))
+}
+
+fn question_json(value: JsonValue) -> Question {
+    serde_json::from_value(value).expect("question should deserialize")
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum WizardMode {
@@ -40,6 +92,10 @@ pub struct WizardRequest {
     pub answers: Option<AnswersPayload>,
     pub required_capabilities: Vec<String>,
     pub provided_capabilities: Vec<String>,
+    pub user_operations: Vec<String>,
+    pub default_operation: Option<String>,
+    pub runtime_capabilities: RuntimeCapabilitiesInput,
+    pub config_schema: ConfigSchemaInput,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -115,56 +171,40 @@ pub fn spec_scaffold(mode: WizardMode) -> ComponentQaSpec {
         title: I18nText::new(title, None),
         description: Some(I18nText::new("wizard.component.description", None)),
         questions: vec![
-            Question {
-                id: "component.name".to_string(),
-                label: I18nText::new("wizard.component.name.label", None),
-                help: Some(I18nText::new("wizard.component.name.help", None)),
-                error: None,
-                kind: QuestionKind::Text,
-                required: true,
-                default: None,
-            },
-            Question {
-                id: "component.path".to_string(),
-                label: I18nText::new("wizard.component.path.label", None),
-                help: Some(I18nText::new("wizard.component.path.help", None)),
-                error: None,
-                kind: QuestionKind::Text,
-                required: false,
-                default: None,
-            },
-            Question {
-                id: "component.kind".to_string(),
-                label: I18nText::new("wizard.component.kind.label", None),
-                help: Some(I18nText::new("wizard.component.kind.help", None)),
-                error: None,
-                kind: QuestionKind::Choice {
-                    options: vec![
-                        ChoiceOption {
-                            value: "tool".to_string(),
-                            label: I18nText::new("wizard.component.kind.option.tool", None),
-                        },
-                        ChoiceOption {
-                            value: "source".to_string(),
-                            label: I18nText::new("wizard.component.kind.option.source", None),
-                        },
-                    ],
-                },
-                required: false,
-                default: None,
-            },
-            Question {
-                id: "component.features.enabled".to_string(),
-                label: I18nText::new("wizard.component.features.enabled.label", None),
-                help: Some(I18nText::new(
-                    "wizard.component.features.enabled.help",
-                    None,
-                )),
-                error: None,
-                kind: QuestionKind::Bool,
-                required: false,
-                default: None,
-            },
+            question(
+                "component.name",
+                "wizard.component.name.label",
+                "wizard.component.name.help",
+                true,
+            ),
+            question(
+                "component.path",
+                "wizard.component.path.label",
+                "wizard.component.path.help",
+                false,
+            ),
+            question_choice(
+                "component.kind",
+                "wizard.component.kind.label",
+                "wizard.component.kind.help",
+                false,
+                vec![
+                    ChoiceOption {
+                        value: "tool".to_string(),
+                        label: I18nText::new("wizard.component.kind.option.tool", None),
+                    },
+                    ChoiceOption {
+                        value: "source".to_string(),
+                        label: I18nText::new("wizard.component.kind.option.source", None),
+                    },
+                ],
+            ),
+            question_bool(
+                "component.features.enabled",
+                "wizard.component.features.enabled.label",
+                "wizard.component.features.enabled.help",
+                false,
+            ),
         ],
         defaults: BTreeMap::from([(
             "component.features.enabled".to_string(),
@@ -179,12 +219,30 @@ pub fn apply_scaffold(request: WizardRequest, dry_run: bool) -> Result<ApplyResu
         normalize_answers(request.answers, request.mode)?;
     let mut all_warnings = warnings;
     all_warnings.append(&mut mapping_warnings);
+    let user_operations = if request.user_operations.is_empty() {
+        vec!["handle_message".to_string()]
+    } else {
+        request.user_operations.clone()
+    };
+    let default_operation = request
+        .default_operation
+        .clone()
+        .or_else(|| user_operations.first().cloned())
+        .unwrap_or_else(|| "handle_message".to_string());
     let context = WizardContext {
         name: request.name,
         abi_version: request.abi_version.clone(),
         prefill_mode: request.mode,
         prefill_answers_cbor,
         prefill_answers_json,
+        user_operations,
+        default_operation,
+        runtime_capabilities: request.runtime_capabilities,
+        config_schema: request.config_schema,
+        dependency_templates: resolve_dependency_templates(
+            DependencyMode::from_env(),
+            &request.target,
+        ),
     };
 
     let files = build_files(&context)?;
@@ -283,6 +341,11 @@ struct WizardContext {
     prefill_mode: WizardMode,
     prefill_answers_cbor: Option<Vec<u8>>,
     prefill_answers_json: Option<String>,
+    user_operations: Vec<String>,
+    default_operation: String,
+    runtime_capabilities: RuntimeCapabilitiesInput,
+    config_schema: ConfigSchemaInput,
+    dependency_templates: DependencyTemplates,
 }
 
 type NormalizedAnswers = (Option<String>, Option<Vec<u8>>, Vec<String>);
@@ -361,6 +424,10 @@ fn build_files(context: &WizardContext) -> Result<Vec<GeneratedFile>> {
         text_file("rust-toolchain.toml", render_rust_toolchain_toml()),
         text_file("README.md", render_readme(context)),
         text_file("component.manifest.json", render_manifest_json(context)),
+        text_file(
+            "schemas/component.schema.json",
+            render_component_schema_json(context),
+        ),
         text_file("Makefile", render_makefile()),
         text_file("build.rs", render_build_rs()),
         text_file("src/lib.rs", render_lib_rs(context)),
@@ -549,17 +616,19 @@ package = "greentic:component"
 world = "greentic:component/component@0.6.0"
 
 [dependencies]
-greentic-types = "0.4"
-greentic-interfaces-guest = {{ version = "0.4", default-features = false, features = ["component-v0-6"] }}
+greentic-types = {{ {greentic_types} }}
+greentic-interfaces-guest = {{ {greentic_interfaces_guest}, default-features = false, features = ["component-v0-6"] }}
 serde = {{ version = "1", features = ["derive"] }}
 serde_json = "1"
 
 [build-dependencies]
-greentic-types = "0.4"
+greentic-types = {{ {greentic_types} }}
 serde_json = "1"
 "#,
         name = context.name,
-        abi_version = context.abi_version
+        abi_version = context.abi_version,
+        greentic_types = context.dependency_templates.greentic_types,
+        greentic_interfaces_guest = context.dependency_templates.greentic_interfaces_guest
     )
 }
 
@@ -571,6 +640,7 @@ Generated by `greentic-component wizard` for component@0.6.0.
 
 ## Next steps
 - Extend QA flows in `src/qa.rs` and i18n keys in `src/i18n.rs`.
+- Canonical `component-qa` and `component-i18n` guest exports come from `greentic-interfaces-guest`, so no local QA/i18n WIT files are required.
 - Generate/update locales via `./tools/i18n.sh`.
 - Rebuild to embed translations: `cargo build`.
 
@@ -598,6 +668,7 @@ ABI_VERSION := $(shell awk 'BEGIN{in_meta=0} /^\[package.metadata.greentic\]/{in
 ABI_VERSION_UNDERSCORE := $(subst .,_,$(ABI_VERSION))
 DIST_DIR := dist
 WASM_OUT := $(DIST_DIR)/$(NAME)__$(ABI_VERSION_UNDERSCORE).wasm
+GREENTIC_COMPONENT ?= greentic-component
 
 .PHONY: build test fmt clippy wasm doctor
 
@@ -619,187 +690,197 @@ wasm:
 		echo "install with: cargo install cargo-component --locked"; \
 		exit 1; \
 	fi
-	RUSTFLAGS= CARGO_ENCODED_RUSTFLAGS= cargo component build --release --target wasm32-wasip2
+	RUSTFLAGS= CARGO_ENCODED_RUSTFLAGS= $(GREENTIC_COMPONENT) build --manifest ./component.manifest.json
 	WASM_SRC=""; \
 	for cand in \
 		"$${CARGO_TARGET_DIR:-target}/wasm32-wasip2/release/$(NAME_UNDERSCORE).wasm" \
 		"$${CARGO_TARGET_DIR:-target}/wasm32-wasip2/release/$(NAME).wasm" \
-		"$${CARGO_TARGET_DIR:-target}/wasm32-wasip1/release/$(NAME_UNDERSCORE).wasm" \
-		"$${CARGO_TARGET_DIR:-target}/wasm32-wasip1/release/$(NAME).wasm" \
 		"target/wasm32-wasip2/release/$(NAME_UNDERSCORE).wasm" \
-		"target/wasm32-wasip2/release/$(NAME).wasm" \
-		"target/wasm32-wasip1/release/$(NAME_UNDERSCORE).wasm" \
-		"target/wasm32-wasip1/release/$(NAME).wasm"; do \
+		"target/wasm32-wasip2/release/$(NAME).wasm"; do \
 		if [ -f "$$cand" ]; then WASM_SRC="$$cand"; break; fi; \
 	done; \
 	if [ -z "$$WASM_SRC" ]; then \
-		echo "unable to locate wasm build artifact for $(NAME)"; \
+		echo "unable to locate wasm32-wasip2 component build artifact for $(NAME)"; \
 		exit 1; \
 	fi; \
 	mkdir -p $(DIST_DIR); \
-	cp "$$WASM_SRC" $(WASM_OUT)
+	cp "$$WASM_SRC" $(WASM_OUT); \
+	$(GREENTIC_COMPONENT) hash ./component.manifest.json --wasm $(WASM_OUT)
 
 doctor:
-	greentic-component doctor $(WASM_OUT)
+	$(GREENTIC_COMPONENT) doctor $(WASM_OUT) --manifest ./component.manifest.json
 "#
     .to_string()
 }
 
 fn render_manifest_json(context: &WizardContext) -> String {
     let name_snake = context.name.replace('-', "_");
-    format!(
-        r#"{{
-  "$schema": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
-  "id": "com.example.{name}",
-  "name": "{name}",
-  "version": "0.1.0",
-  "world": "greentic:component/component@0.6.0",
-  "describe_export": "describe",
-  "operations": [
-    {{
-      "name": "handle_message",
-      "input_schema": {{
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "{name} handle input",
-        "type": "object",
-        "required": ["input"],
-        "properties": {{
-          "input": {{
-            "type": "string",
-            "default": "Hello from {name}!"
-          }}
-        }},
-        "additionalProperties": false
-      }},
-      "output_schema": {{
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "{name} handle output",
-        "type": "object",
-        "required": ["message"],
-        "properties": {{
-          "message": {{
-            "type": "string"
-          }}
-        }},
-        "additionalProperties": false
-      }}
-    }},
-    {{
-      "name": "qa-spec",
-      "input_schema": {{
-        "type": "object",
-        "properties": {{
-          "mode": {{ "type": "string" }}
-        }},
-        "additionalProperties": true
-      }},
-      "output_schema": {{
-        "type": "object",
-        "additionalProperties": true
-      }}
-    }},
-    {{
-      "name": "apply-answers",
-      "input_schema": {{
-        "type": "object",
-        "properties": {{
-          "mode": {{ "type": "string" }},
-          "current_config": {{ "type": "object" }},
-          "answers": {{ "type": "object" }}
-        }},
-        "additionalProperties": true
-      }},
-      "output_schema": {{
-        "type": "object",
-        "required": ["ok", "warnings", "errors"],
-        "properties": {{
-          "ok": {{ "type": "boolean" }},
-          "warnings": {{ "type": "array" }},
-          "errors": {{ "type": "array" }},
-          "config": {{ "type": "object" }}
-        }},
-        "additionalProperties": true
-      }}
-    }},
-    {{
-      "name": "i18n-keys",
-      "input_schema": {{
-        "type": "object",
-        "additionalProperties": true
-      }},
-      "output_schema": {{
-        "type": "array",
-        "items": {{ "type": "string" }}
-      }}
-    }}
-  ],
-  "default_operation": "handle_message",
-  "config_schema": {{
-    "type": "object",
-    "required": [],
-    "properties": {{}},
-    "additionalProperties": false
-  }},
-  "supports": ["messaging"],
-  "profiles": {{
-    "default": "stateless",
-    "supported": ["stateless"]
-  }},
-  "secret_requirements": [],
-  "capabilities": {{
-    "wasi": {{
-      "filesystem": {{
-        "mode": "none",
-        "mounts": []
-      }},
-      "random": true,
-      "clocks": true
-    }},
-    "host": {{
-      "messaging": {{
-        "inbound": true,
-        "outbound": true
-      }},
-      "telemetry": {{
-        "scope": "node"
-      }},
-      "secrets": {{
-        "required": []
-      }}
-    }}
-  }},
-  "limits": {{
-    "memory_mb": 128,
-    "wall_time_ms": 1000
-  }},
-  "artifacts": {{
-    "component_wasm": "target/wasm32-wasip2/release/{name_snake}.wasm"
-  }},
-  "hashes": {{
-    "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
-  }},
-  "dev_flows": {{
-    "default": {{
-      "format": "flow-ir-json",
-      "graph": {{
-        "nodes": [
-          {{ "id": "start", "type": "start" }},
-          {{ "id": "end", "type": "end" }}
-        ],
-        "edges": [
-          {{ "from": "start", "to": "end" }}
-        ]
-      }}
-    }}
-  }}
-}}
-"#,
-        name = context.name,
-        name_snake = name_snake
-    )
+    let mut operations = context
+        .user_operations
+        .iter()
+        .map(|operation_name| {
+            json!({
+                "name": operation_name,
+                "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": format!("{} {} input", context.name, operation_name),
+                    "type": "object",
+                    "required": ["input"],
+                    "properties": {
+                        "input": {
+                            "type": "string",
+                            "default": format!("Hello from {}!", context.name)
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "output_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": format!("{} {} output", context.name, operation_name),
+                    "type": "object",
+                    "required": ["message"],
+                    "properties": {
+                        "message": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    operations.extend([
+        json!({
+            "name": "qa-spec",
+            "input_schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": format!("{} qa-spec input", context.name),
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": ["default", "setup", "install", "update", "upgrade", "remove"]
+                    }
+                },
+                "required": ["mode"],
+                "additionalProperties": false
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": ["setup", "update", "remove"]
+                    },
+                    "title_i18n_key": { "type": "string" },
+                    "description_i18n_key": { "type": "string" },
+                    "fields": {
+                        "type": "array",
+                        "items": { "type": "object" }
+                    }
+                },
+                "required": ["mode", "fields"],
+                "additionalProperties": true
+            }
+        }),
+        json!({
+            "name": "apply-answers",
+            "input_schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": format!("{} apply-answers input", context.name),
+                "type": "object",
+                "properties": {
+                    "mode": { "type": "string" },
+                    "current_config": { "type": "object" },
+                    "answers": { "type": "object" }
+                },
+                "additionalProperties": true
+            },
+            "output_schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": format!("{} apply-answers output", context.name),
+                "type": "object",
+                "required": ["ok", "warnings", "errors"],
+                "properties": {
+                    "ok": { "type": "boolean" },
+                    "warnings": { "type": "array", "items": { "type": "string" } },
+                    "errors": { "type": "array", "items": { "type": "string" } },
+                    "config": { "type": "object" }
+                },
+                "additionalProperties": true
+            }
+        }),
+        json!({
+            "name": "i18n-keys",
+            "input_schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": format!("{} i18n-keys input", context.name),
+                "type": "object",
+                "additionalProperties": false
+            },
+            "output_schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": format!("{} i18n-keys output", context.name),
+                "type": "array",
+                "items": { "type": "string" }
+            }
+        }),
+    ]);
+
+    let mut manifest = json!({
+        "$schema": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
+        "id": format!("com.example.{}", context.name),
+        "name": context.name,
+        "version": "0.1.0",
+        "world": "greentic:component/component@0.6.0",
+        "describe_export": "describe",
+        "operations": operations,
+        "default_operation": context.default_operation,
+        "config_schema": context.config_schema.manifest_schema(),
+        "supports": ["messaging"],
+        "profiles": {
+            "default": "stateless",
+            "supported": ["stateless"]
+        },
+        "secret_requirements": context.runtime_capabilities.manifest_secret_requirements(),
+        "capabilities": context.runtime_capabilities.manifest_capabilities(),
+        "limits": {
+            "memory_mb": 128,
+            "wall_time_ms": 1000
+        },
+        "artifacts": {
+            "component_wasm": format!("target/wasm32-wasip2/release/{name_snake}.wasm")
+        },
+        "hashes": {
+            "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "dev_flows": {
+            "default": {
+                "format": "flow-ir-json",
+                "graph": {
+                    "nodes": [
+                        { "id": "start", "type": "start" },
+                        { "id": "end", "type": "end" }
+                    ],
+                    "edges": [
+                        { "from": "start", "to": "end" }
+                    ]
+                }
+            }
+        }
+    });
+    if let Some(telemetry) = context.runtime_capabilities.manifest_telemetry() {
+        manifest["telemetry"] = telemetry;
+    }
+    serde_json::to_string_pretty(&manifest).expect("wizard manifest should serialize")
+}
+
+fn render_component_schema_json(context: &WizardContext) -> String {
+    serde_json::to_string_pretty(&context.config_schema.component_schema_file(&context.name))
+        .expect("wizard config schema should serialize")
 }
 
 fn render_lib_rs(context: &WizardContext) -> String {
+    let user_describe_ops = render_lib_user_describe_ops(context);
+    let config_schema_rust = context.config_schema.rust_schema_ir();
     format!(
         r#"#[cfg(target_arch = "wasm32")]
 use std::collections::BTreeMap;
@@ -820,7 +901,9 @@ pub mod i18n_bundle;
 pub mod qa;
 
 const COMPONENT_NAME: &str = "{name}";
+#[cfg(target_arch = "wasm32")]
 const COMPONENT_ORG: &str = "com.example";
+#[cfg(target_arch = "wasm32")]
 const COMPONENT_VERSION: &str = "0.1.0";
 
 #[cfg(target_arch = "wasm32")]
@@ -838,73 +921,62 @@ impl node::Guest for Component {{
     fn describe() -> node::ComponentDescriptor {{
         let input_schema_cbor = input_schema_cbor();
         let output_schema_cbor = output_schema_cbor();
+        let mut ops = vec![
+{user_describe_ops}
+        ];
+        ops.extend(vec![
+            node::Op {{
+                name: "qa-spec".to_string(),
+                summary: Some("Return QA spec for requested mode".to_string()),
+                input: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                output: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                examples: Vec::new(),
+            }},
+            node::Op {{
+                name: "apply-answers".to_string(),
+                summary: Some("Apply QA answers and optionally return config override".to_string()),
+                input: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                output: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                examples: Vec::new(),
+            }},
+            node::Op {{
+                name: "i18n-keys".to_string(),
+                summary: Some("Return i18n keys referenced by QA/setup".to_string()),
+                input: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                output: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(output_schema_cbor),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                examples: Vec::new(),
+            }},
+        ]);
         node::ComponentDescriptor {{
             name: COMPONENT_NAME.to_string(),
             version: COMPONENT_VERSION.to_string(),
             summary: Some(format!("Greentic component {{COMPONENT_NAME}}")),
             capabilities: Vec::new(),
-            ops: vec![
-                node::Op {{
-                    name: "handle_message".to_string(),
-                    summary: Some("Handle a single message input".to_string()),
-                    input: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    output: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    examples: Vec::new(),
-                }},
-                node::Op {{
-                    name: "qa-spec".to_string(),
-                    summary: Some("Return QA spec for requested mode".to_string()),
-                    input: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    output: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    examples: Vec::new(),
-                }},
-                node::Op {{
-                    name: "apply-answers".to_string(),
-                    summary: Some("Apply QA answers and optionally return config override".to_string()),
-                    input: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    output: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    examples: Vec::new(),
-                }},
-                node::Op {{
-                    name: "i18n-keys".to_string(),
-                    summary: Some("Return i18n keys referenced by QA/setup".to_string()),
-                    input: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    output: node::IoSchema {{
-                        schema: node::SchemaSource::InlineCbor(output_schema_cbor),
-                        content_type: "application/cbor".to_string(),
-                        schema_version: None,
-                    }},
-                    examples: Vec::new(),
-                }},
-            ],
+            ops,
             schemas: Vec::new(),
             setup: None,
         }}
@@ -923,6 +995,175 @@ impl node::Guest for Component {{
             output_metadata_cbor: None,
         }})
     }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[repr(C)]
+struct CabiList {{
+    ptr: *mut u8,
+    len: usize,
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[repr(C)]
+struct CabiStringList {{
+    ptr: *mut CabiList,
+    len: usize,
+}}
+
+#[cfg(target_arch = "wasm32")]
+static mut QA_SPEC_RET: CabiList = CabiList {{
+    ptr: std::ptr::null_mut(),
+    len: 0,
+}};
+
+#[cfg(target_arch = "wasm32")]
+static mut APPLY_ANSWERS_RET: CabiList = CabiList {{
+    ptr: std::ptr::null_mut(),
+    len: 0,
+}};
+
+#[cfg(target_arch = "wasm32")]
+static mut I18N_KEYS_RET: CabiStringList = CabiStringList {{
+    ptr: std::ptr::null_mut(),
+    len: 0,
+}};
+
+#[cfg(target_arch = "wasm32")]
+fn cabi_mode(mode: i32) -> qa::NormalizedMode {{
+    match mode {{
+        0 | 1 => qa::NormalizedMode::Setup,
+        2 => qa::NormalizedMode::Update,
+        3 => qa::NormalizedMode::Remove,
+        _ => qa::NormalizedMode::Setup,
+    }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+unsafe fn export_vec_bytes(bytes: Vec<u8>, ret: *mut CabiList) -> *mut u8 {{
+    let boxed = bytes.into_boxed_slice();
+    let ptr = boxed.as_ptr() as *mut u8;
+    let len = boxed.len();
+    std::mem::forget(boxed);
+    unsafe {{
+        (*ret).ptr = ptr;
+        (*ret).len = len;
+        ret.cast()
+    }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+unsafe fn post_return_vec_bytes(arg0: *mut u8) {{
+    let ret = unsafe {{ &*(arg0.cast::<CabiList>()) }};
+    if ret.len == 0 || ret.ptr.is_null() {{
+        return;
+    }}
+    let layout = std::alloc::Layout::array::<u8>(ret.len).expect("byte layout");
+    unsafe {{
+        std::alloc::dealloc(ret.ptr, layout);
+    }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+unsafe fn export_i18n_keys_list(keys: Vec<String>) -> *mut u8 {{
+    let len = keys.len();
+    let layout = std::alloc::Layout::array::<CabiList>(len).expect("string list layout");
+    let ptr = if layout.size() == 0 {{
+        std::ptr::null_mut()
+    }} else {{
+        let raw = unsafe {{ std::alloc::alloc(layout) }}.cast::<CabiList>();
+        if raw.is_null() {{
+            std::alloc::handle_alloc_error(layout);
+        }}
+        raw
+    }};
+    for (idx, key) in keys.into_iter().enumerate() {{
+        let boxed = key.into_bytes().into_boxed_slice();
+        let item_ptr = boxed.as_ptr() as *mut u8;
+        let item_len = boxed.len();
+        std::mem::forget(boxed);
+        unsafe {{
+            ptr.add(idx).write(CabiList {{
+                ptr: item_ptr,
+                len: item_len,
+            }});
+        }}
+    }}
+    unsafe {{
+        I18N_KEYS_RET.ptr = ptr;
+        I18N_KEYS_RET.len = len;
+        (&raw mut I18N_KEYS_RET).cast()
+    }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+unsafe fn post_return_i18n_keys(arg0: *mut u8) {{
+    let ret = unsafe {{ &*(arg0.cast::<CabiStringList>()) }};
+    for idx in 0..ret.len {{
+        let item = unsafe {{ &*ret.ptr.add(idx) }};
+        if item.len == 0 || item.ptr.is_null() {{
+            continue;
+        }}
+        let layout = std::alloc::Layout::array::<u8>(item.len).expect("string layout");
+        unsafe {{
+            std::alloc::dealloc(item.ptr, layout);
+        }}
+    }}
+    if ret.len == 0 || ret.ptr.is_null() {{
+        return;
+    }}
+    let layout = std::alloc::Layout::array::<CabiList>(ret.len).expect("string list layout");
+    unsafe {{
+        std::alloc::dealloc(ret.ptr.cast(), layout);
+    }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "greentic:component/component-qa@0.6.0#qa-spec")]
+unsafe extern "C" fn export_component_qa_spec(mode: i32) -> *mut u8 {{
+    let bytes = qa::qa_spec_cbor(cabi_mode(mode));
+    unsafe {{ export_vec_bytes(bytes, &raw mut QA_SPEC_RET) }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "cabi_post_greentic:component/component-qa@0.6.0#qa-spec")]
+unsafe extern "C" fn post_return_component_qa_spec(arg0: *mut u8) {{
+    unsafe {{ post_return_vec_bytes(arg0) }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "greentic:component/component-qa@0.6.0#apply-answers")]
+unsafe extern "C" fn export_component_apply_answers(
+    mode: i32,
+    current_config_ptr: *mut u8,
+    current_config_len: usize,
+    answers_ptr: *mut u8,
+    answers_len: usize,
+) -> *mut u8 {{
+    let current_config = unsafe {{
+        Vec::from_raw_parts(current_config_ptr, current_config_len, current_config_len)
+    }};
+    let answers = unsafe {{ Vec::from_raw_parts(answers_ptr, answers_len, answers_len) }};
+    let bytes = qa::apply_answers_cbor(cabi_mode(mode), &current_config, &answers);
+    unsafe {{ export_vec_bytes(bytes, &raw mut APPLY_ANSWERS_RET) }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "cabi_post_greentic:component/component-qa@0.6.0#apply-answers")]
+unsafe extern "C" fn post_return_component_apply_answers(arg0: *mut u8) {{
+    unsafe {{ post_return_vec_bytes(arg0) }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "greentic:component/component-i18n@0.6.0#i18n-keys")]
+unsafe extern "C" fn export_component_i18n_keys() -> *mut u8 {{
+    unsafe {{ export_i18n_keys_list(qa::i18n_keys()) }}
+}}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(export_name = "cabi_post_greentic:component/component-i18n@0.6.0#i18n-keys")]
+unsafe extern "C" fn post_return_component_i18n_keys(arg0: *mut u8) {{
+    unsafe {{ post_return_i18n_keys(arg0) }}
 }}
 
 #[cfg(target_arch = "wasm32")]
@@ -998,11 +1239,7 @@ fn output_schema() -> SchemaIr {{
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
 fn config_schema() -> SchemaIr {{
-    SchemaIr::Object {{
-        properties: BTreeMap::new(),
-        required: Vec::new(),
-        additional: AdditionalProperties::Forbid,
-    }}
+    {config_schema_rust}
 }}
 
 #[cfg(target_arch = "wasm32")]
@@ -1064,13 +1301,43 @@ fn run_component_cbor(operation: &str, input: Vec<u8>) -> Vec<u8> {{
     encode_cbor(&output)
 }}
 "#,
-        name = context.name
+        name = context.name,
+        user_describe_ops = user_describe_ops
     )
 }
 
+fn render_lib_user_describe_ops(context: &WizardContext) -> String {
+    context
+        .user_operations
+        .iter()
+        .map(|name| {
+            format!(
+                r#"            node::Op {{
+                name: "{name}".to_string(),
+                summary: Some("Handle a single message input".to_string()),
+                input: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(input_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                output: node::IoSchema {{
+                    schema: node::SchemaSource::InlineCbor(output_schema_cbor.clone()),
+                    content_type: "application/cbor".to_string(),
+                    schema_version: None,
+                }},
+                examples: Vec::new(),
+            }}"#,
+                name = name
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
 fn render_qa_rs() -> String {
-    r#"use greentic_types::i18n_text::I18nText;
-use greentic_types::schemas::component::v0_6_0::{QaMode, Question, QuestionKind};
+    r#"use greentic_types::cbor::canonical;
+use greentic_types::i18n_text::I18nText;
+use greentic_types::schemas::component::v0_6_0::{QaMode, Question};
 use serde_json::{json, Value as JsonValue};
 
 // Internal normalized lifecycle semantics used by scaffolded QA operations.
@@ -1104,6 +1371,10 @@ pub fn normalize_mode(raw: &str) -> Option<NormalizedMode> {
 
 // Primary QA authoring entrypoint.
 // Extend question sets here for your real setup/update/remove requirements.
+pub fn qa_spec_cbor(mode: NormalizedMode) -> Vec<u8> {
+    canonical::to_canonical_cbor_allow_floats(&qa_spec_json(mode)).unwrap_or_default()
+}
+
 pub fn qa_spec_json(mode: NormalizedMode) -> JsonValue {
     let (title_key, description_key, questions) = match mode {
         NormalizedMode::Setup => (
@@ -1161,16 +1432,29 @@ pub fn qa_spec_json(mode: NormalizedMode) -> JsonValue {
     })
 }
 
+pub fn apply_answers_cbor(
+    mode: NormalizedMode,
+    current_config: &[u8],
+    answers: &[u8],
+) -> Vec<u8> {
+    let payload = json!({
+        "current_config": decode_json_or_empty(current_config),
+        "answers": decode_json_or_empty(answers),
+    });
+    canonical::to_canonical_cbor_allow_floats(&apply_answers(mode, &payload)).unwrap_or_default()
+}
+
 fn question(id: &str, label_key: &str, help_key: &str, required: bool) -> Question {
-    Question {
-        id: id.to_string(),
-        label: I18nText::new(label_key, None),
-        help: Some(I18nText::new(help_key, None)),
-        error: None,
-        kind: QuestionKind::Text,
-        required,
-        default: None,
-    }
+    serde_json::from_value(json!({
+        "id": id,
+        "label": I18nText::new(label_key, None),
+        "help": I18nText::new(help_key, None),
+        "error": null,
+        "kind": { "type": "text" },
+        "required": required,
+        "default": null
+    }))
+    .expect("question should deserialize")
 }
 
 // Used by `i18n-keys` operation and contract checks in operator.
@@ -1257,6 +1541,13 @@ pub fn apply_answers(mode: NormalizedMode, payload: &JsonValue) -> JsonValue {
             "timings_ms": {}
         }
     })
+}
+
+fn decode_json_or_empty(bytes: &[u8]) -> JsonValue {
+    if let Ok(value) = canonical::from_cbor(bytes) {
+        return value;
+    }
+    serde_json::from_slice(bytes).unwrap_or_else(|_| json!({}))
 }
 "#
     .to_string()
@@ -1602,18 +1893,21 @@ fail() {
 }
 
 ensure_codex() {
-  if command -v codex >/dev/null 2>&1; then
+  if command -v codex >/dev/null 2>&1 && codex --version >/dev/null 2>&1; then
     return
   fi
+  log "Codex CLI missing or broken; attempting install"
   if command -v npm >/dev/null 2>&1; then
     log "installing Codex CLI via npm"
-    npm i -g @openai/codex || fail "failed to install Codex CLI via npm"
+    npm i -g @openai/codex@latest || fail "failed to install Codex CLI via npm"
   elif command -v brew >/dev/null 2>&1; then
     log "installing Codex CLI via brew"
     brew install codex || fail "failed to install Codex CLI via brew"
   else
     fail "Codex CLI not found and no supported installer available (npm or brew)"
   fi
+  command -v codex >/dev/null 2>&1 || fail "Codex CLI install completed but codex is still not on PATH"
+  codex --version >/dev/null 2>&1 || fail "Codex CLI is still unusable after install"
 }
 
 ensure_codex_login() {
@@ -1625,13 +1919,37 @@ ensure_codex_login() {
 }
 
 probe_translator() {
-  command -v greentic-i18n-translator >/dev/null 2>&1 || fail "greentic-i18n-translator not found. Install it and rerun this script."
+  if ! command -v greentic-i18n-translator >/dev/null 2>&1; then
+    command -v cargo-binstall >/dev/null 2>&1 || fail "greentic-i18n-translator not found and cargo-binstall is unavailable"
+    log "installing greentic-i18n-translator via cargo-binstall"
+    cargo binstall -y greentic-i18n-translator || fail "failed to install greentic-i18n-translator via cargo-binstall"
+  fi
+  command -v greentic-i18n-translator >/dev/null 2>&1 || fail "greentic-i18n-translator is still not on PATH after cargo-binstall"
   local help_output
   help_output="$(greentic-i18n-translator --help 2>&1 || true)"
   [[ -n "$help_output" ]] || fail "unable to inspect greentic-i18n-translator --help"
   if ! greentic-i18n-translator translate --help >/dev/null 2>&1; then
     fail "translator subcommand 'translate' is required but unavailable"
   fi
+}
+
+setup_codex_wrapper() {
+  command -v codex >/dev/null 2>&1 || return 0
+  local real_codex
+  real_codex="$(command -v codex)"
+  local wrapper_dir
+  wrapper_dir="$(mktemp -d)"
+  cat > "$wrapper_dir/codex" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\${1:-}" == "exec" ]]; then
+  shift
+  exec "$real_codex" exec --skip-git-repo-check "\$@"
+fi
+exec "$real_codex" "\$@"
+EOF
+  chmod +x "$wrapper_dir/codex"
+  export PATH="$wrapper_dir:$PATH"
 }
 
 run_translate() {
@@ -1716,6 +2034,7 @@ run_optional_checks() {
 [[ -f "$SOURCE_FILE" ]] || fail "missing source locale file: $SOURCE_FILE"
 
 ensure_codex
+setup_codex_wrapper
 ensure_codex_login
 probe_translator
 run_translate

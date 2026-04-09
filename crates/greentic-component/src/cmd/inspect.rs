@@ -9,7 +9,15 @@ use wasmtime::{Engine, Store};
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
 use super::path::strip_file_scheme;
-use crate::{ComponentError, PreparedComponent, prepare_component_with_manifest};
+use crate::describe::{DescribePayload, from_wit_world};
+use crate::embedded_compare::{
+    EmbeddedManifestComparisonReport, compare_embedded_with_describe,
+    compare_embedded_with_manifest,
+};
+use crate::embedded_descriptor::{
+    EMBEDDED_COMPONENT_MANIFEST_SECTION_V1, read_and_verify_embedded_component_manifest_section_v1,
+};
+use crate::{ComponentError, PreparedComponent, parse_manifest, prepare_component_with_manifest};
 use greentic_types::cbor::canonical;
 use greentic_types::schemas::common::schema_ir::{AdditionalProperties, SchemaIr};
 use greentic_types::schemas::component::v0_6_0::{ComponentDescribe, schema_hash};
@@ -53,8 +61,12 @@ pub struct InspectResult {
 }
 
 pub fn run(args: &InspectArgs) -> Result<InspectResult, ComponentError> {
-    if should_use_describe_path(args) {
+    if args.describe.is_some() {
         return inspect_describe(args);
+    }
+
+    if should_inspect_wasm_artifact(args) {
+        return inspect_artifact(args);
     }
 
     let target = args
@@ -121,6 +133,379 @@ pub fn run(args: &InspectArgs) -> Result<InspectResult, ComponentError> {
     Ok(InspectResult::default())
 }
 
+#[derive(Debug, Serialize)]
+struct EmbeddedInspectStatus {
+    present: bool,
+    section_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    envelope_version: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    envelope_kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    payload_hash_blake3: Option<String>,
+    hash_verified: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    manifest: Option<crate::embedded_descriptor::EmbeddedComponentManifestV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compare_manifest: Option<EmbeddedManifestComparisonReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compare_describe: Option<EmbeddedManifestComparisonReport>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    warnings: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ArtifactInspectReport {
+    wasm_path: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    manifest: Option<ArtifactManifestStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    describe: Option<ArtifactDescribeStatus>,
+    embedded: EmbeddedInspectStatus,
+}
+
+#[derive(Debug, Serialize)]
+struct ArtifactManifestStatus {
+    path: PathBuf,
+    component_id: String,
+    version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compare_embedded: Option<EmbeddedManifestComparisonReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct ArtifactDescribeStatus {
+    status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    schema_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    versions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    function_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    operation_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compare_embedded: Option<EmbeddedManifestComparisonReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
+}
+
+fn inspect_artifact(args: &InspectArgs) -> Result<InspectResult, ComponentError> {
+    let target = args
+        .target
+        .as_ref()
+        .ok_or_else(|| ComponentError::Doctor("inspect target is required".to_string()))?;
+    let wasm_path = resolve_wasm_path(target).map_err(ComponentError::Doctor)?;
+    let manifest_path = args
+        .manifest
+        .clone()
+        .or_else(|| discover_manifest_path(&wasm_path, Path::new(target)));
+    let wasm_bytes = fs::read(&wasm_path)
+        .map_err(|err| ComponentError::Doctor(format!("failed to read wasm: {err}")))?;
+    let mut warnings = Vec::new();
+    let verified =
+        read_and_verify_embedded_component_manifest_section_v1(&wasm_bytes).map_err(|err| {
+            ComponentError::Doctor(format!("failed to read embedded manifest: {err}"))
+        })?;
+
+    let mut compare_manifest = None;
+    let mut compare_describe = None;
+    let mut envelope_version = None;
+    let mut envelope_kind = None;
+    let mut payload_hash_blake3 = None;
+    let mut manifest = None;
+    let mut external_manifest_summary = None;
+    let mut describe_status = None;
+    let present = verified.is_some();
+    let hash_verified = verified.is_some();
+
+    if let Some(manifest_path) = manifest_path.as_ref() {
+        let raw = fs::read_to_string(manifest_path).map_err(|err| {
+            ComponentError::Doctor(format!(
+                "failed to read manifest {}: {err}",
+                manifest_path.display()
+            ))
+        })?;
+        let parsed = parse_manifest(&raw).map_err(|err| {
+            ComponentError::Doctor(format!(
+                "failed to parse manifest {}: {err}",
+                manifest_path.display()
+            ))
+        })?;
+        external_manifest_summary =
+            Some((parsed.id.as_str().to_string(), parsed.version.to_string()));
+        if let Some(verified) = verified.as_ref() {
+            compare_manifest = Some(compare_embedded_with_manifest(&verified.manifest, &parsed));
+        }
+    }
+
+    if let Some(verified) = verified {
+        envelope_version = Some(verified.envelope.version);
+        envelope_kind = Some(verified.envelope.kind.clone());
+        payload_hash_blake3 = Some(verified.envelope.payload_hash_blake3.clone());
+        manifest = Some(verified.manifest.clone());
+        match call_describe(&wasm_path) {
+            Ok(bytes) => {
+                let payload = strip_self_describe_tag(&bytes);
+                match canonical::from_cbor::<ComponentDescribe>(payload) {
+                    Ok(describe) => {
+                        let operation_count = describe.operations.len();
+                        let describe_id = describe.info.id.clone();
+                        describe_status = Some(ArtifactDescribeStatus {
+                            status: "available".to_string(),
+                            source: Some("export".to_string()),
+                            name: Some(describe_id),
+                            schema_id: None,
+                            world: None,
+                            versions: None,
+                            version_count: None,
+                            function_count: None,
+                            operation_count: Some(operation_count),
+                            compare_embedded: None,
+                            reason: None,
+                        });
+                        compare_describe = Some(compare_embedded_with_describe(
+                            &verified.manifest,
+                            &describe,
+                        ));
+                    }
+                    Err(err) => {
+                        let reason = format!("decode failed: {err}");
+                        warnings.push(format!("describe {reason}"));
+                        describe_status = Some(ArtifactDescribeStatus {
+                            status: "unavailable".to_string(),
+                            source: Some("export".to_string()),
+                            name: None,
+                            schema_id: None,
+                            world: None,
+                            versions: None,
+                            version_count: None,
+                            function_count: None,
+                            operation_count: None,
+                            compare_embedded: None,
+                            reason: Some(reason),
+                        });
+                    }
+                }
+            }
+            Err(err) => {
+                if err.contains("missing export interface component-descriptor") {
+                    match from_wit_world(&wasm_path, "greentic:component/component@0.6.0") {
+                        Ok(payload) => {
+                            let function_count = payload
+                                .versions
+                                .first()
+                                .and_then(|version| version.schema.get("functions"))
+                                .and_then(|functions| functions.as_array())
+                                .map(|functions| functions.len());
+                            let world = payload
+                                .versions
+                                .first()
+                                .and_then(|version| version.schema.get("world"))
+                                .and_then(|world| world.as_str())
+                                .map(str::to_string);
+                            let versions = payload
+                                .versions
+                                .iter()
+                                .map(|version| version.version.to_string())
+                                .collect::<Vec<_>>();
+                            describe_status = Some(ArtifactDescribeStatus {
+                                status: "available".to_string(),
+                                source: Some("wit-world".to_string()),
+                                name: Some(payload.name),
+                                schema_id: payload.schema_id,
+                                world,
+                                versions: Some(versions),
+                                version_count: Some(payload.versions.len()),
+                                function_count,
+                                operation_count: None,
+                                compare_embedded: None,
+                                reason: Some("derived from exported WIT world".to_string()),
+                            });
+                        }
+                        Err(fallback_err) => {
+                            describe_status = Some(ArtifactDescribeStatus {
+                                status: "unavailable".to_string(),
+                                source: Some("wit-world".to_string()),
+                                name: None,
+                                schema_id: None,
+                                world: None,
+                                versions: None,
+                                version_count: None,
+                                function_count: None,
+                                operation_count: None,
+                                compare_embedded: None,
+                                reason: Some(format!(
+                                    "missing export interface component-descriptor; WIT fallback failed: {fallback_err}"
+                                )),
+                            });
+                        }
+                    }
+                } else {
+                    warnings.push(format!("describe unavailable: {err}"));
+                    describe_status = Some(ArtifactDescribeStatus {
+                        status: "unavailable".to_string(),
+                        source: Some("export".to_string()),
+                        name: None,
+                        schema_id: None,
+                        world: None,
+                        versions: None,
+                        version_count: None,
+                        function_count: None,
+                        operation_count: None,
+                        compare_embedded: None,
+                        reason: Some(err),
+                    });
+                }
+            }
+        }
+    }
+
+    if let (Some(compare), Some(status)) = (compare_describe.clone(), describe_status.as_mut()) {
+        status.compare_embedded = Some(compare);
+    }
+
+    let report = ArtifactInspectReport {
+        wasm_path,
+        manifest: manifest_path.as_ref().and_then(|path| {
+            external_manifest_summary
+                .as_ref()
+                .map(|(id, version)| ArtifactManifestStatus {
+                    path: path.clone(),
+                    component_id: id.clone(),
+                    version: version.clone(),
+                    compare_embedded: compare_manifest.clone(),
+                })
+        }),
+        describe: describe_status,
+        embedded: EmbeddedInspectStatus {
+            present,
+            section_name: EMBEDDED_COMPONENT_MANIFEST_SECTION_V1.to_string(),
+            envelope_version,
+            envelope_kind,
+            payload_hash_blake3,
+            hash_verified,
+            manifest,
+            compare_manifest,
+            compare_describe,
+            warnings: warnings.clone(),
+        },
+    };
+
+    if args.json {
+        let json = serde_json::to_string_pretty(&report)
+            .map_err(|err| ComponentError::Doctor(format!("failed to encode json: {err}")))?;
+        println!("{json}");
+    } else {
+        println!("wasm: {}", report.wasm_path.display());
+        if let Some(manifest) = &report.manifest {
+            println!("manifest: {}", manifest.path.display());
+            println!("  component: {}", manifest.component_id);
+            println!("  version: {}", manifest.version);
+            if let Some(compare) = &manifest.compare_embedded {
+                println!("  embedded vs manifest: {:?}", compare.overall);
+            }
+        }
+        println!(
+            "embedded manifest: {}",
+            if report.embedded.present {
+                "present"
+            } else {
+                "missing"
+            }
+        );
+        println!("  section: {}", report.embedded.section_name);
+        if let Some(version) = report.embedded.envelope_version {
+            println!("  envelope version: {version}");
+        }
+        if let Some(kind) = &report.embedded.envelope_kind {
+            println!("  kind: {kind}");
+        }
+        if let Some(hash) = &report.embedded.payload_hash_blake3 {
+            println!("  payload hash: {hash}");
+        }
+        println!("  hash verified: {}", report.embedded.hash_verified);
+        if let Some(manifest) = &report.embedded.manifest {
+            println!("  component: {}", manifest.id);
+            println!("  name: {}", manifest.name);
+            println!("  version: {}", manifest.version);
+            println!("  world: {}", manifest.world);
+            println!("  operations: {}", manifest.operations.len());
+            let operation_names = manifest
+                .operations
+                .iter()
+                .map(|op| op.name.as_str())
+                .collect::<Vec<_>>();
+            if !operation_names.is_empty() {
+                println!("  operation names: {}", operation_names.join(", "));
+            }
+            if let Some(default_operation) = &manifest.default_operation {
+                println!("  default operation: {default_operation}");
+            }
+            if !manifest.supports.is_empty() {
+                println!("  supports: {:?}", manifest.supports);
+            }
+            println!("  capabilities: {:?}", manifest.capabilities);
+            println!("  secret requirements: [redacted]");
+            println!("  profiles: {:?}", manifest.profiles);
+            if let Some(limits) = &manifest.limits {
+                println!(
+                    "  limits: memory_mb={} wall_time_ms={} fuel={:?} files={:?}",
+                    limits.memory_mb, limits.wall_time_ms, limits.fuel, limits.files
+                );
+            }
+            if let Some(telemetry) = &manifest.telemetry {
+                println!("  telemetry span prefix: {}", telemetry.span_prefix);
+                println!("  telemetry attributes: {:?}", telemetry.attributes);
+                println!("  telemetry emit node spans: {}", telemetry.emit_node_spans);
+            }
+        }
+        if let Some(describe) = &report.describe {
+            println!("describe: {}", describe.status);
+            if let Some(source) = &describe.source {
+                println!("  source: {source}");
+            }
+            if let Some(name) = &describe.name {
+                println!("  name: {name}");
+            }
+            if let Some(schema_id) = &describe.schema_id {
+                println!("  schema id: {schema_id}");
+            }
+            if let Some(world) = &describe.world {
+                println!("  world: {world}");
+            }
+            if let Some(versions) = &describe.versions {
+                println!("  versions: {}", versions.join(", "));
+            }
+            if let Some(version_count) = describe.version_count {
+                println!("  version count: {version_count}");
+            }
+            if let Some(function_count) = describe.function_count {
+                println!("  functions: {function_count}");
+            }
+            if let Some(operation_count) = describe.operation_count {
+                println!("  operations: {operation_count}");
+            }
+            if let Some(compare) = &describe.compare_embedded {
+                println!("  embedded vs describe: {:?}", compare.overall);
+            }
+            if let Some(reason) = &describe.reason {
+                println!("  reason: {reason}");
+            }
+        }
+    }
+
+    Ok(InspectResult { warnings })
+}
+
 pub fn emit_warnings(warnings: &[String]) {
     for warning in warnings {
         eprintln!("warning: {warning}");
@@ -178,22 +563,31 @@ pub fn build_report(prepared: &PreparedComponent) -> Value {
     })
 }
 
-fn should_use_describe_path(args: &InspectArgs) -> bool {
-    if args.describe.is_some() {
-        return true;
-    }
-    if args.manifest.is_some() {
-        return false;
-    }
+fn should_inspect_wasm_artifact(args: &InspectArgs) -> bool {
     let Some(target) = args.target.as_ref() else {
         return false;
     };
     let target = strip_file_scheme(Path::new(target));
-    target
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .map(|ext| ext.eq_ignore_ascii_case("wasm"))
-        .unwrap_or(false)
+    target.is_dir()
+        || target
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.eq_ignore_ascii_case("wasm"))
+            .unwrap_or(false)
+}
+
+fn discover_manifest_path(wasm_path: &Path, target_path: &Path) -> Option<PathBuf> {
+    let mut candidates = Vec::new();
+    if target_path.is_dir() {
+        candidates.push(target_path.join("component.manifest.json"));
+    }
+    if let Some(parent) = wasm_path.parent() {
+        candidates.push(parent.join("component.manifest.json"));
+        if let Some(grandparent) = parent.parent() {
+            candidates.push(grandparent.join("component.manifest.json"));
+        }
+    }
+    candidates.into_iter().find(|path| path.is_file())
 }
 
 fn inspect_describe(args: &InspectArgs) -> Result<InspectResult, ComponentError> {
@@ -217,10 +611,37 @@ fn inspect_describe(args: &InspectArgs) -> Result<InspectResult, ComponentError>
     if let Err(err) = ensure_canonical_allow_floats(payload) {
         warnings.push(format!("describe payload not canonical: {err}"));
     }
-    let describe: ComponentDescribe = canonical::from_cbor(payload)
-        .map_err(|err| ComponentError::Doctor(format!("describe decode failed: {err}")))?;
+    if let Ok(describe) = canonical::from_cbor::<ComponentDescribe>(payload) {
+        let mut report = DescribeReport::from(describe, args.verify)?;
+        report.wasm_path = wasm_path;
 
-    let mut report = DescribeReport::from(describe, args.verify)?;
+        if args.json {
+            let json = serde_json::to_string_pretty(&report)
+                .map_err(|err| ComponentError::Doctor(format!("failed to encode json: {err}")))?;
+            println!("{json}");
+        } else {
+            emit_describe_human(&report);
+        }
+
+        let verify_failed = args.verify
+            && report
+                .operations
+                .iter()
+                .any(|op| matches!(op.schema_hash_valid, Some(false)));
+        if verify_failed {
+            return Err(ComponentError::Doctor(
+                "schema_hash verification failed".to_string(),
+            ));
+        }
+        return Ok(InspectResult { warnings });
+    }
+
+    let derived: DescribePayload = canonical::from_cbor(payload)
+        .map_err(|err| ComponentError::Doctor(format!("describe decode failed: {err}")))?;
+    if args.verify {
+        warnings.push("verify skipped for WIT-derived describe payload".to_string());
+    }
+    let mut report = DerivedDescribeReport::from(derived);
     report.wasm_path = wasm_path;
 
     if args.json {
@@ -228,18 +649,7 @@ fn inspect_describe(args: &InspectArgs) -> Result<InspectResult, ComponentError>
             .map_err(|err| ComponentError::Doctor(format!("failed to encode json: {err}")))?;
         println!("{json}");
     } else {
-        emit_describe_human(&report);
-    }
-
-    let verify_failed = args.verify
-        && report
-            .operations
-            .iter()
-            .any(|op| matches!(op.schema_hash_valid, Some(false)));
-    if verify_failed {
-        return Err(ComponentError::Doctor(
-            "schema_hash verification failed".to_string(),
-        ));
+        emit_derived_describe_human(&report);
     }
 
     Ok(InspectResult { warnings })
@@ -259,6 +669,69 @@ fn emit_describe_human(report: &DescribeReport) {
         }
     }
     println!("  config: {}", report.config.summary);
+}
+
+#[derive(Debug, Serialize)]
+struct DerivedDescribeReport {
+    kind: &'static str,
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    schema_id: Option<String>,
+    versions: Vec<DerivedDescribeVersionReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wasm_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Serialize)]
+struct DerivedDescribeVersionReport {
+    version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world: Option<String>,
+    function_count: usize,
+}
+
+impl DerivedDescribeReport {
+    fn from(payload: DescribePayload) -> Self {
+        Self {
+            kind: "wit-derived",
+            name: payload.name,
+            schema_id: payload.schema_id,
+            versions: payload
+                .versions
+                .into_iter()
+                .map(|version| DerivedDescribeVersionReport {
+                    version: version.version.to_string(),
+                    world: version
+                        .schema
+                        .get("world")
+                        .and_then(|world| world.as_str())
+                        .map(str::to_string),
+                    function_count: version
+                        .schema
+                        .get("functions")
+                        .and_then(|functions| functions.as_array())
+                        .map(|functions| functions.len())
+                        .unwrap_or(0),
+                })
+                .collect(),
+            wasm_path: None,
+        }
+    }
+}
+
+fn emit_derived_describe_human(report: &DerivedDescribeReport) {
+    println!("describe: wit-derived");
+    println!("  name: {}", report.name);
+    if let Some(schema_id) = &report.schema_id {
+        println!("  schema id: {schema_id}");
+    }
+    for version in &report.versions {
+        println!("  - version: {}", version.version);
+        if let Some(world) = &version.world {
+            println!("    world: {world}");
+        }
+        println!("    functions: {}", version.function_count);
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -558,5 +1031,84 @@ impl WasiView for InspectWasi {
             ctx: &mut self.ctx,
             table: &mut self.table,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasmtime::component::Val;
+
+    #[test]
+    fn should_inspect_wasm_artifact_detects_wasm_and_dirs_only() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        assert!(should_inspect_wasm_artifact(&InspectArgs {
+            target: Some("component.wasm".into()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+        assert!(should_inspect_wasm_artifact(&InspectArgs {
+            target: Some(dir.path().display().to_string()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+        assert!(!should_inspect_wasm_artifact(&InspectArgs {
+            target: Some("component.manifest.json".into()),
+            manifest: None,
+            describe: None,
+            json: false,
+            verify: false,
+            strict: false,
+        }));
+    }
+
+    #[test]
+    fn discover_manifest_path_checks_target_and_parent_paths() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest = dir.path().join("component.manifest.json");
+        fs::write(&manifest, "{}").expect("write manifest");
+
+        let from_dir = discover_manifest_path(&dir.path().join("component.wasm"), dir.path());
+        assert_eq!(from_dir, Some(manifest.clone()));
+
+        let nested = dir.path().join("dist/component.wasm");
+        fs::create_dir_all(nested.parent().expect("parent")).expect("create dist");
+        let from_parent = discover_manifest_path(&nested, nested.parent().expect("parent"));
+        assert_eq!(from_parent, Some(manifest));
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_multiple_candidates_in_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        fs::write(dist.join("one.wasm"), b"1").expect("write first wasm");
+        fs::write(dist.join("two.wasm"), b"2").expect("write second wasm");
+
+        let err = resolve_wasm_path(dir.path().to_str().expect("utf-8"))
+            .expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn val_to_bytes_rejects_non_byte_lists() {
+        let err = val_to_bytes(&Val::List(vec![Val::String("oops".to_string())]))
+            .expect_err("non-u8 list should fail");
+        assert_eq!(err, "expected list<u8>");
+    }
+
+    #[test]
+    fn strip_self_describe_tag_removes_only_known_prefix() {
+        let tagged = [0xd9, 0xd9, 0xf7, 0x01, 0x02];
+        assert_eq!(strip_self_describe_tag(&tagged), &[0x01, 0x02]);
+        assert_eq!(strip_self_describe_tag(&[0x01, 0x02]), &[0x01, 0x02]);
     }
 }

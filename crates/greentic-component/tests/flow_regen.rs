@@ -7,11 +7,18 @@ use assert_fs::TempDir;
 use serde_json::Value as JsonValue;
 
 fn write_stub_manifest(dir: &TempDir, dev_flows: bool) {
+    let input_schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "input": { "type": "string", "default": "hello" }
+        },
+        "required": ["input"]
+    });
     let manifest = serde_json::json!({
         "id": "ai.greentic.example",
         "name": "example",
         "operations": [
-            { "name": "handle_message", "input_schema": {}, "output_schema": {} }
+            { "name": "handle_message", "input_schema": input_schema, "output_schema": {} }
         ],
         "default_operation": "handle_message",
         "config_schema": { "type": "object", "properties": {}, "required": [] },
@@ -39,34 +46,10 @@ fn write_stub_manifest(dir: &TempDir, dev_flows: bool) {
     .expect("write manifest");
 }
 
-fn write_input_schema(dir: &TempDir, default: Option<&str>) {
-    let schema = match default {
-        Some(value) => format!(
-            r#"{{
-  "type": "object",
-  "properties": {{
-    "input": {{ "type": "string", "default": "{value}" }}
-  }},
-  "required": ["input"]
-}}"#
-        ),
-        None => r#"{
-  "type": "object",
-  "properties": { "input": { "type": "string" } },
-  "required": ["input"]
-}"#
-        .to_string(),
-    };
-    let schema_dir = dir.path().join("schemas/io");
-    fs::create_dir_all(&schema_dir).expect("schema dir");
-    fs::write(schema_dir.join("input.schema.json"), schema).expect("write schema");
-}
-
 #[test]
 fn flow_update_regenerates_dev_flows_and_sets_operation() {
     let temp = TempDir::new().expect("tempdir");
     write_stub_manifest(&temp, true);
-    write_input_schema(&temp, Some("hello"));
 
     let mut cmd = cargo_bin_cmd!("greentic-component");
     cmd.current_dir(temp.path()).arg("flow").arg("update");
@@ -106,7 +89,37 @@ fn flow_update_regenerates_dev_flows_and_sets_operation() {
 fn flow_update_errors_on_missing_required_defaults() {
     let temp = TempDir::new().expect("tempdir");
     write_stub_manifest(&temp, false);
-    write_input_schema(&temp, None);
+    let manifest = serde_json::json!({
+        "id": "ai.greentic.example",
+        "name": "example",
+        "operations": [
+            {
+                "name": "handle_message",
+                "input_schema": {
+                    "type": "object",
+                    "properties": { "input": { "type": "string" } },
+                    "required": ["input"]
+                },
+                "output_schema": {}
+            }
+        ],
+        "default_operation": "handle_message",
+        "config_schema": { "type": "object", "properties": {}, "required": [] },
+        "supports": ["messaging"],
+        "profiles": { "default": "stateless", "supported": ["stateless"] },
+        "capabilities": {
+            "wasi": { "filesystem": { "mode": "none", "mounts": [] }, "random": true, "clocks": true },
+            "host": { "messaging": { "inbound": true, "outbound": true }, "telemetry": { "scope": "node" }, "secrets": { "required": [] } }
+        },
+        "limits": { "memory_mb": 64, "wall_time_ms": 1000 },
+        "artifacts": { "component_wasm": "component.wasm" },
+        "hashes": { "component_wasm": "blake3:0000000000000000000000000000000000000000000000000000000000000000" }
+    });
+    fs::write(
+        temp.path().join("component.manifest.json"),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .expect("write manifest");
 
     let mut cmd = cargo_bin_cmd!("greentic-component");
     cmd.current_dir(temp.path()).arg("flow").arg("update");
@@ -141,7 +154,6 @@ fn flow_update_errors_when_operation_ambiguous() {
         serde_json::to_string_pretty(&manifest).unwrap(),
     )
     .expect("write manifest");
-    write_input_schema(&temp, Some("hello"));
 
     let mut cmd = cargo_bin_cmd!("greentic-component");
     cmd.current_dir(temp.path()).arg("flow").arg("update");

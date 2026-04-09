@@ -11,13 +11,19 @@ use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiCtxView, WasiVie
 
 use super::path::strip_file_scheme;
 use crate::cmd::component_world::is_fallback_world;
-use crate::{ComponentError, abi, loader};
+use crate::embedded_compare::{compare_embedded_with_describe, compare_embedded_with_manifest};
+use crate::embedded_descriptor::{
+    VerifiedEmbeddedDescriptorV1, read_and_verify_embedded_component_manifest_section_v1,
+};
+use crate::test_harness::{HarnessConfig, TestHarness};
+use crate::{ComponentError, abi, loader, parse_manifest};
 
 use greentic_types::cbor::canonical;
 use greentic_types::schemas::common::schema_ir::{AdditionalProperties, SchemaIr};
 use greentic_types::schemas::component::v0_6_0::{
     ComponentDescribe, ComponentInfo, ComponentQaSpec, QaMode, schema_hash,
 };
+use greentic_types::{EnvId, TenantCtx, TenantId};
 
 const COMPONENT_WORLD_V0_6_0: &str = "greentic:component/component@0.6.0";
 const SELF_DESCRIBE_TAG: [u8; 3] = [0xd9, 0xd9, 0xf7];
@@ -56,8 +62,10 @@ pub fn run(args: DoctorArgs) -> Result<(), ComponentError> {
     let target_path = strip_file_scheme(Path::new(&args.target));
     let wasm_path = resolve_wasm_path(&args.target, &target_path, args.manifest.as_deref())
         .map_err(ComponentError::Doctor)?;
+    let manifest_path = discover_manifest_path(&wasm_path, &target_path, args.manifest.as_deref());
 
-    let report = DoctorReport::from_wasm(&wasm_path).map_err(ComponentError::Doctor)?;
+    let report = DoctorReport::from_wasm(&wasm_path, manifest_path.as_deref())
+        .map_err(ComponentError::Doctor)?;
     match args.format {
         DoctorFormat::Human => report.emit_human(),
         DoctorFormat::Json => report.emit_json()?,
@@ -67,6 +75,29 @@ pub fn run(args: DoctorArgs) -> Result<(), ComponentError> {
         return Err(ComponentError::Doctor("doctor checks failed".to_string()));
     }
     Ok(())
+}
+
+fn discover_manifest_path(
+    wasm_path: &Path,
+    target_path: &Path,
+    explicit: Option<&Path>,
+) -> Option<PathBuf> {
+    if let Some(path) = explicit {
+        return Some(path.to_path_buf());
+    }
+
+    let mut candidates = Vec::new();
+    if target_path.is_dir() {
+        candidates.push(target_path.join("component.manifest.json"));
+    }
+    if let Some(parent) = wasm_path.parent() {
+        candidates.push(parent.join("component.manifest.json"));
+        if let Some(grandparent) = parent.parent() {
+            candidates.push(grandparent.join("component.manifest.json"));
+        }
+    }
+
+    candidates.into_iter().find(|path| path.is_file())
 }
 
 fn resolve_wasm_path(
@@ -148,12 +179,17 @@ struct DoctorReport {
 }
 
 impl DoctorReport {
-    fn from_wasm(wasm_path: &Path) -> Result<Self, String> {
+    fn from_wasm(wasm_path: &Path, manifest_path: Option<&Path>) -> Result<Self, String> {
         let mut report = DoctorReport::default();
         report.validate_world(wasm_path);
+        let embedded = report.validate_embedded_metadata(wasm_path, manifest_path)?;
 
         let mut caller = ComponentCaller::new(wasm_path)
             .map_err(|err| format!("doctor: failed to load component: {err}"))?;
+
+        if !caller.has_interface("component-descriptor") && caller.has_interface("node") {
+            return report.validate_node_component(wasm_path, manifest_path, embedded.is_some());
+        }
 
         let info_bytes = report.require_export_bytes(
             &mut caller,
@@ -187,7 +223,9 @@ impl DoctorReport {
             if let Some(bytes) = spec_bytes.as_deref() {
                 match decode_cbor::<ComponentQaSpec>(bytes) {
                     Ok(spec) => {
-                        if spec.mode != mode {
+                        let compatible_default =
+                            mode == QaMode::Default && spec.mode == QaMode::Setup;
+                        if spec.mode != mode && !compatible_default {
                             report.error(
                                 "doctor.qa.mode_mismatch",
                                 format!("qa-spec returned {:?} for mode {mode_name}", spec.mode),
@@ -226,6 +264,16 @@ impl DoctorReport {
                 Ok(describe) => {
                     report.validate_info(&describe.info, "describe");
                     report.validate_describe(&describe, &bytes);
+                    if let Some(embedded) = embedded.as_ref() {
+                        report.validate_embedded_against_describe(&embedded.manifest, &describe);
+                    } else {
+                        report.warning(
+                            "doctor.embedded.describe_unavailable",
+                            "embedded metadata unavailable for compare with describe()".to_string(),
+                            "embedded_manifest",
+                            None,
+                        );
+                    }
                     report.validate_i18n(&i18n_keys, &qa_specs);
                     report.validate_apply_answers(&mut caller, &describe, &bytes);
                 }
@@ -240,6 +288,223 @@ impl DoctorReport {
 
         report.finalize();
         Ok(report)
+    }
+
+    fn validate_node_component(
+        mut self,
+        wasm_path: &Path,
+        manifest_path: Option<&Path>,
+        _embedded_present: bool,
+    ) -> Result<Self, String> {
+        let Some(manifest_path) = manifest_path else {
+            self.error(
+                "doctor.node.manifest_required",
+                "node-interface doctor checks require a component.manifest.json path".to_string(),
+                "manifest",
+                Some("pass --manifest or run doctor from the component project root".to_string()),
+            );
+            self.finalize();
+            return Ok(self);
+        };
+
+        let raw_manifest = fs::read_to_string(manifest_path)
+            .map_err(|err| format!("failed to read {}: {err}", manifest_path.display()))?;
+        let manifest = parse_manifest(&raw_manifest)
+            .map_err(|err| format!("failed to parse {}: {err}", manifest_path.display()))?;
+        let harness = new_doctor_harness(wasm_path, &manifest)?;
+
+        let i18n_keys = match invoke_json(&harness, "i18n-keys", &serde_json::json!({})) {
+            Ok(value) => match json_array_to_string_set(&value) {
+                Ok(keys) => Some(keys),
+                Err(err) => {
+                    self.error(
+                        "doctor.export.invalid_strings",
+                        format!("node.i18n-keys returned invalid strings: {err}"),
+                        "node.i18n-keys",
+                        None,
+                    );
+                    None
+                }
+            },
+            Err(err) => {
+                self.error(
+                    "doctor.export.call_failed",
+                    format!("node.i18n-keys failed: {err}"),
+                    "node.i18n-keys",
+                    None,
+                );
+                None
+            }
+        };
+
+        let mut qa_specs = BTreeMap::new();
+        for (mode, mode_name) in qa_modes() {
+            match invoke_json(
+                &harness,
+                "qa-spec",
+                &serde_json::json!({ "mode": mode_name }),
+            ) {
+                Ok(value) => match serde_json::from_value::<ComponentQaSpec>(value) {
+                    Ok(spec) => {
+                        let compatible_default =
+                            mode == QaMode::Default && spec.mode == QaMode::Setup;
+                        if spec.mode != mode && !compatible_default {
+                            self.error(
+                                "doctor.qa.mode_mismatch",
+                                format!("qa-spec returned {:?} for mode {mode_name}", spec.mode),
+                                "qa-spec",
+                                None,
+                            );
+                        }
+                        qa_specs.insert(mode_name.to_string(), spec);
+                    }
+                    Err(err) => self.error(
+                        "doctor.qa.decode_failed",
+                        format!("qa-spec({mode_name}) decode failed: {err}"),
+                        "qa-spec",
+                        None,
+                    ),
+                },
+                Err(err) => self.error(
+                    "doctor.export.call_failed",
+                    format!("node.qa-spec failed: {err}"),
+                    "node.qa-spec",
+                    None,
+                ),
+            }
+        }
+        self.validate_i18n(&i18n_keys, &qa_specs);
+
+        for (_mode, mode_name) in qa_modes() {
+            let payload = sample_apply_answers_payload(mode_name);
+            match invoke_json(&harness, "apply-answers", &payload) {
+                Ok(value) => self.validate_apply_answers_value(mode_name, &value),
+                Err(err) => self.error(
+                    "doctor.export.call_failed",
+                    format!("node.apply-answers failed: {err}"),
+                    "node.apply-answers",
+                    None,
+                ),
+            }
+        }
+
+        if let Some(operation) = default_user_operation(&manifest) {
+            match invoke_json(
+                &harness,
+                operation,
+                &serde_json::json!({ "input": "doctor" }),
+            ) {
+                Ok(value) => {
+                    if !value.is_object() {
+                        self.error(
+                            "doctor.runtime.invalid_output",
+                            format!("{operation} returned non-object output"),
+                            format!("node.invoke.{operation}"),
+                            None,
+                        );
+                    }
+                }
+                Err(err) => self.error(
+                    "doctor.export.call_failed",
+                    format!("node.invoke({operation}) failed: {err}"),
+                    format!("node.invoke.{operation}"),
+                    None,
+                ),
+            }
+        }
+
+        self.finalize();
+        Ok(self)
+    }
+
+    fn validate_embedded_metadata(
+        &mut self,
+        wasm_path: &Path,
+        manifest_path: Option<&Path>,
+    ) -> Result<Option<VerifiedEmbeddedDescriptorV1>, String> {
+        let wasm_bytes = fs::read(wasm_path)
+            .map_err(|err| format!("failed to read {}: {err}", wasm_path.display()))?;
+        let embedded = read_and_verify_embedded_component_manifest_section_v1(&wasm_bytes)
+            .map_err(|err| format!("embedded manifest decode failed: {err}"))?;
+
+        let Some(embedded) = embedded else {
+            self.error(
+                "doctor.embedded.missing",
+                format!(
+                    "missing embedded manifest section {}",
+                    crate::EMBEDDED_COMPONENT_MANIFEST_SECTION_V1
+                ),
+                "embedded_manifest",
+                None,
+            );
+            return Ok(None);
+        };
+
+        if let Some(manifest_path) = manifest_path {
+            let raw_manifest = fs::read_to_string(manifest_path)
+                .map_err(|err| format!("failed to read {}: {err}", manifest_path.display()))?;
+            let manifest = parse_manifest(&raw_manifest)
+                .map_err(|err| format!("failed to parse {}: {err}", manifest_path.display()))?;
+            let comparison = compare_embedded_with_manifest(&embedded.manifest, &manifest);
+            for field in comparison
+                .fields
+                .into_iter()
+                .filter(|field| field.status != crate::ComparisonStatus::Match)
+            {
+                self.error(
+                    "doctor.embedded.manifest_mismatch",
+                    format!(
+                        "embedded manifest differs from canonical manifest for {}{}",
+                        field.field,
+                        field
+                            .detail
+                            .as_deref()
+                            .map(|detail| format!(": {detail}"))
+                            .unwrap_or_default()
+                    ),
+                    format!("embedded_manifest.{}", field.field),
+                    None,
+                );
+            }
+        } else {
+            self.warning(
+                "doctor.embedded.manifest_unavailable",
+                "external manifest unavailable; skipping embedded vs manifest comparison"
+                    .to_string(),
+                "embedded_manifest",
+                None,
+            );
+        }
+
+        Ok(Some(embedded))
+    }
+
+    fn validate_embedded_against_describe(
+        &mut self,
+        embedded: &crate::embedded_descriptor::EmbeddedComponentManifestV1,
+        describe: &ComponentDescribe,
+    ) {
+        let comparison = compare_embedded_with_describe(embedded, describe);
+        for field in comparison
+            .fields
+            .into_iter()
+            .filter(|field| field.status != crate::ComparisonStatus::Match)
+        {
+            self.error(
+                "doctor.embedded.describe_mismatch",
+                format!(
+                    "embedded manifest differs from describe() for {}{}",
+                    field.field,
+                    field
+                        .detail
+                        .as_deref()
+                        .map(|detail| format!(": {detail}"))
+                        .unwrap_or_default()
+                ),
+                format!("embedded_manifest.describe.{}", field.field),
+                None,
+            );
+        }
     }
 
     fn validate_world(&mut self, wasm_path: &Path) {
@@ -438,6 +703,43 @@ impl DoctorReport {
         }
     }
 
+    fn validate_apply_answers_value(&mut self, mode_name: &str, value: &JsonValue) {
+        let Some(object) = value.as_object() else {
+            self.error(
+                "doctor.qa.apply_answers.invalid_shape",
+                format!("apply-answers({mode_name}) returned non-object JSON"),
+                format!("apply-answers.{mode_name}"),
+                None,
+            );
+            return;
+        };
+
+        if !object.get("ok").is_some_and(JsonValue::is_boolean) {
+            self.error(
+                "doctor.qa.apply_answers.invalid_shape",
+                format!("apply-answers({mode_name}) must include boolean `ok`"),
+                format!("apply-answers.{mode_name}.ok"),
+                None,
+            );
+        }
+        if !object.get("warnings").is_some_and(|value| value.is_array()) {
+            self.error(
+                "doctor.qa.apply_answers.invalid_shape",
+                format!("apply-answers({mode_name}) must include array `warnings`"),
+                format!("apply-answers.{mode_name}.warnings"),
+                None,
+            );
+        }
+        if !object.get("errors").is_some_and(|value| value.is_array()) {
+            self.error(
+                "doctor.qa.apply_answers.invalid_shape",
+                format!("apply-answers({mode_name}) must include array `errors`"),
+                format!("apply-answers.{mode_name}.errors"),
+                None,
+            );
+        }
+    }
+
     fn validate_schema_ir<P: Into<String>>(&mut self, schema: &SchemaIr, path: P) {
         let path = path.into();
         let mut errors = Vec::new();
@@ -568,6 +870,22 @@ impl DoctorReport {
         });
     }
 
+    fn warning(
+        &mut self,
+        code: impl Into<String>,
+        message: impl Into<String>,
+        path: impl Into<String>,
+        hint: Option<String>,
+    ) {
+        self.diagnostics.push(DoctorDiagnostic {
+            severity: Severity::Warning,
+            code: code.into(),
+            message: message.into(),
+            path: path.into(),
+            hint,
+        });
+    }
+
     fn finalize(&mut self) {
         self.diagnostics
             .sort_by(|a, b| a.path.cmp(&b.path).then_with(|| a.code.cmp(&b.code)));
@@ -613,12 +931,14 @@ impl DoctorReport {
 #[serde(rename_all = "lowercase")]
 enum Severity {
     Error,
+    Warning,
 }
 
 impl std::fmt::Display for Severity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Severity::Error => write!(f, "error"),
+            Severity::Warning => write!(f, "warning"),
         }
     }
 }
@@ -673,6 +993,10 @@ impl ComponentCaller {
             .ok_or_else(|| format!("export {interface}.{func} is not callable"))?;
 
         call_component_func(&mut self.store, &func, params)
+    }
+
+    fn has_interface(&mut self, interface: &str) -> bool {
+        resolve_interface_index(&self.instance, &mut self.store, interface).is_some()
     }
 }
 
@@ -759,6 +1083,119 @@ fn val_to_strings(val: &Val) -> Result<Vec<String>, String> {
 fn decode_cbor<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, String> {
     let payload = strip_self_describe_tag(bytes);
     canonical::from_cbor(payload).map_err(|err| format!("CBOR decode failed: {err}"))
+}
+
+fn new_doctor_harness(
+    wasm_path: &Path,
+    manifest: &crate::manifest::ComponentManifest,
+) -> Result<TestHarness, String> {
+    let env: EnvId = "dev"
+        .to_string()
+        .try_into()
+        .map_err(|err| format!("invalid doctor env: {err}"))?;
+    let tenant: TenantId = "doctor"
+        .to_string()
+        .try_into()
+        .map_err(|err| format!("invalid doctor tenant: {err}"))?;
+    let tenant_ctx = TenantCtx::new(env, tenant)
+        .with_flow("doctor")
+        .with_node("doctor");
+    let allowed_secrets = manifest
+        .secret_requirements
+        .iter()
+        .map(|req| req.key.to_string())
+        .chain(
+            manifest
+                .capabilities
+                .host
+                .secrets
+                .as_ref()
+                .into_iter()
+                .flat_map(|spec| spec.required.iter().map(|req| req.key.to_string())),
+        )
+        .collect();
+
+    TestHarness::new(HarnessConfig {
+        wasm_bytes: fs::read(wasm_path)
+            .map_err(|err| format!("failed to read {}: {err}", wasm_path.display()))?,
+        tenant_ctx,
+        flow_id: "doctor".to_string(),
+        node_id: Some("doctor".to_string()),
+        state_prefix: "doctor".to_string(),
+        state_seeds: Vec::new(),
+        allow_state_read: true,
+        allow_state_write: true,
+        allow_state_delete: true,
+        allow_secrets: true,
+        allowed_secrets,
+        secrets: Default::default(),
+        wasi_preopens: Vec::new(),
+        config: Some(serde_json::json!({})),
+        allow_http: true,
+        timeout_ms: 5_000,
+        max_memory_bytes: 64 * 1024 * 1024,
+    })
+    .map_err(|err| format!("failed to initialize doctor harness: {err}"))
+}
+
+fn invoke_json(
+    harness: &TestHarness,
+    operation: &str,
+    payload: &JsonValue,
+) -> Result<JsonValue, String> {
+    let outcome = harness
+        .invoke(operation, payload)
+        .map_err(|err| format!("invoke component: {err}"))?;
+    serde_json::from_str(&outcome.output_json)
+        .map_err(|err| format!("decode operation output json failed: {err}"))
+}
+
+fn json_array_to_string_set(value: &JsonValue) -> Result<BTreeSet<String>, String> {
+    let array = value
+        .as_array()
+        .ok_or_else(|| "expected array<string>".to_string())?;
+    let mut out = BTreeSet::new();
+    for item in array {
+        let Some(string) = item.as_str() else {
+            return Err("expected array<string>".to_string());
+        };
+        out.insert(string.to_string());
+    }
+    Ok(out)
+}
+
+fn sample_apply_answers_payload(mode_name: &str) -> JsonValue {
+    let answers = match mode_name {
+        "setup" | "default" => serde_json::json!({
+            "api_key": "demo-key",
+            "region": "eu",
+            "webhook_base_url": "https://example.invalid/webhook",
+            "enabled": "true"
+        }),
+        "remove" => serde_json::json!({
+            "confirm_remove": "true"
+        }),
+        _ => serde_json::json!({
+            "enabled": "true"
+        }),
+    };
+    serde_json::json!({
+        "mode": mode_name,
+        "answers": answers,
+        "current_config": {}
+    })
+}
+
+fn default_user_operation(manifest: &crate::manifest::ComponentManifest) -> Option<&str> {
+    if let Some(default) = manifest.default_operation.as_deref() {
+        return Some(default);
+    }
+
+    manifest
+        .operations
+        .iter()
+        .map(|op| op.name.as_str())
+        .find(|name| !matches!(*name, "qa-spec" | "apply-answers" | "i18n-keys"))
 }
 
 fn strip_self_describe_tag(bytes: &[u8]) -> &[u8] {
@@ -1240,9 +1677,8 @@ mod tests {
     use super::*;
     use greentic_types::i18n_text::I18nText;
     use greentic_types::schemas::component::v0_6_0::{
-        ChoiceOption, ComponentDescribe, ComponentInfo, ComponentOperation, ComponentQaSpec,
-        ComponentRunInput, ComponentRunOutput, QaMode, Question, QuestionKind, RedactionKind,
-        RedactionRule,
+        ComponentDescribe, ComponentInfo, ComponentOperation, ComponentQaSpec, ComponentRunInput,
+        ComponentRunOutput, QaMode, RedactionKind, RedactionRule,
     };
     use serde_json::json;
 
@@ -1487,20 +1923,24 @@ mod tests {
             mode: QaMode::Default,
             title: I18nText::new("qa.title", None),
             description: Some(I18nText::new("qa.desc", None)),
-            questions: vec![Question {
-                id: "name".to_string(),
-                label: I18nText::new("qa.question.name", None),
-                help: None,
-                error: None,
-                kind: QuestionKind::Choice {
-                    options: vec![ChoiceOption {
-                        value: "one".to_string(),
-                        label: I18nText::new("qa.option.one", None),
-                    }],
-                },
-                required: true,
-                default: None,
-            }],
+            questions: vec![
+                serde_json::from_value(serde_json::json!({
+                    "id": "name",
+                    "label": I18nText::new("qa.question.name", None),
+                    "help": null,
+                    "error": null,
+                    "kind": {
+                        "type": "choice",
+                        "options": [{
+                            "value": "one",
+                            "label": I18nText::new("qa.option.one", None)
+                        }]
+                    },
+                    "required": true,
+                    "default": null
+                }))
+                .expect("question should deserialize"),
+            ],
             defaults: BTreeMap::new(),
         };
         let mut qa_specs = BTreeMap::new();
@@ -1567,5 +2007,339 @@ mod tests {
         );
         assert!(combined.contains("describe_hash="));
         assert!(combined.contains("schema_hashes=[run="));
+    }
+
+    #[test]
+    fn discover_manifest_path_prefers_explicit_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let explicit = dir.path().join("custom.manifest.json");
+        let inferred = dir.path().join("component.manifest.json");
+        fs::write(&inferred, "{}").expect("write inferred manifest");
+
+        let discovered = discover_manifest_path(
+            &dir.path().join("component.wasm"),
+            dir.path(),
+            Some(&explicit),
+        );
+
+        assert_eq!(discovered, Some(explicit));
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_explicit_wasm_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let resolved = resolve_wasm_path(wasm.to_str().expect("utf-8"), &wasm, None)
+            .expect("resolve wasm file");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_multiple_candidates_in_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        fs::write(dist.join("one.wasm"), b"1").expect("write first wasm");
+        fs::write(dist.join("two.wasm"), b"2").expect("write second wasm");
+
+        let err = resolve_wasm_path(dir.path().to_str().expect("utf-8"), dir.path(), None)
+            .expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn qa_modes_include_all_supported_modes_in_order() {
+        let modes = qa_modes();
+        assert_eq!(modes[0], (QaMode::Default, "default"));
+        assert_eq!(modes[1], (QaMode::Setup, "setup"));
+        assert_eq!(modes[2], (QaMode::Update, "update"));
+        assert_eq!(modes[3], (QaMode::Remove, "remove"));
+    }
+
+    #[test]
+    fn decode_cbor_accepts_self_describe_tagged_payloads() {
+        let payload =
+            canonical::to_canonical_cbor_allow_floats(&json!({"ok": true})).expect("encode cbor");
+        let tagged = [[0xd9, 0xd9, 0xf7].as_slice(), payload.as_slice()].concat();
+
+        let value: serde_json::Value = decode_cbor(&tagged).expect("decode tagged cbor");
+
+        assert_eq!(value, json!({"ok": true}));
+    }
+
+    #[test]
+    fn discover_manifest_path_finds_manifest_in_wasm_parent_chain() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        let wasm = dist.join("component.wasm");
+        fs::write(dir.path().join("component.manifest.json"), "{}").expect("write manifest");
+
+        let discovered = discover_manifest_path(&wasm, &wasm, None);
+
+        assert_eq!(discovered, Some(dir.path().join("component.manifest.json")));
+    }
+
+    #[test]
+    fn discover_manifest_path_returns_none_when_no_candidate_exists() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+
+        let discovered = discover_manifest_path(&wasm, &wasm, None);
+
+        assert!(discovered.is_none());
+    }
+
+    #[test]
+    fn discover_manifest_path_prefers_target_directory_manifest_over_ancestor() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dist = dir.path().join("dist");
+        fs::create_dir_all(&dist).expect("create dist");
+        let wasm = dist.join("component.wasm");
+        fs::write(dir.path().join("component.manifest.json"), "{}").expect("write ancestor");
+        fs::write(dist.join("component.manifest.json"), "{}").expect("write target");
+
+        let discovered = discover_manifest_path(&wasm, dist.as_path(), None);
+
+        assert_eq!(discovered, Some(dist.join("component.manifest.json")));
+    }
+
+    #[test]
+    fn find_wasm_in_dir_returns_none_when_no_candidates_exist() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let found = find_wasm_in_dir(dir.path()).expect("scan directory");
+
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn find_wasm_in_dir_prefers_single_release_candidate() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let release = dir.path().join("target/wasm32-wasip2/release");
+        fs::create_dir_all(&release).expect("create release dir");
+        let wasm = release.join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let found = find_wasm_in_dir(dir.path()).expect("scan directory");
+
+        assert_eq!(found, Some(wasm));
+    }
+
+    #[test]
+    fn find_wasm_in_dir_reports_multiple_candidates_across_profiles() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let release = dir.path().join("target/wasm32-wasip2/release");
+        let debug = dir.path().join("target/wasm32-wasip2/debug");
+        fs::create_dir_all(&release).expect("create release dir");
+        fs::create_dir_all(&debug).expect("create debug dir");
+        fs::write(release.join("component.wasm"), b"release").expect("write release wasm");
+        fs::write(debug.join("component.wasm"), b"debug").expect("write debug wasm");
+
+        let err = find_wasm_in_dir(dir.path()).expect_err("multiple wasm files should fail");
+
+        assert!(err.contains("multiple wasm files found"));
+    }
+
+    #[test]
+    fn collect_wasm_files_ignores_non_wasm_entries() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        fs::write(dir.path().join("component.wasm"), b"wasm").expect("write wasm");
+        fs::write(dir.path().join("notes.txt"), b"text").expect("write text");
+        let mut out = Vec::new();
+
+        collect_wasm_files(dir.path(), &mut out).expect("collect wasm files");
+
+        assert_eq!(out, vec![dir.path().join("component.wasm")]);
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_manifest_json_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "id": "com.greentic.test.component",
+                "name": "Test Component",
+                "version": "0.1.0",
+                "world": "greentic:component/component@0.6.0",
+                "describe_export": "describe",
+                "operations": [{
+                    "name": "run",
+                    "input_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                    "output_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false}
+                }],
+                "default_operation": "run",
+                "supports": ["messaging"],
+                "profiles": {"default": "stateless", "supported": ["stateless"]},
+                "secret_requirements": [],
+                "capabilities": {
+                    "wasi": {
+                        "filesystem": {"mode":"none","mounts":[]},
+                        "random": true,
+                        "clocks": true
+                    },
+                    "host": {
+                        "messaging": {"inbound": true, "outbound": true},
+                        "telemetry": {"scope": "tenant"}
+                    }
+                },
+                "config_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                "limits": {"memory_mb": 64, "wall_time_ms": 1000},
+                "artifacts": {"component_wasm": "component.wasm"},
+                "hashes": {"component_wasm": hash},
+                "dev_flows": {
+                    "default": {
+                        "format": "flow-ir-json",
+                        "graph": {
+                            "nodes": [{"id":"start","type":"start"}, {"id":"end","type":"end"}],
+                            "edges": [{"from":"start","to":"end"}]
+                        }
+                    }
+                }
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let resolved =
+            resolve_wasm_path(manifest_path.to_str().expect("utf-8"), &manifest_path, None)
+                .expect("resolve manifest json");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_accepts_explicit_manifest_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"fixture-wasm").expect("write wasm");
+        let hash = format!("blake3:{}", blake3::hash(b"fixture-wasm").to_hex());
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "id": "com.greentic.test.component",
+                "name": "Test Component",
+                "version": "0.1.0",
+                "world": "greentic:component/component@0.6.0",
+                "describe_export": "describe",
+                "operations": [{
+                    "name": "run",
+                    "input_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                    "output_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false}
+                }],
+                "default_operation": "run",
+                "supports": ["messaging"],
+                "profiles": {"default": "stateless", "supported": ["stateless"]},
+                "secret_requirements": [],
+                "capabilities": {
+                    "wasi": {
+                        "filesystem": {"mode":"none","mounts":[]},
+                        "random": true,
+                        "clocks": true
+                    },
+                    "host": {
+                        "messaging": {"inbound": true, "outbound": true},
+                        "telemetry": {"scope": "tenant"}
+                    }
+                },
+                "config_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
+                "limits": {"memory_mb": 64, "wall_time_ms": 1000},
+                "artifacts": {"component_wasm": "component.wasm"},
+                "hashes": {"component_wasm": hash},
+                "dev_flows": {
+                    "default": {
+                        "format": "flow-ir-json",
+                        "graph": {
+                            "nodes": [{"id":"start","type":"start"}, {"id":"end","type":"end"}],
+                            "edges": [{"from":"start","to":"end"}]
+                        }
+                    }
+                }
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let resolved = resolve_wasm_path("fixture", dir.path(), Some(&manifest_path))
+            .expect("resolve explicit manifest");
+
+        assert_eq!(resolved, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_errors_when_target_cannot_be_resolved() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        let err = resolve_wasm_path("missing-target", dir.path(), None)
+            .expect_err("missing target should fail");
+
+        assert!(err.contains("unable to resolve wasm"));
+    }
+
+    #[test]
+    fn resolve_wasm_path_reports_manifest_load_error_for_explicit_override() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let manifest_path = dir.path().join("missing.manifest.json");
+
+        let err = resolve_wasm_path("fixture", dir.path(), Some(&manifest_path))
+            .expect_err("missing manifest should fail");
+
+        assert!(err.contains("failed to load manifest"));
+    }
+
+    #[test]
+    fn collect_wasm_files_reports_read_errors() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let missing = dir.path().join("missing");
+        let mut out = Vec::new();
+
+        let err = collect_wasm_files(&missing, &mut out).expect_err("missing dir should fail");
+
+        assert!(err.contains("failed to read"));
+        assert!(err.contains("missing"));
+    }
+
+    #[test]
+    fn run_returns_doctor_error_when_target_is_missing() {
+        let err = run(DoctorArgs {
+            target: "missing-target".to_string(),
+            manifest: None,
+            format: DoctorFormat::Human,
+        })
+        .expect_err("missing target should fail");
+
+        match err {
+            ComponentError::Doctor(message) => assert!(message.contains("unable to resolve wasm")),
+            other => panic!("unexpected error: {other}"),
+        }
+    }
+
+    #[test]
+    fn run_emits_json_and_reports_failed_checks_for_fixture_without_embedded_manifest() {
+        let fixture_dir =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/fixtures/component_v0_6_0");
+        let wasm = fixture_dir.join("component.wasm");
+
+        let err = run(DoctorArgs {
+            target: wasm.to_string_lossy().to_string(),
+            manifest: None,
+            format: DoctorFormat::Json,
+        })
+        .expect_err("fixture should fail doctor checks");
+
+        match err {
+            ComponentError::Doctor(message) => assert!(message.contains("doctor checks failed")),
+            other => panic!("unexpected error: {other}"),
+        }
     }
 }

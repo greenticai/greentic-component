@@ -12,3 +12,38 @@ impl Lifecycle {
         !(self.init || self.health || self.shutdown)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Lifecycle;
+
+    #[test]
+    fn default_lifecycle_is_noop() {
+        assert!(Lifecycle::default().is_noop());
+    }
+
+    #[test]
+    fn any_enabled_hook_makes_lifecycle_non_noop() {
+        assert!(
+            !Lifecycle {
+                init: true,
+                ..Lifecycle::default()
+            }
+            .is_noop()
+        );
+        assert!(
+            !Lifecycle {
+                health: true,
+                ..Lifecycle::default()
+            }
+            .is_noop()
+        );
+        assert!(
+            !Lifecycle {
+                shutdown: true,
+                ..Lifecycle::default()
+            }
+            .is_noop()
+        );
+    }
+}

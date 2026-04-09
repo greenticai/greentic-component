@@ -17,7 +17,9 @@ use thiserror::Error;
 use time::OffsetDateTime;
 use walkdir::WalkDir;
 
+use super::config_schema::ConfigSchemaInput;
 use super::deps::{self, DependencyMode};
+use super::runtime_capabilities::RuntimeCapabilitiesInput;
 use super::validate::{self, ValidationError};
 use super::write::{GeneratedFile, WriteError, Writer};
 
@@ -277,6 +279,10 @@ pub struct ScaffoldRequest {
     pub version: String,
     pub license: String,
     pub wit_world: String,
+    pub user_operations: Vec<String>,
+    pub default_operation: String,
+    pub runtime_capabilities: RuntimeCapabilitiesInput,
+    pub config_schema: ConfigSchemaInput,
     pub non_interactive: bool,
     pub year_override: Option<i32>,
     pub dependency_mode: DependencyMode,
@@ -598,6 +604,14 @@ struct TemplateContext {
     version: String,
     license: String,
     wit_world: String,
+    user_operations: Vec<TemplateOperation>,
+    default_operation: String,
+    config_schema_json: String,
+    component_schema_file_json: String,
+    config_schema_rust: String,
+    capabilities_json: String,
+    secret_requirements_json: String,
+    telemetry_json: Option<String>,
     year: i32,
     repo: String,
     author: Option<String>,
@@ -606,6 +620,12 @@ struct TemplateContext {
     greentic_interfaces_guest_dep: String,
     greentic_types_dep: String,
     relative_patch_path: Option<String>,
+}
+
+#[derive(Serialize)]
+struct TemplateOperation {
+    name: String,
+    schema_title_name: String,
 }
 
 impl TemplateContext {
@@ -626,6 +646,38 @@ impl TemplateContext {
             version: request.version.clone(),
             license: request.license.clone(),
             wit_world: request.wit_world.clone(),
+            user_operations: request
+                .user_operations
+                .iter()
+                .cloned()
+                .map(|name| {
+                    let schema_title_name = if name == "handle_message" {
+                        "handle".to_string()
+                    } else {
+                        name.clone()
+                    };
+                    TemplateOperation {
+                        name,
+                        schema_title_name,
+                    }
+                })
+                .collect(),
+            default_operation: request.default_operation.clone(),
+            config_schema_json: indent_json_block(&request.config_schema.manifest_schema()),
+            component_schema_file_json: indent_json_block(
+                &request.config_schema.component_schema_file(&request.name),
+            ),
+            config_schema_rust: format!("    {}", request.config_schema.rust_schema_ir()),
+            capabilities_json: indent_json_block(
+                &request.runtime_capabilities.manifest_capabilities(),
+            ),
+            secret_requirements_json: indent_json_block(
+                &request.runtime_capabilities.manifest_secret_requirements(),
+            ),
+            telemetry_json: request
+                .runtime_capabilities
+                .manifest_telemetry()
+                .map(|value| indent_json_block(&value)),
             year,
             repo: request.name.clone(),
             author: detect_author(),
@@ -636,6 +688,15 @@ impl TemplateContext {
             relative_patch_path: deps.relative_patch_path,
         }
     }
+}
+
+fn indent_json_block(value: &serde_json::Value) -> String {
+    let json = serde_json::to_string_pretty(value).expect("json should serialize");
+    let mut lines = json.lines();
+    let first = lines.next().unwrap_or_default().to_string();
+    let mut indented = vec![first];
+    indented.extend(lines.map(|line| format!("  {line}")));
+    indented.join("\n")
 }
 
 fn template_year() -> i32 {
@@ -780,6 +841,10 @@ mod tests {
             version: "0.1.0".into(),
             license: "MIT".into(),
             wit_world: DEFAULT_WIT_WORLD.into(),
+            user_operations: vec!["handle_message".into()],
+            default_operation: "handle_message".into(),
+            runtime_capabilities: RuntimeCapabilitiesInput::default(),
+            config_schema: ConfigSchemaInput::default(),
             non_interactive: true,
             year_override: Some(2030),
             dependency_mode: DependencyMode::Local,
@@ -809,6 +874,10 @@ mod tests {
             version: "0.1.0".into(),
             license: "MIT".into(),
             wit_world: DEFAULT_WIT_WORLD.into(),
+            user_operations: vec!["handle_message".into()],
+            default_operation: "handle_message".into(),
+            runtime_capabilities: RuntimeCapabilitiesInput::default(),
+            config_schema: ConfigSchemaInput::default(),
             non_interactive: true,
             year_override: None,
             dependency_mode: DependencyMode::Local,

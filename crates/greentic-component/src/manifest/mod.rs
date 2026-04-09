@@ -278,6 +278,10 @@ pub enum ManifestError {
     Capability(String),
     #[error("duplicate secret requirement `{0}` detected")]
     DuplicateSecretRequirement(String),
+    #[error(
+        "secret declarations disagree between `secret_requirements` and `capabilities.host.secrets.required`"
+    )]
+    InconsistentSecretRequirements,
     #[error("secret requirement `{key}` is invalid: {reason}")]
     InvalidSecretRequirement { key: String, reason: String },
     #[error("limits invalid: {0}")]
@@ -320,6 +324,7 @@ impl TryFrom<RawManifest> for ComponentManifest {
     type Error = ManifestError;
 
     fn try_from(raw: RawManifest) -> Result<Self, Self::Error> {
+        let mut raw = raw;
         if raw.name.trim().is_empty() {
             return Err(ManifestError::EmptyField("name"));
         }
@@ -345,10 +350,13 @@ impl TryFrom<RawManifest> for ComponentManifest {
             validate_configurators(configurators)?;
         }
 
+        let secret_requirements =
+            normalize_secret_requirements(&mut raw.capabilities, &raw.secret_requirements)?;
+
         validate_capabilities(&raw.capabilities)
             .map_err(|err| ManifestError::Capability(err.to_string()))?;
 
-        validate_secret_requirements(&raw.secret_requirements)?;
+        validate_secret_requirements(&secret_requirements)?;
 
         if let Some(limits) = &raw.limits {
             limits
@@ -394,7 +402,7 @@ impl TryFrom<RawManifest> for ComponentManifest {
             world,
             supports: raw.supports,
             capabilities: raw.capabilities,
-            secret_requirements: raw.secret_requirements,
+            secret_requirements,
             profiles: raw.profiles,
             configurators: raw.configurators,
             limits: raw.limits,
@@ -407,6 +415,47 @@ impl TryFrom<RawManifest> for ComponentManifest {
             hashes,
         })
     }
+}
+
+fn normalize_secret_requirements(
+    capabilities: &mut Capabilities,
+    top_level: &[SecretRequirement],
+) -> Result<Vec<SecretRequirement>, ManifestError> {
+    let host_required = capabilities
+        .host
+        .secrets
+        .as_ref()
+        .map(|secrets| secrets.required.clone())
+        .unwrap_or_default();
+    if top_level.is_empty() && !host_required.is_empty() {
+        return Ok(host_required);
+    }
+    if !top_level.is_empty() && host_required.is_empty() {
+        capabilities.host.secrets = Some(crate::capabilities::SecretsCapabilities {
+            required: top_level.to_vec(),
+        });
+        return Ok(top_level.to_vec());
+    }
+    if !top_level.is_empty()
+        && !host_required.is_empty()
+        && !secret_requirement_sets_match(top_level, &host_required)
+    {
+        return Err(ManifestError::InconsistentSecretRequirements);
+    }
+    Ok(top_level.to_vec())
+}
+
+fn secret_requirement_sets_match(left: &[SecretRequirement], right: &[SecretRequirement]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    left.iter().zip(right.iter()).all(|(lhs, rhs)| {
+        lhs.key == rhs.key
+            && lhs.required == rhs.required
+            && lhs.scope == rhs.scope
+            && lhs.format == rhs.format
+            && lhs.schema == rhs.schema
+    })
 }
 
 #[derive(Debug, serde::Deserialize)]

@@ -15,19 +15,23 @@ fail() {
 }
 
 ensure_codex() {
-  if command -v codex >/dev/null 2>&1; then
+  if command -v codex >/dev/null 2>&1 && codex --version >/dev/null 2>&1; then
     return
   fi
 
+  log "Codex CLI missing or broken; attempting install"
   if command -v npm >/dev/null 2>&1; then
     log "installing Codex CLI via npm"
-    npm i -g @openai/codex || fail "failed to install Codex CLI via npm"
+    npm i -g @openai/codex@latest || fail "failed to install Codex CLI via npm"
   elif command -v brew >/dev/null 2>&1; then
     log "installing Codex CLI via brew"
     brew install codex || fail "failed to install Codex CLI via brew"
   else
     fail "Codex CLI not found and no supported installer available (npm or brew)"
   fi
+
+  command -v codex >/dev/null 2>&1 || fail "Codex CLI install completed but codex is still not on PATH"
+  codex --version >/dev/null 2>&1 || fail "Codex CLI is still unusable after install"
 }
 
 ensure_codex_login() {
@@ -40,7 +44,15 @@ ensure_codex_login() {
 }
 
 probe_translator() {
-  command -v greentic-i18n-translator >/dev/null 2>&1 || fail "greentic-i18n-translator not found. Install it and rerun this script."
+  if ! command -v greentic-i18n-translator >/dev/null 2>&1; then
+    command -v cargo-binstall >/dev/null 2>&1 \
+      || fail "greentic-i18n-translator not found and cargo-binstall is unavailable"
+    log "installing greentic-i18n-translator via cargo-binstall"
+    cargo binstall -y greentic-i18n-translator \
+      || fail "failed to install greentic-i18n-translator via cargo-binstall"
+  fi
+  command -v greentic-i18n-translator >/dev/null 2>&1 \
+    || fail "greentic-i18n-translator is still not on PATH after cargo-binstall"
 
   local help_output
   help_output="$(greentic-i18n-translator --help 2>&1 || true)"
@@ -51,6 +63,26 @@ probe_translator() {
       fail "translator subcommand '$cmd' is required but unavailable"
     fi
   done
+}
+
+setup_codex_wrapper() {
+  command -v codex >/dev/null 2>&1 || return 0
+
+  local real_codex
+  real_codex="$(command -v codex)"
+  local wrapper_dir
+  wrapper_dir="$(mktemp -d)"
+  cat > "$wrapper_dir/codex" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\${1:-}" == "exec" ]]; then
+  shift
+  exec "$real_codex" exec --skip-git-repo-check "\$@"
+fi
+exec "$real_codex" "\$@"
+EOF
+  chmod +x "$wrapper_dir/codex"
+  export PATH="$wrapper_dir:$PATH"
 }
 
 run_translate() {
@@ -136,6 +168,7 @@ run_optional_checks() {
 [[ -f "$SOURCE_FILE" ]] || fail "missing source locale file: $SOURCE_FILE"
 
 ensure_codex
+setup_codex_wrapper
 ensure_codex_login
 probe_translator
 run_translate

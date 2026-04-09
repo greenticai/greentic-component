@@ -96,10 +96,10 @@ expression: normalize_text(manifest.trim())
   ],
   "default_operation": "handle_message",
   "config_schema": {
-    "type": "object",
+    "additionalProperties": false,
     "properties": {},
     "required": [],
-    "additionalProperties": false
+    "type": "object"
   },
   "supports": ["messaging"],
   "profiles": {
@@ -108,25 +108,21 @@ expression: normalize_text(manifest.trim())
   },
   "secret_requirements": [],
   "capabilities": {
+    "host": {
+      "secrets": {
+        "required": []
+      },
+      "telemetry": {
+        "scope": "node"
+      }
+    },
     "wasi": {
+      "clocks": true,
       "filesystem": {
         "mode": "none",
         "mounts": []
       },
-      "random": true,
-      "clocks": true
-    },
-    "host": {
-      "messaging": {
-        "inbound": true,
-        "outbound": true
-      },
-      "telemetry": {
-        "scope": "node"
-      },
-      "secrets": {
-        "required": []
-      }
+      "random": true
     }
   },
   "limits": {
@@ -154,4 +150,3 @@ expression: normalize_text(manifest.trim())
     }
   }
 }
-

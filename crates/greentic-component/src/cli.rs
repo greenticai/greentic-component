@@ -30,7 +30,7 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Scaffold a new Greentic component project
-    New(NewArgs),
+    New(Box<NewArgs>),
     /// Component wizard helpers
     Wizard(Box<WizardCliArgs>),
     /// List available component templates
@@ -67,11 +67,14 @@ pub fn main() -> Result<()> {
         Ok(matches) => matches,
         Err(err) => err.exit(),
     };
+    if let Some(result) = cmd::wizard::maybe_run_schema_from_matches(&matches) {
+        return result;
+    }
     let cli = Cli::from_arg_matches(&matches).map_err(|err| Error::msg(err.to_string()))?;
     cmd::i18n::init(cli.locale.clone());
     let engine = ScaffoldEngine::new();
     match cli.command {
-        Commands::New(args) => cmd::new::run(args, &engine),
+        Commands::New(args) => cmd::new::run(*args, &engine),
         Commands::Wizard(command) => cmd::wizard::run_cli(*command),
         Commands::Templates(args) => cmd::templates::run(args, &engine),
         Commands::Doctor(args) => cmd::doctor::run(args).map_err(Error::new),
@@ -151,6 +154,21 @@ fn localize_help(mut command: clap::Command, is_root: bool) -> clap::Command {
         .map(|sub| sub.get_name().to_string())
         .collect::<Vec<_>>();
     for name in sub_names {
+        if name == "wizard" {
+            command = command.mut_subcommand(name.clone(), |sub| {
+                sub.arg(
+                    Arg::new("schema")
+                        .long("schema")
+                        .action(ArgAction::SetTrue)
+                        .help(cmd::i18n::tr_lit(
+                            "Print the current answers.json schema and exit",
+                        ))
+                        .long_help(cmd::i18n::tr_lit(
+                            "Print the current answers.json schema and exit.\n\nAgentic coding tools such as Codex and Claude should call this first to fetch the current answer schema, fill out answers.json, and replay the wizard non-interactively.",
+                        )),
+                )
+            });
+        }
         command = command.mut_subcommand(name, |sub| localize_help(sub, false));
     }
     command
@@ -179,6 +197,30 @@ mod tests {
                 assert!(args.json);
                 assert!(!args.no_check);
                 assert!(!args.no_git);
+                assert!(args.operation_names.is_empty());
+                assert_eq!(args.default_operation, None);
+            }
+            _ => panic!("expected new args"),
+        }
+    }
+
+    #[test]
+    fn parses_new_operation_flags() {
+        let cli = Cli::try_parse_from([
+            "greentic-component",
+            "new",
+            "--name",
+            "demo",
+            "--operation",
+            "render,sync-state",
+            "--default-operation",
+            "sync-state",
+        ])
+        .expect("expected CLI to parse");
+        match cli.command {
+            Commands::New(args) => {
+                assert_eq!(args.operation_names, vec!["render", "sync-state"]);
+                assert_eq!(args.default_operation.as_deref(), Some("sync-state"));
             }
             _ => panic!("expected new args"),
         }

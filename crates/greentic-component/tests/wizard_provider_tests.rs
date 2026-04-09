@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use greentic_component::scaffold::config_schema::ConfigSchemaInput;
+use greentic_component::scaffold::runtime_capabilities::RuntimeCapabilitiesInput;
 use greentic_component::wizard::{WizardRequest, WizardStep, apply_scaffold, execute_plan};
 use insta::assert_json_snapshot;
 use serde::Serialize;
@@ -35,6 +37,10 @@ fn scaffold_plan_snapshot_is_deterministic() {
         answers: None,
         required_capabilities: vec!["host.http.client".to_string()],
         provided_capabilities: vec!["telemetry.emit".to_string()],
+        user_operations: vec!["handle_message".to_string()],
+        default_operation: Some("handle_message".to_string()),
+        runtime_capabilities: RuntimeCapabilitiesInput::default(),
+        config_schema: ConfigSchemaInput::default(),
     };
 
     let result = apply_scaffold(request, true).expect("plan should build");
@@ -126,6 +132,10 @@ fn execute_plan_writes_expected_files() {
         answers: None,
         required_capabilities: Vec::new(),
         provided_capabilities: Vec::new(),
+        user_operations: vec!["handle_message".to_string()],
+        default_operation: Some("handle_message".to_string()),
+        runtime_capabilities: RuntimeCapabilitiesInput::default(),
+        config_schema: ConfigSchemaInput::default(),
     };
 
     let result = apply_scaffold(request, true).expect("plan should build");
@@ -137,6 +147,20 @@ fn execute_plan_writes_expected_files() {
     assert!(target.join("assets/i18n/en.json").exists());
     assert!(target.join("assets/i18n/locales.json").exists());
     assert!(target.join("tools/i18n.sh").exists());
+    let i18n_tool =
+        std::fs::read_to_string(target.join("tools/i18n.sh")).expect("read tools/i18n.sh");
+    assert!(
+        i18n_tool.contains("--skip-git-repo-check"),
+        "wizard i18n script should wrap codex exec with --skip-git-repo-check"
+    );
+    assert!(
+        i18n_tool.contains("greentic-i18n-translator"),
+        "wizard i18n script should call greentic-i18n-translator directly"
+    );
+    assert!(
+        i18n_tool.contains("cargo binstall -y greentic-i18n-translator"),
+        "wizard i18n script should install greentic-i18n-translator with cargo-binstall when missing"
+    );
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;

@@ -5,9 +5,12 @@ mod support;
 
 use greentic_component::cmd::build;
 use greentic_component::cmd::build::BuildArgs;
+use greentic_component::embed_and_verify_wasm;
 use greentic_component::error::ComponentError;
+use greentic_component::scaffold::config_schema::ConfigSchemaInput;
 use greentic_component::scaffold::deps::DependencyMode;
 use greentic_component::scaffold::engine::{DEFAULT_WIT_WORLD, ScaffoldEngine, ScaffoldRequest};
+use greentic_component::scaffold::runtime_capabilities::RuntimeCapabilitiesInput;
 use predicates::prelude::*;
 use serde_json::{Value, json};
 use std::fs;
@@ -20,6 +23,29 @@ world component {
     export describe: func();
 }
  "#;
+
+fn copy_component_v060_fixture() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let temp = tempfile::TempDir::new().unwrap();
+    let fixture_dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/contract/fixtures/component_v0_6_0");
+    let workdir = temp.path().join("fixture");
+    fs::create_dir_all(&workdir).unwrap();
+    fs::copy(
+        fixture_dir.join("component.wasm"),
+        workdir.join("component.wasm"),
+    )
+    .unwrap();
+    fs::copy(
+        fixture_dir.join("component.manifest.json"),
+        workdir.join("component.manifest.json"),
+    )
+    .unwrap();
+    (
+        temp,
+        workdir.join("component.wasm"),
+        workdir.join("component.manifest.json"),
+    )
+}
 
 #[test]
 fn inspect_outputs_json() {
@@ -76,6 +102,72 @@ fn inspect_accepts_describe_fixture() {
 }
 
 #[test]
+fn inspect_reports_embedded_manifest_from_wasm_json() {
+    let (_temp, wasm_path, manifest_path) = copy_component_v060_fixture();
+    let manifest_raw = fs::read_to_string(&manifest_path).unwrap();
+    let manifest = greentic_component::parse_manifest(&manifest_raw).unwrap();
+    embed_and_verify_wasm(&wasm_path, &manifest).unwrap();
+
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("component-inspect");
+    cmd.arg(wasm_path)
+        .arg("--manifest")
+        .arg(manifest_path)
+        .arg("--json")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"embedded\""))
+        .stdout(predicate::str::contains("\"present\": true"))
+        .stdout(predicate::str::contains("\"compare_manifest\""));
+}
+
+#[test]
+fn inspect_human_output_includes_manifest_and_describe_sections_for_embedded_wasm() {
+    let (_temp, wasm_path, manifest_path) = copy_component_v060_fixture();
+    let manifest_raw = fs::read_to_string(&manifest_path).unwrap();
+    let manifest = greentic_component::parse_manifest(&manifest_raw).unwrap();
+    embed_and_verify_wasm(&wasm_path, &manifest).unwrap();
+
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("component-inspect");
+    cmd.arg(wasm_path)
+        .arg("--manifest")
+        .arg(manifest_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("manifest: "))
+        .stdout(predicate::str::contains("embedded vs manifest: Match"))
+        .stdout(predicate::str::contains("embedded manifest: present"))
+        .stdout(predicate::str::contains(
+            "world: greentic:component/component@0.6.0",
+        ))
+        .stdout(predicate::str::contains("operation names: handle_message"))
+        .stdout(predicate::str::contains(
+            "default operation: handle_message",
+        ))
+        .stdout(predicate::str::contains("supports: [Messaging]"))
+        .stdout(predicate::str::contains("capabilities:"))
+        .stdout(predicate::str::contains("secret requirements:"))
+        .stdout(predicate::str::contains("profiles:"))
+        .stdout(predicate::str::contains(
+            "limits: memory_mb=128 wall_time_ms=1000",
+        ))
+        .stdout(predicate::str::contains("describe: available"))
+        .stdout(predicate::str::contains("source: wit-world"))
+        .stdout(predicate::str::contains("name: component"))
+        .stdout(predicate::str::contains(
+            "schema id: greentic:component/component@0.6.0",
+        ))
+        .stdout(predicate::str::contains(
+            "world: greentic:component/component@0.6.0",
+        ))
+        .stdout(predicate::str::contains("versions: 0.6.0"))
+        .stdout(predicate::str::contains("version count: 1"))
+        .stdout(predicate::str::contains("functions: 2"))
+        .stdout(predicate::str::contains(
+            "reason: derived from exported WIT world",
+        ));
+}
+
+#[test]
 fn doctor_detects_scaffold_directory() {
     let temp = tempfile::TempDir::new().unwrap();
     let root = temp.path().join("demo-detect");
@@ -88,6 +180,10 @@ fn doctor_detects_scaffold_directory() {
         version: "0.1.0".into(),
         license: "MIT".into(),
         wit_world: DEFAULT_WIT_WORLD.into(),
+        user_operations: vec!["handle_message".into()],
+        default_operation: "handle_message".into(),
+        runtime_capabilities: RuntimeCapabilitiesInput::default(),
+        config_schema: ConfigSchemaInput::default(),
         non_interactive: true,
         year_override: Some(2030),
         dependency_mode: DependencyMode::Local,
@@ -98,6 +194,30 @@ fn doctor_detects_scaffold_directory() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("unable to resolve wasm"));
+}
+
+#[test]
+fn doctor_fails_when_built_wasm_is_missing_embedded_manifest() {
+    let (_temp, wasm_path, _manifest_path) = copy_component_v060_fixture();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("component-doctor");
+    cmd.arg(wasm_path)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("doctor.embedded.missing"));
+}
+
+#[test]
+fn doctor_no_longer_reports_missing_embedded_when_section_is_present() {
+    let (_temp, wasm_path, manifest_path) = copy_component_v060_fixture();
+    let manifest_raw = fs::read_to_string(&manifest_path).unwrap();
+    let manifest = greentic_component::parse_manifest(&manifest_raw).unwrap();
+    embed_and_verify_wasm(&wasm_path, &manifest).unwrap();
+
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("component-doctor");
+    cmd.arg(wasm_path)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("doctor.embedded.missing").not());
 }
 
 #[test]
@@ -113,6 +233,10 @@ fn scaffold_makefile_uses_greentic_dev_commands() {
         version: "0.1.0".into(),
         license: "MIT".into(),
         wit_world: DEFAULT_WIT_WORLD.into(),
+        user_operations: vec!["handle_message".into()],
+        default_operation: "handle_message".into(),
+        runtime_capabilities: RuntimeCapabilitiesInput::default(),
+        config_schema: ConfigSchemaInput::default(),
         non_interactive: true,
         year_override: Some(2030),
         dependency_mode: DependencyMode::Local,
@@ -123,7 +247,7 @@ fn scaffold_makefile_uses_greentic_dev_commands() {
         fs::read_to_string(root.join("Makefile")).expect("Makefile should be scaffolded");
     assert!(makefile.contains("greentic-dev component build --manifest ./component.manifest.json"));
     assert!(makefile.contains(
-        "greentic-dev component doctor target/wasm32-wasip2/release/demo_dev.wasm --manifest ./component.manifest.json"
+        "greentic-dev component doctor $(WASM_OUT) --manifest ./component.manifest.json"
     ));
 }
 
@@ -140,18 +264,25 @@ fn build_logs_resolved_component_world_version() {
         version: "0.1.0".into(),
         license: "MIT".into(),
         wit_world: DEFAULT_WIT_WORLD.into(),
+        user_operations: vec!["handle_message".into()],
+        default_operation: "handle_message".into(),
+        runtime_capabilities: RuntimeCapabilitiesInput::default(),
+        config_schema: ConfigSchemaInput::default(),
         non_interactive: true,
         year_override: Some(2030),
         dependency_mode: DependencyMode::Local,
     };
     engine.scaffold(request).unwrap();
+    let fixture_wasm =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifests/bin/component.wasm");
 
     let cargo_wrapper = root.join("fake_cargo.sh");
     std::fs::write(
         &cargo_wrapper,
-        r#"#!/bin/sh
+        format!(
+            r#"#!/bin/sh
 set -e
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "--version" ]; then
+if [ "${{1:-}}" = "component" ] && [ "${{2:-}}" = "--version" ]; then
   echo "cargo-component-component 0.21.1"
   exit 0
 fi
@@ -162,25 +293,27 @@ path=os.path.join(os.getcwd(),"component.manifest.json")
 try:
     with open(path, "r") as f:
         data=json.load(f)
-    print(data.get("artifacts", {}).get("component_wasm") or "target/wasm32-wasip2/release/component.wasm")
+    print(data.get("artifacts", {{}}).get("component_wasm") or "target/wasm32-wasip2/release/component.wasm")
 except Exception:
     print("target/wasm32-wasip2/release/component.wasm")
 PY
 )
 mkdir -p "$(dirname "$wasm_path")"
-printf '\0' > "$wasm_path"
+cp "{fixture_wasm}" "$wasm_path"
 
-if [ "${1:-}" = "component" ] && [ "${2:-}" = "build" ]; then
+if [ "${{1:-}}" = "component" ] && [ "${{2:-}}" = "build" ]; then
   exit 0
 fi
 
-if [ "${1:-}" = "build" ]; then
+if [ "${{1:-}}" = "build" ]; then
   exit 0
 fi
 
 REAL_CARGO="$(command -v cargo)"
 "$REAL_CARGO" "$@"
 "#,
+            fixture_wasm = fixture_wasm.display()
+        ),
     )
     .expect("write cargo wrapper");
     let mut perms = std::fs::metadata(&cargo_wrapper)

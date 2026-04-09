@@ -273,6 +273,7 @@ impl Clone for ComponentHandle {
 mod tests {
     use super::*;
     use serde_json::json;
+    use wasmtime::component::Val;
 
     fn descriptor_fixture() -> ComponentDescriptor {
         ComponentDescriptor {
@@ -301,5 +302,34 @@ mod tests {
         let tagged = [SELF_DESCRIBE_TAG.as_slice(), &[1_u8, 2, 3]].concat();
         assert_eq!(strip_self_describe_tag(&tagged), &[1_u8, 2, 3]);
         assert_eq!(strip_self_describe_tag(&[7_u8, 8, 9]), &[7_u8, 8, 9]);
+    }
+
+    #[test]
+    fn interface_candidates_cover_short_and_versioned_names() {
+        let names = interface_candidates("component-descriptor");
+        assert_eq!(names[0], "component-descriptor");
+        assert_eq!(names[1], "greentic:component/component-descriptor@0.6.0");
+        assert_eq!(names[2], "greentic:component/component-descriptor");
+    }
+
+    #[test]
+    fn val_to_bytes_accepts_only_u8_lists() {
+        let ok = val_to_bytes(&Val::List(vec![Val::U8(1), Val::U8(2), Val::U8(3)]))
+            .expect("u8 list should decode");
+        assert_eq!(ok, vec![1, 2, 3]);
+
+        let err = val_to_bytes(&Val::List(vec![Val::U8(1), Val::Bool(true)]))
+            .expect_err("mixed lists must be rejected");
+        assert!(matches!(err, CompError::Runtime(message) if message.contains("non-u8")));
+
+        let err = val_to_bytes(&Val::Bool(true)).expect_err("non-lists must be rejected");
+        assert!(matches!(err, CompError::Runtime(message) if message.contains("non-byte list")));
+    }
+
+    #[test]
+    fn create_engine_enables_component_model_support() {
+        let engine = create_engine().expect("engine");
+        let empty_component = b"\0asm\x0d\0\x01\0";
+        WasmComponent::from_binary(&engine, empty_component).expect("component should parse");
     }
 }

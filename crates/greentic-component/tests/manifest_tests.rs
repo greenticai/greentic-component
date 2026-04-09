@@ -129,3 +129,25 @@ fn manifest_preserves_dev_flows() {
     parse_manifest(&serialized).expect("manifest with dev_flows parses");
     validate_manifest(&serialized).expect("schema-valid manifest with dev_flows");
 }
+
+#[test]
+fn parse_manifest_uses_host_secret_requirements_when_top_level_is_empty() {
+    let mut value: Value = serde_json::from_str(&fixture("valid.component.json")).unwrap();
+    value["secret_requirements"] = serde_json::json!([]);
+    let raw = serde_json::to_string(&value).unwrap();
+    let manifest = parse_manifest(&raw).expect("manifest parses");
+    assert_eq!(manifest.secret_requirements.len(), 1);
+    assert_eq!(manifest.secret_requirements[0].key.as_str(), "KV_API_TOKEN");
+}
+
+#[test]
+fn parse_manifest_rejects_mismatched_secret_surfaces() {
+    let mut value: Value = serde_json::from_str(&fixture("valid.component.json")).unwrap();
+    value["capabilities"]["host"]["secrets"]["required"][0]["key"] =
+        Value::String("OTHER_TOKEN".into());
+    let raw = serde_json::to_string(&value).unwrap();
+    match parse_manifest(&raw).unwrap_err() {
+        ManifestError::InconsistentSecretRequirements => {}
+        err => panic!("expected InconsistentSecretRequirements, got {err:?}"),
+    }
+}

@@ -13,6 +13,8 @@ use thiserror::Error;
 
 static NAME_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[a-z0-9]+([_-][a-z0-9]+)*$").expect("valid name regex"));
+static OPERATION_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[a-z][a-z0-9_.:-]*$").expect("valid operation regex"));
 static ORG_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
         .expect("valid org regex")
@@ -48,6 +50,72 @@ pub enum ValidationError {
         #[source]
         source: semver::Error,
     },
+    #[error("operation name must match the canonical manifest pattern (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.operation_invalid",
+        help = "Use lowercase names starting with a letter; allowed characters are letters, digits, '.', '_', ':', and '-'."
+    )]
+    InvalidOperationName(String),
+    #[error("operation `{0}` was declared more than once")]
+    #[diagnostic(
+        code = "greentic.cli.operation_duplicate",
+        help = "Pass each operation only once."
+    )]
+    DuplicateOperationName(String),
+    #[error("default_operation `{0}` must match one of the declared operations")]
+    #[diagnostic(
+        code = "greentic.cli.default_operation_unknown",
+        help = "Choose a default operation from the operations declared for this component."
+    )]
+    UnknownDefaultOperation(String),
+    #[error("filesystem mode must be one of none, read_only, sandbox (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.filesystem_mode_invalid",
+        help = "Use one of `none`, `read_only`, or `sandbox`."
+    )]
+    InvalidFilesystemMode(String),
+    #[error("filesystem mount must be `name:host_class:guest_path` (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.filesystem_mount_invalid",
+        help = "Pass mounts as `name:host_class:guest_path`, for example `assets:assets:/assets`."
+    )]
+    InvalidFilesystemMount(String),
+    #[error("telemetry scope must be one of tenant, pack, node (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.telemetry_scope_invalid",
+        help = "Use one of `tenant`, `pack`, or `node`."
+    )]
+    InvalidTelemetryScope(String),
+    #[error("secret format must be one of bytes, text, json (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.secret_format_invalid",
+        help = "Use one of `bytes`, `text`, or `json`."
+    )]
+    InvalidSecretFormat(String),
+    #[error("telemetry attribute must be `key=value` (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.telemetry_attribute_invalid",
+        help = "Pass telemetry attributes as `key=value`."
+    )]
+    InvalidTelemetryAttribute(String),
+    #[error("config field must be `name:type[:required|optional]` (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.config_field_invalid",
+        help = "Pass config fields as `enabled:bool:required` or `api_key:string`."
+    )]
+    InvalidConfigField(String),
+    #[error("config field name must be lowercase snake_case (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.config_field_name_invalid",
+        help = "Use lowercase field names like `enabled` or `api_key`."
+    )]
+    InvalidConfigFieldName(String),
+    #[error("config field type must be one of string, bool, integer, number (got `{0}`)")]
+    #[diagnostic(
+        code = "greentic.cli.config_field_type_invalid",
+        help = "Use `string`, `bool`, `integer`, or `number`."
+    )]
+    InvalidConfigFieldType(String),
     #[error("unable to determine working directory: {0}")]
     #[diagnostic(code = "greentic.cli.cwd_unavailable")]
     WorkingDir(#[source] io::Error),
@@ -75,6 +143,19 @@ impl ValidationError {
             ValidationError::InvalidName(_) => "greentic.cli.name_invalid",
             ValidationError::InvalidOrg(_) => "greentic.cli.org_invalid",
             ValidationError::InvalidSemver { .. } => "greentic.cli.version_invalid",
+            ValidationError::InvalidOperationName(_) => "greentic.cli.operation_invalid",
+            ValidationError::DuplicateOperationName(_) => "greentic.cli.operation_duplicate",
+            ValidationError::UnknownDefaultOperation(_) => "greentic.cli.default_operation_unknown",
+            ValidationError::InvalidFilesystemMode(_) => "greentic.cli.filesystem_mode_invalid",
+            ValidationError::InvalidFilesystemMount(_) => "greentic.cli.filesystem_mount_invalid",
+            ValidationError::InvalidTelemetryScope(_) => "greentic.cli.telemetry_scope_invalid",
+            ValidationError::InvalidSecretFormat(_) => "greentic.cli.secret_format_invalid",
+            ValidationError::InvalidTelemetryAttribute(_) => {
+                "greentic.cli.telemetry_attribute_invalid"
+            }
+            ValidationError::InvalidConfigField(_) => "greentic.cli.config_field_invalid",
+            ValidationError::InvalidConfigFieldName(_) => "greentic.cli.config_field_name_invalid",
+            ValidationError::InvalidConfigFieldType(_) => "greentic.cli.config_field_type_invalid",
             ValidationError::WorkingDir(_) => "greentic.cli.cwd_unavailable",
             ValidationError::TargetIsFile(_) => "greentic.cli.path_is_file",
             ValidationError::TargetDirNotEmpty(_) => "greentic.cli.path_not_empty",
@@ -111,6 +192,15 @@ impl ComponentName {
 
 pub fn is_valid_name(value: &str) -> bool {
     ComponentName::parse(value).is_ok()
+}
+
+pub fn normalize_operation_name(value: &str) -> ValidationResult<String> {
+    let trimmed = value.trim();
+    if OPERATION_RE.is_match(trimmed) {
+        Ok(trimmed.to_string())
+    } else {
+        Err(ValidationError::InvalidOperationName(trimmed.to_string()))
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

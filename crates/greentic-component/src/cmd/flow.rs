@@ -108,7 +108,8 @@ pub fn update_with_manifest(config: &ConfigOutcome) -> Result<FlowUpdateOutcome>
     let component_name = manifest_component_name(&config.manifest)?;
     let _node_kind = resolve_node_kind(&config.manifest)?;
     let operation = resolve_operation(&config.manifest, component_id)?;
-    let input_schema = load_operation_input_schema(&config.manifest_path, &config.manifest)?;
+    let input_schema =
+        load_operation_input_schema(&config.manifest_path, &config.manifest, &operation)?;
 
     validate_config_schema(&config.schema)
         .map_err(|err| anyhow!("config_schema failed validation: {err}"))?;
@@ -581,20 +582,38 @@ fn write_manifest(manifest_path: &PathBuf, manifest: &JsonValue) -> Result<()> {
         .with_context(|| format!("failed to write {}", manifest_path.display()))
 }
 
-fn load_operation_input_schema(manifest_path: &Path, manifest: &JsonValue) -> Result<JsonValue> {
+fn load_operation_input_schema(
+    manifest_path: &Path,
+    manifest: &JsonValue,
+    operation_name: &str,
+) -> Result<JsonValue> {
     let manifest_dir = manifest_path
         .parent()
         .ok_or_else(|| anyhow!("manifest path has no parent: {}", manifest_path.display()))?;
-    let schema_path = manifest
-        .get("schemas")
-        .and_then(|entry| entry.get("input"))
-        .and_then(|value| value.as_str())
-        .map(|path| manifest_dir.join(path))
-        .unwrap_or_else(|| manifest_dir.join("schemas/io/input.schema.json"));
-    let text = fs::read_to_string(&schema_path)
-        .with_context(|| format!("failed to read {}", schema_path.display()))?;
-    serde_json::from_str(&text)
-        .with_context(|| format!("failed to parse {}", schema_path.display()))
+
+    let operations = manifest
+        .get("operations")
+        .and_then(JsonValue::as_array)
+        .ok_or_else(|| anyhow!("manifest.operations must be an array"))?;
+    let operation = operations
+        .iter()
+        .find(|op| op.get("name").and_then(JsonValue::as_str) == Some(operation_name))
+        .ok_or_else(|| anyhow!("operation `{operation_name}` not found in manifest.operations"))?;
+    let input_schema = operation
+        .get("input_schema")
+        .ok_or_else(|| anyhow!("operation `{operation_name}` is missing input_schema"))?;
+
+    // If input_schema contains a $ref, resolve it by reading the referenced file
+    if let Some(ref_path) = input_schema.get("$ref").and_then(JsonValue::as_str) {
+        let schema_path = manifest_dir.join(ref_path);
+        let text = fs::read_to_string(&schema_path)
+            .with_context(|| format!("failed to read {}", schema_path.display()))?;
+        serde_json::from_str(&text)
+            .with_context(|| format!("failed to parse {}", schema_path.display()))
+    } else {
+        // Inline schema - use it directly
+        Ok(input_schema.clone())
+    }
 }
 
 fn compute_default_fields(fields: &[ConfigField]) -> Result<Vec<EmitField>> {

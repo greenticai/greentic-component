@@ -41,7 +41,7 @@ impl DependencyMode {
 
 const GREENTIC_TYPES_VERSION: &str = "0.4";
 const GREENTIC_INTERFACES_GUEST_VERSION: &str = "0.4";
-const GREENTIC_INTERFACES_VERSION: &str = "0.4.93";
+const GREENTIC_INTERFACES_VERSION: &str = "0.4";
 
 #[derive(Debug, Clone)]
 pub struct DependencyTemplates {
@@ -83,6 +83,9 @@ fn resolve_local_templates(target_path: &Path) -> DependencyTemplates {
     let interfaces_root = repo_root
         .parent()
         .map(|parent| parent.join("greentic-interfaces"));
+    let types_root = repo_root
+        .parent()
+        .map(|parent| parent.join("greentic-types"));
 
     let greentic_interfaces = interfaces_root
         .as_ref()
@@ -98,10 +101,15 @@ fn resolve_local_templates(target_path: &Path) -> DependencyTemplates {
         .map(|path| format!(r#"path = "{}""#, absolute_path_string(&path)))
         .unwrap_or_else(|| format!("version = \"{GREENTIC_INTERFACES_GUEST_VERSION}\""));
 
+    let greentic_types = types_root
+        .filter(|path| path.exists())
+        .map(|path| format!(r#"path = "{}""#, absolute_path_string(&path)))
+        .unwrap_or_else(|| format!("version = \"{GREENTIC_TYPES_VERSION}\""));
+
     DependencyTemplates {
         greentic_interfaces,
         greentic_interfaces_guest,
-        greentic_types: format!("version = \"{GREENTIC_TYPES_VERSION}\""),
+        greentic_types,
         relative_patch_path: local_patch_path(target_path),
     }
 }

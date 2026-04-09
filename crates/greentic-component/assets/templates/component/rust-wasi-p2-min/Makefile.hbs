@@ -1,6 +1,8 @@
 .PHONY: build test lint check flows wasm
 
 BUILD_FLAGS ?=
+DIST_DIR := dist
+WASM_OUT := $(DIST_DIR)/{{ name }}__0_6_0.wasm
 
 default: build
 
@@ -17,9 +19,12 @@ wasm:
 		exit 1; \
 	fi
 	cargo component build --release --target wasm32-wasip2
+	mkdir -p $(DIST_DIR)
+	cp target/wasm32-wasip2/release/{{ name_snake }}.wasm $(WASM_OUT)
+	greentic-component hash ./component.manifest.json --wasm $(WASM_OUT)
 
 check:
-	greentic-dev component doctor target/wasm32-wasip2/release/{{ name_snake }}.wasm --manifest ./component.manifest.json
+	greentic-dev component doctor $(WASM_OUT) --manifest ./component.manifest.json
 
 lint:
 	cargo fmt --all

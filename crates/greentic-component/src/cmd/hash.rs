@@ -97,3 +97,135 @@ fn normalize_or_canonicalize(root: &Path, candidate: &Path) -> Result<PathBuf> {
     }
     normalize_under_root(root, candidate)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::sync::{Mutex, OnceLock};
+
+    fn cwd_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    #[test]
+    fn resolve_wasm_path_prefers_explicit_override() {
+        let manifest = json!({
+            "artifacts": { "component_wasm": "component.wasm" }
+        });
+        let path = resolve_wasm_path(&manifest, Some(Path::new("override.wasm"))).unwrap();
+        assert_eq!(path, PathBuf::from("override.wasm"));
+    }
+
+    #[test]
+    fn resolve_wasm_path_errors_when_manifest_is_missing_artifact() {
+        let err = resolve_wasm_path(&json!({}), None).expect_err("artifact path required");
+        assert!(err.to_string().contains("artifacts.component_wasm"));
+    }
+
+    #[test]
+    fn normalize_or_canonicalize_allows_relative_paths_under_root() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let wasm = root.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let normalized =
+            normalize_or_canonicalize(root.path(), Path::new("component.wasm")).unwrap();
+        assert_eq!(normalized, wasm);
+    }
+
+    #[test]
+    fn resolve_wasm_path_uses_manifest_artifact_when_present() {
+        let manifest = json!({
+            "artifacts": { "component_wasm": "dist/component.wasm" }
+        });
+
+        let path = resolve_wasm_path(&manifest, None).expect("artifact path");
+
+        assert_eq!(path, PathBuf::from("dist/component.wasm"));
+    }
+
+    #[test]
+    fn normalize_or_canonicalize_canonicalizes_absolute_paths() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let wasm = root.path().join("component.wasm");
+        fs::write(&wasm, b"wasm").expect("write wasm");
+
+        let normalized = normalize_or_canonicalize(root.path(), &wasm).expect("absolute path");
+
+        assert_eq!(normalized, wasm.canonicalize().expect("canonical wasm"));
+    }
+
+    #[test]
+    fn run_updates_manifest_hash_using_manifest_artifact() {
+        let _guard = cwd_lock().lock().expect("cwd lock");
+        let original_cwd = std::env::current_dir().expect("cwd");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set cwd");
+
+        let wasm = dir.path().join("component.wasm");
+        fs::write(&wasm, b"updated-wasm").expect("write wasm");
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::to_string_pretty(&json!({
+                "artifacts": { "component_wasm": "component.wasm" },
+                "hashes": { "component_wasm": "blake3:old" }
+            }))
+            .expect("manifest json"),
+        )
+        .expect("write manifest");
+
+        run(HashArgs {
+            manifest: PathBuf::from("component.manifest.json"),
+            wasm: None,
+        })
+        .expect("run hash command");
+
+        let updated: Value =
+            serde_json::from_str(&fs::read_to_string(&manifest_path).expect("read manifest"))
+                .expect("parse updated manifest");
+        let expected = format!("blake3:{}", blake3::hash(b"updated-wasm").to_hex());
+        assert_eq!(updated["hashes"]["component_wasm"], Value::String(expected));
+
+        std::env::set_current_dir(original_cwd).expect("restore cwd");
+    }
+
+    #[test]
+    fn run_prefers_explicit_wasm_override() {
+        let _guard = cwd_lock().lock().expect("cwd lock");
+        let original_cwd = std::env::current_dir().expect("cwd");
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_current_dir(dir.path()).expect("set cwd");
+
+        let manifest_wasm = dir.path().join("component.wasm");
+        let override_wasm = dir.path().join("override.wasm");
+        fs::write(&manifest_wasm, b"manifest-wasm").expect("write manifest wasm");
+        fs::write(&override_wasm, b"override-wasm").expect("write override wasm");
+        let manifest_path = dir.path().join("component.manifest.json");
+        fs::write(
+            &manifest_path,
+            serde_json::to_string_pretty(&json!({
+                "artifacts": { "component_wasm": "component.wasm" },
+                "hashes": { "component_wasm": "blake3:old" }
+            }))
+            .expect("manifest json"),
+        )
+        .expect("write manifest");
+
+        run(HashArgs {
+            manifest: PathBuf::from("component.manifest.json"),
+            wasm: Some(PathBuf::from("override.wasm")),
+        })
+        .expect("run hash command");
+
+        let updated: Value =
+            serde_json::from_str(&fs::read_to_string(&manifest_path).expect("read manifest"))
+                .expect("parse updated manifest");
+        let expected = format!("blake3:{}", blake3::hash(b"override-wasm").to_hex());
+        assert_eq!(updated["hashes"]["component_wasm"], Value::String(expected));
+
+        std::env::set_current_dir(original_cwd).expect("restore cwd");
+    }
+}

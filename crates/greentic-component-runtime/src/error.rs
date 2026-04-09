@@ -50,3 +50,42 @@ impl CompError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jsonschema::validator_for;
+    use serde_json::json;
+
+    #[test]
+    fn validation_errors_are_normalized_to_schema_validation() {
+        let schema = validator_for(&json!({
+            "type": "object",
+            "properties": { "enabled": { "type": "boolean" } },
+            "required": ["enabled"],
+            "additionalProperties": false
+        }))
+        .expect("validator");
+
+        let invalid = json!({"enabled": "yes"});
+        let mut errors = schema.iter_errors(&invalid);
+        let err = errors.next().expect("validation error");
+        let comp_error = CompError::from(err);
+
+        assert!(
+            matches!(comp_error, CompError::SchemaValidation(message) if message.contains("boolean"))
+        );
+    }
+
+    #[test]
+    fn secret_resolution_keeps_the_failing_key() {
+        let err =
+            CompError::secret_resolution("API_TOKEN", CompError::Runtime("vault offline".into()));
+
+        assert!(matches!(
+            err,
+            CompError::SecretResolution { ref key, ref source }
+                if key == "API_TOKEN" && matches!(source.as_ref(), CompError::Runtime(message) if message == "vault offline")
+        ));
+    }
+}

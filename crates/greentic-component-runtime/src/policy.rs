@@ -53,3 +53,51 @@ impl LoadPolicy {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use greentic_component_store::{DigestPolicy, SignaturePolicy};
+
+    #[test]
+    fn default_host_policy_denies_mutating_or_network_features() {
+        let policy = HostPolicy::default();
+        assert!(!policy.allow_http_fetch);
+        assert!(!policy.allow_state_read);
+        assert!(!policy.allow_state_write);
+        assert!(!policy.allow_state_delete);
+        assert!(policy.allow_telemetry);
+        assert!(policy.state_store.lock().expect("lock").is_empty());
+    }
+
+    #[test]
+    fn load_policy_builder_preserves_store_and_overrides_fields() {
+        let cache_dir = std::env::temp_dir().join(format!(
+            "greentic-component-runtime-policy-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&cache_dir).expect("cache dir");
+        let store = Arc::new(ComponentStore::new(&cache_dir).expect("store"));
+        let verification = VerificationPolicy {
+            digest: Some(DigestPolicy::sha256(Some("abcd".into()), true)),
+            signature: Some(SignaturePolicy::Disabled),
+        };
+        let host = HostPolicy {
+            allow_http_fetch: true,
+            ..HostPolicy::default()
+        };
+
+        let policy = LoadPolicy::new(store.clone())
+            .with_verification(verification.clone())
+            .with_host_policy(host.clone());
+
+        assert!(Arc::ptr_eq(&policy.store, &store));
+        assert_eq!(policy.verification.digest.unwrap().expected(), Some("abcd"));
+        assert!(matches!(
+            policy.verification.signature,
+            Some(SignaturePolicy::Disabled)
+        ));
+        assert!(policy.host.allow_http_fetch);
+        assert_eq!(policy.host.allow_telemetry, host.allow_telemetry);
+    }
+}

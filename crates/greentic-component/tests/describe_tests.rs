@@ -20,6 +20,12 @@ fn builds_payload_from_metadata() {
     let component = TestComponent::new(TEST_WIT, &["describe", "init"]);
     let payload = from_wit_world(&component.wasm_path, &component.world).unwrap();
     assert!(payload.schema_id.is_some());
+    assert_eq!(payload.name, component.world.rsplit('/').next().unwrap());
+    assert_eq!(payload.schema_id.as_deref(), Some(component.world.as_str()));
+    assert_eq!(
+        payload.versions[0].schema["world"].as_str(),
+        Some(component.world.as_str())
+    );
     assert_eq!(
         payload.versions[0].schema["functions"]
             .as_array()

@@ -41,6 +41,8 @@ fn wizard_i18n_keys_exist_in_root_en_catalog() {
         "cli.wizard.result.component_written",
         "cli.wizard.result.choose_another_output_dir",
         "cli.wizard.step.template_used",
+        "cli.help.a019",
+        "cli.help.a020",
     ];
 
     for key in required {

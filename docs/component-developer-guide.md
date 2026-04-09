@@ -69,7 +69,25 @@ What the key fields mean:
 - `capabilities`: what host services your component may use (state, secrets, etc.).
 - `artifacts` and `hashes`: where the Wasm lives and its hash for integrity.
 
-Operation schemas must describe concrete JSON shapes (not just `{}`). Doctor/build enforce this by default and emit `E_OP_SCHEMA_EMPTY` unless you pass `--permissive` (which only logs `W_OP_SCHEMA_EMPTY`). Keep `schemas/io/input.schema.json` and `schemas/io/output.schema.json` populated with the shapes you expect, reference them from `manifest.schemas`, and rerun `greentic-component flow update` whenever you tweak those schemas.
+Operation schemas must describe concrete JSON shapes (not just `{}`). Doctor/build enforce this by default and emit `E_OP_SCHEMA_EMPTY` unless you pass `--permissive` (which only logs `W_OP_SCHEMA_EMPTY`). For `component@0.6.0`, keep the canonical input/output contracts inline under `operations[].input_schema` and `operations[].output_schema`.
+
+### 2.2 Embedded artifact metadata in 0.6
+
+For built `component@0.6.0` artifacts, `greentic-component build` now derives a curated embedded projection from the canonical manifest and writes it into the Wasm custom section:
+
+`greentic.component.manifest.v1`
+
+That embedded section is the artifact-local truth for the built Wasm. In practice this means:
+
+- `component.manifest.json` remains the authoring manifest
+- `greentic-component build` canonicalizes that manifest and embeds the projection into the Wasm
+- `greentic-component inspect` can read and summarize the embedded metadata directly from the Wasm
+- `greentic-component doctor` expects that embedded section to exist on built artifacts and compares it with the external manifest and `describe()` where the fields overlap
+
+So for 0.6, the main consistency rule is:
+
+- authoring manifest -> canonical manifest -> embedded projection for artifact-local truth
+- authoring manifest -> canonical manifest -> describe projection for runtime-facing self-description
 
 ## 3) Payload model (canonical)
 
@@ -168,9 +186,64 @@ At a high level:
 1. Create a project targeting `wasm32-wasip2`.
 2. Implement your operation handlers.
 3. Export the Greentic component interface (your WIT world).
-4. Build the `.wasm` file.
+4. Build the `.wasm` file with `greentic-component build` or a scaffold target that delegates to it.
 
 You do not need to be a Rust expert to start. Use the scaffolded templates (`greentic-component new`) to get a working baseline.
+
+### 6.2 Build output expectations
+
+For `component@0.6.0`, a healthy build now gives you more than just a compiled Wasm:
+
+- the Wasm exports the expected world
+- the external manifest hashes are refreshed
+- the Wasm contains `greentic.component.manifest.v1`
+- optional `describe()` artifacts are emitted when available
+
+If you run `make wasm` inside a wizard-generated component, that target now delegates through `greentic-component build` so the embedded manifest step is not skipped.
+
+### 6.1 Wizard-first operation authoring
+
+This repo currently has two authoring paths:
+
+- `greentic-component new`
+- `greentic-component wizard`
+
+`new` can now scaffold one or more canonical user operations at creation time via:
+
+- `--operation <name[,name...]>`
+- `--default-operation <name>`
+- `--filesystem-mode` / `--filesystem-mount`
+- `--http-client` / `--http-server`
+- `--state-read` / `--state-write` / `--state-delete`
+- `--telemetry-scope` / `--telemetry-span-prefix` / `--telemetry-attribute`
+- `--secret-key` / `--secret-env` / `--secret-tenant` / `--secret-format`
+
+It still remains the simpler baseline scaffold generator.
+
+`wizard` is the richer operation-authoring path and currently supports:
+
+- `--mode create`
+- `--mode add_operation`
+- `--mode update_operation`
+
+For `wizard create`, user operations can be supplied through answer documents using either:
+
+- `operations`: JSON array of operation names
+- `operation_names`: comma-separated string
+
+For existing wizard-generated components:
+
+- `add_operation` appends a user operation to `component.manifest.json`
+- `update_operation` renames a user operation
+
+Both flows also update the generated `src/lib.rs` operation metadata block so the scaffolded source stays aligned with the manifest.
+
+For runtime capability metadata, both authoring flows now write the existing canonical manifest fields rather than a parallel capability model. Secrets are authored through `secret_requirements` and mirrored into `capabilities.host.secrets.required`. Telemetry permission and top-level telemetry config remain separate surfaces.
+
+The difference is scope:
+
+- `new` only authors operations during initial scaffold creation
+- `wizard` can also add and rename operations in an existing wizard-generated component
 
 ## 7) Local testing with `greentic-component test`
 

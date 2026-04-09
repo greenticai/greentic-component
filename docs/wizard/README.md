@@ -4,7 +4,7 @@ This module exposes deterministic scaffold planning for wizard flows.
 
 ## Design
 
-- `wizard [run|validate|apply] --mode <create|build_test|doctor> [--execution <dry-run|execute>]`
+- `wizard [run|validate|apply] --mode <create|add_operation|update_operation|build_test|doctor> [--execution <dry-run|execute>]`
 - `apply_scaffold(request, dry_run) -> ApplyResult` (create mode core)
 - `execute_plan(plan) -> Result<()>`
 
@@ -33,6 +33,8 @@ Current step kinds:
 - `build_component`
 - `test_component`
 - `doctor`
+
+The generated scaffold `wasm` path delegates through `greentic-component build`, so wizard-produced components follow the same embedded-manifest build pipeline as direct CLI builds.
 
 ## Orchestrator Usage
 

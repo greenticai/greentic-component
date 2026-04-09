@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "global": {
+    "line_coverage_min": 60.0
+  },
+  "defaults": {
+    "per_file_line_coverage_min": 60.0
+  },
+  "exclusions": {
+    "files": [
+      "crates/greentic-component/src/bin/component-doctor.rs",
+      "crates/greentic-component/src/bin/component-hash.rs",
+      "crates/greentic-component/src/bin/component-inspect.rs",
+      "crates/greentic-component/src/bin/greentic-component.rs",
+      "crates/greentic-component/examples/gen_contract_fixture.rs",
+      "crates/greentic-component/examples/gen_fixture.rs",
+      "crates/greentic-component-store/src/http.rs"
+    ]
+  },
+  "per_file": {
+    "crates/greentic-component/src/loader.rs": {
+      "line_coverage_min": 80.0
+    },
+    "crates/greentic-component/src/path_safety.rs": {
+      "line_coverage_min": 85.0
+    },
+    "crates/greentic-component/src/provenance.rs": {
+      "line_coverage_min": 80.0
+    },
+    "crates/greentic-component/src/security.rs": {
+      "line_coverage_min": 85.0
+    },
+    "crates/greentic-component/src/signing.rs": {
+      "line_coverage_min": 85.0
+    },
+    "crates/greentic-component-store/src/verify.rs": {
+      "line_coverage_min": 85.0
+    }
+  }
+}

@@ -6,35 +6,37 @@
   "world": "{{ wit_world }}",
   "describe_export": "describe",
   "operations": [
+{{#each user_operations}}
     {
-      "name": "handle_message",
+      "name": "{{ name }}",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "{{ name }} handle input",
+        "title": "{{ ../name }} {{ schema_title_name }} input",
         "type": "object",
         "required": ["input"],
         "properties": {
           "input": {
             "type": "string",
             "description": "Opaque payload forwarded to handle",
-            "default": "Hello from {{ name }}!"
+            "default": "Hello from {{ ../name }}!"
           }
         }
       },
       "output_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "{{ name }} handle output",
+        "title": "{{ ../name }} {{ schema_title_name }} output",
         "type": "object",
         "required": ["message"],
         "properties": {
           "message": {
             "type": "string",
             "description": "Response returned by the handle entry point",
-            "default": "Handled by {{ name }}"
+            "default": "Handled by {{ ../name }}"
           }
         }
       }
     },
+{{/each}}
     {
       "name": "qa-spec",
       "input_schema": {
@@ -90,41 +92,18 @@
       }
     }
   ],
-  "default_operation": "handle_message",
-  "config_schema": {
-    "type": "object",
-    "properties": {},
-    "required": [],
-    "additionalProperties": false
-  },
+  "default_operation": "{{ default_operation }}",
+  "config_schema": {{{ config_schema_json }}},
   "supports": ["messaging"],
   "profiles": {
     "default": "stateless",
     "supported": ["stateless"]
   },
-  "secret_requirements": [],
-  "capabilities": {
-    "wasi": {
-      "filesystem": {
-        "mode": "none",
-        "mounts": []
-      },
-      "random": true,
-      "clocks": true
-    },
-    "host": {
-      "messaging": {
-        "inbound": true,
-        "outbound": true
-      },
-      "telemetry": {
-        "scope": "node"
-      },
-      "secrets": {
-        "required": []
-      }
-    }
-  },
+  "secret_requirements": {{{ secret_requirements_json }}},
+  "capabilities": {{{ capabilities_json }}},
+{{#if telemetry_json}}
+  "telemetry": {{{ telemetry_json }}},
+{{/if}}
   "limits": {
     "memory_mb": 128,
     "wall_time_ms": 1000
@@ -150,4 +129,3 @@
     }
   }
 }
-
