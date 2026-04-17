@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RUST_VERSION: "1.91.0"
+  RUST_VERSION: "1.94.0"
 
 on:
   schedule:
