@@ -18,6 +18,8 @@ Docs index lives in `docs/README.md`, including the v0.6 vision and legacy/depre
 - **Predictable config**: manifests + JSON schemas drive rich prompts and defaults; config flows are regenerated for you.
 - **Portable**: wasm32-wasip2 targets + explicit capabilities mean minimal host assumptions.
 
+Component manifests and `describe()` stay focused on component behavior and schemas. Host-side flow concerns such as reshaping inputs, normalizing outputs, or projecting errors happen around the component call rather than through new required fields in `component.manifest.json`.
+
 ## Quick start (copy/paste)
 
 ```bash
@@ -95,6 +97,8 @@ pub fn handle_message(operation: String, input: String) -> InvokeResult {
 ```
 
 Routing stays untouched so downstream tools can rewire the placeholder. If any required field in `schemas/io/input.schema.json` lacks a default, flow generation fails loudly instead of emitting an invalid stub.
+
+These generated `dev_flows` remain orchestration data owned by the host/tooling layer. They use your component schemas as the contract surface, but they do not change the component ABI or require extra mapping fields in the component manifest.
 
 ## Build, test, ship
 
@@ -319,4 +323,3 @@ Contributions welcome—please run `cargo fmt`, `cargo clippy --all-targets --al
 ## Security
 
 See [SECURITY.md](SECURITY.md) for guidance on `x-redact`, capability declarations, and protecting operator logs.
-

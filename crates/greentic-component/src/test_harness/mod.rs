@@ -6,13 +6,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use blake3::Hasher;
-use greentic_interfaces_host::component::v0_5::exports::greentic::component::node;
-use greentic_interfaces_host::component::v0_5::exports::greentic::component::node::GuestIndices;
 use greentic_interfaces_host::component_v0_6;
 use greentic_types::TenantCtx;
 use greentic_types::cbor::canonical;
 use serde_json::Value;
-use wasmtime::component::{Component, InstancePre, Linker};
+use wasmtime::component::{Component, Linker};
 use wasmtime::{Config, Engine, Store};
 
 use crate::test_harness::linker::{HostState, HostStateConfig, build_linker};
@@ -22,12 +20,6 @@ use crate::test_harness::state::{InMemoryStateStore, StateDumpEntry, StateScope}
 mod linker;
 mod secrets;
 mod state;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ComponentAbi {
-    V0_5,
-    V0_6,
-}
 
 #[derive(Debug)]
 pub struct ComponentInvokeError {
@@ -116,9 +108,6 @@ pub struct TestHarness {
     engine: Engine,
     component: Component,
     linker: Linker<HostState>,
-    instance_pre: InstancePre<HostState>,
-    guest_indices: Option<GuestIndices>,
-    abi: ComponentAbi,
     state_store: Arc<InMemoryStateStore>,
     secrets_store: Arc<InMemorySecretsStore>,
     state_scope: StateScope,
@@ -126,7 +115,8 @@ pub struct TestHarness {
     allow_state_write: bool,
     allow_state_delete: bool,
     tenant_ctx: TenantCtx,
-    exec_ctx: node::ExecCtx,
+    flow_id: String,
+    node_id: Option<String>,
     wasi_preopens: Vec<WasiPreopen>,
     config_json: Option<String>,
     allow_http: bool,
@@ -153,27 +143,15 @@ impl TestHarness {
         let component = Component::from_binary(&engine, &config.wasm_bytes)
             .map_err(|err| anyhow::anyhow!("load component wasm: {err}"))?;
         let wasm_bytes_metadata = describe_wasm_metadata(&config.wasm_bytes);
-        let abi = detect_component_abi(&config.wasm_bytes);
 
         let linker = build_linker(&engine)?;
-        let instance_pre = linker.instantiate_pre(&component).map_err(|err| {
+        linker.instantiate_pre(&component).map_err(|err| {
             anyhow::anyhow!(
                 "prepare component instance (wasm metadata: {}): {}",
                 wasm_bytes_metadata,
                 err
             )
         })?;
-        let guest_indices = if abi == ComponentAbi::V0_5 {
-            Some(GuestIndices::new(&instance_pre).map_err(|err| {
-                anyhow::anyhow!(
-                    "load guest indices (wasm metadata: {}): {}",
-                    wasm_bytes_metadata,
-                    err
-                )
-            })?)
-        } else {
-            None
-        };
 
         let state_store = Arc::new(InMemoryStateStore::new());
         let secrets_store = InMemorySecretsStore::new(config.allow_secrets, config.allowed_secrets);
@@ -182,13 +160,6 @@ impl TestHarness {
         for (key, value) in config.state_seeds {
             state_store.write(&scope, &key, value);
         }
-
-        let exec_ctx = node::ExecCtx {
-            tenant: make_component_tenant_ctx(&config.tenant_ctx),
-            i18n_id: config.tenant_ctx.i18n_id.clone(),
-            flow_id: config.flow_id,
-            node_id: config.node_id,
-        };
 
         let config_json = match config.config {
             Some(value) => Some(serde_json::to_string(&value).context("serialize config json")?),
@@ -199,9 +170,6 @@ impl TestHarness {
             engine,
             component,
             linker,
-            instance_pre,
-            guest_indices,
-            abi,
             state_store,
             secrets_store,
             state_scope: scope,
@@ -209,7 +177,8 @@ impl TestHarness {
             allow_state_write: config.allow_state_write,
             allow_state_delete: config.allow_state_delete,
             tenant_ctx: config.tenant_ctx,
-            exec_ctx,
+            flow_id: config.flow_id,
+            node_id: config.node_id,
             wasi_preopens: config.wasi_preopens,
             config_json,
             allow_http: config.allow_http,
@@ -249,84 +218,8 @@ impl TestHarness {
         });
 
         let instantiate_start = Instant::now();
-        match self.abi {
-            ComponentAbi::V0_5 => {
-                let guest_indices = self
-                    .guest_indices
-                    .as_ref()
-                    .context("missing v0.5 guest indices")?;
-                let instance = self
-                    .instance_pre
-                    .instantiate(&mut store)
-                    .map_err(|err| anyhow::anyhow!("instantiate component: {err}"))
-                    .and_then(|instance| {
-                        guest_indices
-                            .load(&mut store, &instance)
-                            .map_err(|err| anyhow::anyhow!("load component exports: {err}"))
-                            .map(|exports| (instance, exports))
-                    })
-                    .with_context(|| {
-                        format!(
-                            "failed to prepare component instance (wasm metadata: {})",
-                            self.wasm_bytes_metadata
-                        )
-                    });
-
-                let (_instance, exports) = match instance {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return map_invoke_error(
-                            err,
-                            &store,
-                            self.timeout_ms,
-                            self.max_memory_bytes,
-                        );
-                    }
-                };
-                let instantiate_ms = duration_ms(instantiate_start.elapsed());
-
-                let input = serde_json::to_string(input_json).context("serialize input json")?;
-                let run_start = Instant::now();
-                let result = exports
-                    .call_invoke(&mut store, &self.exec_ctx, operation, &input)
-                    .map_err(|err| anyhow::anyhow!("invoke component: {err}"));
-
-                use greentic_interfaces_host::component::v0_5::exports::greentic::component::node::InvokeResult;
-
-                let result = match result {
-                    Ok(result) => result,
-                    Err(err) => {
-                        return map_invoke_error(
-                            err,
-                            &store,
-                            self.timeout_ms,
-                            self.max_memory_bytes,
-                        );
-                    }
-                };
-                let run_ms = duration_ms(run_start.elapsed());
-
-                match result {
-                    InvokeResult::Ok(output_json) => Ok(InvokeOutcome {
-                        output_json,
-                        instantiate_ms,
-                        run_ms,
-                    }),
-                    InvokeResult::Err(err) => Err(anyhow::Error::new(ComponentInvokeError {
-                        code: err.code,
-                        message: err.message,
-                        retryable: err.retryable,
-                        backoff_ms: err.backoff_ms,
-                        details: err.details,
-                    })),
-                }
-            }
-            ComponentAbi::V0_6 => {
-                let exports = component_v0_6::ComponentV0V6V0::instantiate(
-                    &mut store,
-                    &self.component,
-                    &self.linker,
-                )
+        let exports =
+            component_v0_6::ComponentV0V6V0::instantiate(&mut store, &self.component, &self.linker)
                 .map_err(|err| anyhow::anyhow!("instantiate component: {err}"))
                 .with_context(|| {
                     format!(
@@ -334,116 +227,86 @@ impl TestHarness {
                         self.wasm_bytes_metadata
                     )
                 });
-                let exports = match exports {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return map_invoke_error(
-                            err,
-                            &store,
-                            self.timeout_ms,
-                            self.max_memory_bytes,
-                        );
-                    }
-                };
-                let instantiate_ms = duration_ms(instantiate_start.elapsed());
-
-                let mut payload = input_json.clone();
-                if !payload.is_object() {
-                    payload = serde_json::json!({ "input": payload });
-                }
-                if let Some(object) = payload.as_object_mut()
-                    && !object.contains_key("operation")
-                {
-                    object.insert(
-                        "operation".to_string(),
-                        Value::String(operation.to_string()),
-                    );
-                }
-
-                let input = canonical::to_canonical_cbor_allow_floats(&payload)
-                    .context("encode invoke payload to cbor")?;
-                let invoke_envelope =
-                    component_v0_6::exports::greentic::component::node::InvocationEnvelope {
-                        ctx: make_component_tenant_ctx_v0_6(&self.tenant_ctx),
-                        flow_id: self.exec_ctx.flow_id.clone(),
-                        step_id: self
-                            .exec_ctx
-                            .node_id
-                            .clone()
-                            .unwrap_or_else(|| operation.to_string()),
-                        component_id: self
-                            .exec_ctx
-                            .node_id
-                            .clone()
-                            .unwrap_or_else(|| "component".to_string()),
-                        attempt: self.tenant_ctx.attempt,
-                        payload_cbor: input,
-                        metadata_cbor: None,
-                    };
-
-                let run_start = Instant::now();
-                let result = exports
-                    .greentic_component_node()
-                    .call_invoke(&mut store, operation, &invoke_envelope)
-                    .map_err(|err| anyhow::anyhow!("invoke component: {err}"));
-                let result = match result {
-                    Ok(value) => value,
-                    Err(err) => {
-                        return map_invoke_error(
-                            err,
-                            &store,
-                            self.timeout_ms,
-                            self.max_memory_bytes,
-                        );
-                    }
-                };
-                let run_ms = duration_ms(run_start.elapsed());
-                match result {
-                    Ok(result) => {
-                        let output_value: Value = canonical::from_cbor(&result.output_cbor)
-                            .context("decode invoke output cbor")?;
-                        let output_json = serde_json::to_string(&output_value)
-                            .context("serialize invoke output json")?;
-                        Ok(InvokeOutcome {
-                            output_json,
-                            instantiate_ms,
-                            run_ms,
-                        })
-                    }
-                    Err(err) => Err(anyhow::Error::new(ComponentInvokeError {
-                        code: err.code,
-                        message: err.message,
-                        retryable: err.retryable,
-                        backoff_ms: err.backoff_ms,
-                        details: err
-                            .details
-                            .as_ref()
-                            .and_then(|bytes| canonical::from_cbor::<Value>(bytes).ok())
-                            .and_then(|value| serde_json::to_string(&value).ok()),
-                    })),
-                }
+        let exports = match exports {
+            Ok(value) => value,
+            Err(err) => {
+                return map_invoke_error(err, &store, self.timeout_ms, self.max_memory_bytes);
             }
+        };
+        let instantiate_ms = duration_ms(instantiate_start.elapsed());
+
+        let mut payload = input_json.clone();
+        if !payload.is_object() {
+            payload = serde_json::json!({ "input": payload });
+        }
+        if let Some(object) = payload.as_object_mut()
+            && !object.contains_key("operation")
+        {
+            object.insert(
+                "operation".to_string(),
+                Value::String(operation.to_string()),
+            );
+        }
+
+        let input = canonical::to_canonical_cbor_allow_floats(&payload)
+            .context("encode invoke payload to cbor")?;
+        let invoke_envelope =
+            component_v0_6::exports::greentic::component::node::InvocationEnvelope {
+                ctx: make_component_tenant_ctx_v0_6(&self.tenant_ctx),
+                flow_id: self.flow_id.clone(),
+                step_id: self
+                    .node_id
+                    .clone()
+                    .unwrap_or_else(|| operation.to_string()),
+                component_id: self
+                    .node_id
+                    .clone()
+                    .unwrap_or_else(|| "component".to_string()),
+                attempt: self.tenant_ctx.attempt,
+                payload_cbor: input,
+                metadata_cbor: None,
+            };
+
+        let run_start = Instant::now();
+        let result = exports
+            .greentic_component_node()
+            .call_invoke(&mut store, operation, &invoke_envelope)
+            .map_err(|err| anyhow::anyhow!("invoke component: {err}"));
+        let result = match result {
+            Ok(value) => value,
+            Err(err) => {
+                return map_invoke_error(err, &store, self.timeout_ms, self.max_memory_bytes);
+            }
+        };
+        let run_ms = duration_ms(run_start.elapsed());
+        match result {
+            Ok(result) => {
+                let output_value: Value = canonical::from_cbor(&result.output_cbor)
+                    .context("decode invoke output cbor")?;
+                let output_json =
+                    serde_json::to_string(&output_value).context("serialize invoke output json")?;
+                Ok(InvokeOutcome {
+                    output_json,
+                    instantiate_ms,
+                    run_ms,
+                })
+            }
+            Err(err) => Err(anyhow::Error::new(ComponentInvokeError {
+                code: err.code,
+                message: err.message,
+                retryable: err.retryable,
+                backoff_ms: err.backoff_ms,
+                details: err
+                    .details
+                    .as_ref()
+                    .and_then(|bytes| canonical::from_cbor::<Value>(bytes).ok())
+                    .and_then(|value| serde_json::to_string(&value).ok()),
+            })),
         }
     }
 
     pub fn state_dump(&self) -> Vec<StateDumpEntry> {
         self.state_store.dump()
-    }
-}
-
-fn make_component_tenant_ctx(tenant: &TenantCtx) -> node::TenantCtx {
-    node::TenantCtx {
-        tenant: tenant.tenant.as_str().to_string(),
-        team: tenant.team.as_ref().map(|t| t.as_str().to_string()),
-        user: tenant.user.as_ref().map(|u| u.as_str().to_string()),
-        trace_id: tenant.trace_id.clone(),
-        i18n_id: tenant.i18n_id.clone(),
-        correlation_id: tenant.correlation_id.clone(),
-        deadline_unix_ms: tenant
-            .deadline
-            .and_then(|deadline| u64::try_from(deadline.unix_millis()).ok()),
-        attempt: tenant.attempt,
-        idempotency_key: tenant.idempotency_key.clone(),
     }
 }
 
@@ -514,16 +377,6 @@ fn map_invoke_error(
         }));
     }
     Err(err)
-}
-
-fn detect_component_abi(bytes: &[u8]) -> ComponentAbi {
-    if let Ok(decoded) = crate::wasm::decode_world(bytes) {
-        let world = &decoded.resolve.worlds[decoded.world];
-        if world.name == "component-v0-v5-v0" {
-            return ComponentAbi::V0_5;
-        }
-    }
-    ComponentAbi::V0_6
 }
 
 fn describe_wasm_metadata(bytes: &[u8]) -> String {

@@ -13,7 +13,7 @@ inputs:
   toolchain:
     description: Rust toolchain to install.
     required: false
-    default: 1.91.0
+    default: 1.95.0
   components:
     description: Toolchain components to install (comma separated).
     required: false

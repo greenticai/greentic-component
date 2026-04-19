@@ -9,9 +9,10 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.4.76"
+version = "0.5.0"
 license = "MIT"
-rust-version = "1.91"
+rust-version = "1.95"
+
 
 [workspace.dependencies]
 anyhow = "1"
@@ -23,25 +24,22 @@ blake3 = "1"
 bytes = "1"
 ciborium = "0.2"
 clap = { version = "4", features = ["derive"] }
-greentic-component-manifest = { version = "0.4", path = "crates/component-manifest" }
-greentic-component-store = { version = "0.4",path = "crates/greentic-component-store" }
+criterion = "0.8"
+greentic-component-manifest = { version = "0.5", path = "crates/component-manifest" }
+greentic-component-store = { version = "0.5",path = "crates/greentic-component-store" }
 dashmap = "6"
 directories = "6"
 displaydoc = "0.2"
 futures = "0.3"
-greentic-interfaces-guest = { version = "0.4", default-features = false, features = ["component-v0-6"] }
-greentic-interfaces-host = "0.4"
-greentic-interfaces = { version = "0.4", default-features = false, features = [
+greentic-interfaces-guest = { version = "0.5", default-features = false, features = ["component-v0-6"] }
+greentic-interfaces-host = "0.5"
+greentic-interfaces = { version = "0.5", default-features = false, features = [
     "bindings-rust",
     "common-types-v0-1",
     "component-v1",
     "component-v0-6",
-    "component-v0-5",
-    "component-v0-4",
     "describe-v1",
     "provision-v0-1",
-    "types-core-v0-4",
-    "types-core-v0-2",
     "wasix-mcp-v0-0-5",
     "wasix-mcp-24-11-05",
     "wasix-mcp-25-03-26",
@@ -70,16 +68,16 @@ greentic-interfaces = { version = "0.4", default-features = false, features = [
     "gui-fragment",
     "runner-host-v1",
 ] }
-greentic-interfaces-wasmtime = "0.4"
-greentic-distributor-client = { version = "0.4", default-features = false, features = ["dist-client"] }
-greentic-types = "0.4"
-greentic-qa-lib = "0.4"
+greentic-interfaces-wasmtime = "0.5"
+greentic-distributor-client = { version = "0.5", default-features = false, features = ["dist-client"] }
+greentic-types = "0.5"
+greentic-qa-lib = "0.5"
 handlebars = "6"
 hex = "0.4"
 ignore = "0.4"
 include_dir = { version = "0.7" }
 insta = { version = "1", features = ["glob", "json"] }
-jsonschema = "0.45"
+jsonschema = "0.46"
 miette = { version = "7", default-features = false, features = ["derive"] }
 oci-distribution = { version = "0.11", default-features = false, features = ["rustls-tls"] }
 once_cell = "1"
@@ -94,14 +92,14 @@ semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_with = "3"
-sha2 = "0.10"
+sha2 = "0.11"
 sys-locale = "0.3"
 tempfile = "3"
 thiserror = "2"
 time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "fs", "time", "io-util"] }
 tokio-util = "0.7"
-toml = "0.9"
+toml = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 unic-langid = "0.9"
@@ -113,5 +111,5 @@ wasm-metadata = "0"
 wasmparser = "0"
 wasmtime = { version = "43", default-features = false, features = ["component-model", "cranelift", "runtime", "std"] }
 wasmtime-wasi = { version = "43" }
-wit-component = "0.245"
-wit-parser = "0.245"
+wit-component = "0.247"
+wit-parser = "0.247"
