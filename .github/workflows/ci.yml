@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RUST_VERSION: "1.94.0"
+  RUST_VERSION: "1.95.0"
   SEMVER_RUST_VERSION: "1.95.0"
 
 on:
