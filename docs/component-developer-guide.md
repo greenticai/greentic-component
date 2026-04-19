@@ -110,6 +110,23 @@ Example payload:
 }
 ```
 
+### 3.1 Flow mapping belongs to the host layer
+
+Flow orchestration may reshape data before and after a component call, but that mapping is not part of the component contract in this repo.
+
+The separation is:
+
+- the component owns operation behavior plus input/output/config schemas
+- the host/runtime owns invocation envelope construction, flow routing, and mapping around the call
+
+That means:
+
+- `component.manifest.json` does not need new required `in_map`, `out_map`, or `err_map` fields
+- `describe()` does not grow flow-node mapping fields
+- local `greentic-component test` exercises the component boundary itself, not a full flow-mapping pipeline
+
+If a flow document shows mapping terminology, treat it as host-side orchestration. The current canonical flow shape uses `input` and `output`, while names such as `in_map`, `out_map`, and `err_map` remain flow-layer terms rather than component ABI fields.
+
 ## 4) State model (canonical state-store)
 
 Persistent state is accessed via the canonical WIT interface:
@@ -247,7 +264,7 @@ The difference is scope:
 
 ## 7) Local testing with `greentic-component test`
 
-The `test` command runs your component locally with in-memory state and secrets. It does **not** simulate flow routing or templating.
+The `test` command runs your component locally with in-memory state and secrets. It does **not** simulate flow routing, mapping, or templating.
 
 ### 7.1 Basic test
 

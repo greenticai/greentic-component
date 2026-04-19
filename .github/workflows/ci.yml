@@ -8,6 +8,7 @@ concurrency:
 
 env:
   RUST_VERSION: "1.94.0"
+  SEMVER_RUST_VERSION: "1.95.0"
 
 on:
   push:
@@ -33,18 +34,57 @@ jobs:
       TARGET_DIR: target/linux
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - name: Setup Rust environment
         uses: ./.github/actions/rust-setup
         with:
           cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
           target-dir: ${{ env.TARGET_DIR }}
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: ${{ env.SEMVER_RUST_VERSION }}
           targets: |
             wasm32-wasip2
             x86_64-unknown-linux-gnu
+      - name: Resolve semver baseline tag
+        id: semver-baseline
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c "import json,sys; data=json.load(sys.stdin); print(next(p['version'] for p in data['packages'] if p['name']=='greentic-component'))")
+          BASELINE_TAG=$(python3 - "$CURRENT_VERSION" <<'PY'
+          import re
+          import subprocess
+          import sys
+
+          def parse_version(raw: str):
+              return tuple(int(part) for part in raw.split("."))
+
+          current = parse_version(sys.argv[1])
+          raw_tags = subprocess.check_output(["git", "tag"], text=True).splitlines()
+          semver_tags = []
+          for tag in raw_tags:
+              match = re.fullmatch(r"v(\d+\.\d+\.\d+)", tag.strip())
+              if not match:
+                  continue
+              version = parse_version(match.group(1))
+              if version < current:
+                  semver_tags.append((version, tag.strip()))
+
+          if not semver_tags:
+              raise SystemExit("No previous semver git tag found before current greentic-component version")
+
+          semver_tags.sort()
+          print(semver_tags[-1][1])
+          PY
+          )
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "baseline_tag=$BASELINE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Using semver baseline tag: $BASELINE_TAG for greentic-component $CURRENT_VERSION"
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           rust-toolchain: manual
+          baseline-rev: refs/tags/${{ steps.semver-baseline.outputs.baseline_tag }}
           package: "greentic-component,greentic-component-manifest,greentic-component-store,greentic-component-runtime"
 
   lint:
