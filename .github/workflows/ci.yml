@@ -86,11 +86,17 @@ jobs:
           echo "baseline_rev=$BASELINE_REV" >> "$GITHUB_OUTPUT"
           echo "baseline_label=$BASELINE_LABEL" >> "$GITHUB_OUTPUT"
           echo "Using semver baseline: $BASELINE_LABEL ($BASELINE_REV)"
-      - uses: obi1kenobi/cargo-semver-checks-action@v2
+      - id: semver
+        continue-on-error: true
+        uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           rust-toolchain: manual
           baseline-rev: ${{ steps.semver-baseline.outputs.baseline_rev }}
           package: "greentic-component,greentic-component-manifest,greentic-component-store,greentic-component-runtime"
+      - name: Emit advisory
+        if: steps.semver.outcome == 'failure'
+        run: |
+          echo "::warning title=Semver advisory::cargo-semver-checks detected a breaking change vs the current baseline. If intentional, plan to run start-next-minor.sh before the next stable cut. See plans/pre-release-minor-bump-lane.md."
 
   lint:
     name: lint
