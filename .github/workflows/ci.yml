@@ -6,9 +6,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  RUST_VERSION: "1.95.0"
-
 on:
   push:
     branches: [main]
@@ -22,102 +19,31 @@ on:
         default: false
 
 jobs:
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-lint
-      cancel-in-progress: true
-    env:
-      WASM_RUSTFLAGS: "-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--threads=1 -C debuginfo=0"
-      CARGO_BUILD_JOBS: "1"
-      CARGO_INCREMENTAL: "0"
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      CARGO_PROFILE_TEST_DEBUG: "0"
-      CARGO_TERM_COLOR: always
-      CARGO_NET_RETRY: 5
-      CARGO_HTTP_TIMEOUT: 120
-      TARGET_DIR: target/linux
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Rust environment
-        uses: ./.github/actions/rust-setup
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          target-dir: ${{ env.TARGET_DIR }}
-          toolchain: ${{ env.RUST_VERSION }}
-          targets: |
-            wasm32-wasip2
-            x86_64-unknown-linux-gnu
-      - name: Check canonical WIT duplication guard
-        run: bash ci/check_no_duplicate_canonical_wit.sh .
-      - name: Run lint checks
-        run: |
-          LOCAL_CHECK_ONLINE=1 \
-          LOCAL_CHECK_STRICT=1 \
-          LOCAL_CHECK_VERBOSE=1 \
-          LOCAL_CHECK_SKIP_BUILD=1 \
-          LOCAL_CHECK_SKIP_TEST=1 \
-          LOCAL_CHECK_SKIP_BUILD_ALL=1 \
-          LOCAL_CHECK_SKIP_TEST_ALL=1 \
-          LOCAL_CHECK_SKIP_BINS=1 \
-          LOCAL_CHECK_SKIP_SMOKE=1 \
-          LOCAL_CHECK_SKIP_SCHEMA=1 \
-          LOCAL_CHECK_SKIP_PACKAGE=1 \
-          LOCAL_CHECK_SKIP_PUBLISH=1 \
-          bash ci/local_check.sh
+  ci:
+    uses: greenticai/.github/.github/workflows/pr-ci.yml@main
+    with:
+      variant: host
+      toolchain-variant: wasm
 
-  test:
-    name: test
+  wit-guard:
+    name: wit-guard
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-test
-      cancel-in-progress: true
-    env:
-      WASM_RUSTFLAGS: "-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--threads=1 -C debuginfo=0"
-      CARGO_BUILD_JOBS: "1"
-      CARGO_INCREMENTAL: "0"
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      CARGO_PROFILE_TEST_DEBUG: "0"
-      CARGO_TERM_COLOR: always
-      CARGO_NET_RETRY: 5
-      CARGO_HTTP_TIMEOUT: 120
-      TARGET_DIR: target/linux
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Rust environment
-        uses: ./.github/actions/rust-setup
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          target-dir: ${{ env.TARGET_DIR }}
-          toolchain: ${{ env.RUST_VERSION }}
-          targets: |
-            wasm32-wasip2
-            x86_64-unknown-linux-gnu
-      - name: Check canonical WIT duplication guard
+      - name: Canonical WIT duplication guard
         run: bash ci/check_no_duplicate_canonical_wit.sh .
-      - name: Run workspace tests
-        run: |
-          LOCAL_CHECK_ONLINE=1 \
-          LOCAL_CHECK_STRICT=1 \
-          LOCAL_CHECK_VERBOSE=1 \
-          LOCAL_CHECK_SKIP_FMT=1 \
-          LOCAL_CHECK_SKIP_CLIPPY=1 \
-          LOCAL_CHECK_SKIP_BINS=1 \
-          LOCAL_CHECK_SKIP_SMOKE=1 \
-          LOCAL_CHECK_SKIP_SCHEMA=1 \
-          LOCAL_CHECK_SKIP_PACKAGE=1 \
-          LOCAL_CHECK_SKIP_PUBLISH=1 \
-          bash ci/local_check.sh
+      - name: Canonical bindings import guard
+        run: bash ci/check_no_bindings_imports.sh .
 
   release:
     name: release smoke + package
-    needs: [lint, test]
+    needs: [ci, wit-guard]
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-release
       cancel-in-progress: true
     env:
+      RUST_VERSION: "1.95.0"
       WASM_RUSTFLAGS: "-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--threads=1 -C debuginfo=0"
       CARGO_BUILD_JOBS: "1"
       CARGO_INCREMENTAL: "0"
@@ -158,7 +84,7 @@ jobs:
 
   binstall-release:
     name: binstall release
-    needs: [lint, test]
+    needs: [ci, wit-guard]
     if: github.ref == 'refs/heads/main' || inputs.publish == true
     runs-on: ${{ matrix.os }}
     permissions:
@@ -188,6 +114,7 @@ jobs:
             target: aarch64-pc-windows-msvc
             bin_suffix: ".exe"
     env:
+      RUST_VERSION: "1.95.0"
       CARGO_TERM_COLOR: always
       CARGO_NET_RETRY: 5
       CARGO_HTTP_TIMEOUT: 120
