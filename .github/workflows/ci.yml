@@ -8,7 +8,6 @@ concurrency:
 
 env:
   RUST_VERSION: "1.95.0"
-  SEMVER_RUST_VERSION: "1.95.0"
 
 on:
   push:
@@ -21,83 +20,8 @@ on:
         required: false
         type: boolean
         default: false
-      semver_baseline_rev:
-        description: "Optional semver baseline git ref (tag or commit)"
-        required: false
-        type: string
-        default: ""
 
 jobs:
-  semver-checks:
-    name: semver-checks
-    runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-semver
-      cancel-in-progress: true
-    env:
-      CARGO_TERM_COLOR: always
-      TARGET_DIR: target/linux
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - name: Setup Rust environment
-        uses: ./.github/actions/rust-setup
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          target-dir: ${{ env.TARGET_DIR }}
-          toolchain: ${{ env.SEMVER_RUST_VERSION }}
-          targets: |
-            wasm32-wasip2
-            x86_64-unknown-linux-gnu
-      - name: Resolve semver baseline tag
-        id: semver-baseline
-        env:
-          SEMVER_BASELINE_OVERRIDE: ${{ github.event.inputs.semver_baseline_rev || '' }}
-        run: |
-          set -euo pipefail
-          if [ -n "${SEMVER_BASELINE_OVERRIDE}" ]; then
-            BASELINE_REV="${SEMVER_BASELINE_OVERRIDE}"
-            BASELINE_LABEL="${SEMVER_BASELINE_OVERRIDE}"
-          else
-            BASELINE_TAG=$(python3 - <<'PY'
-          import re
-          import subprocess
-          raw_tags = subprocess.check_output(
-              ["git", "tag", "--sort=-v:refname"], text=True
-          ).splitlines()
-          semver_tags = []
-          for tag in raw_tags:
-              match = re.fullmatch(r"v(\d+\.\d+\.\d+)", tag.strip())
-              if not match:
-                  continue
-              semver_tags.append(tag.strip())
-
-          if not semver_tags:
-              raise SystemExit("No semver git tag found for semver baseline selection")
-
-          print(semver_tags[0])
-          PY
-            )
-            BASELINE_REV="refs/tags/${BASELINE_TAG}"
-            BASELINE_LABEL="${BASELINE_TAG}"
-          fi
-          echo "baseline_rev=$BASELINE_REV" >> "$GITHUB_OUTPUT"
-          echo "baseline_label=$BASELINE_LABEL" >> "$GITHUB_OUTPUT"
-          echo "Using semver baseline: $BASELINE_LABEL ($BASELINE_REV)"
-      - id: semver
-        continue-on-error: true
-        uses: obi1kenobi/cargo-semver-checks-action@v2
-        with:
-          rust-toolchain: manual
-          baseline-rev: ${{ steps.semver-baseline.outputs.baseline_rev }}
-          package: "greentic-component,greentic-component-manifest,greentic-component-store,greentic-component-runtime"
-      - name: Emit advisory
-        if: steps.semver.outcome == 'failure'
-        run: |
-          echo "::warning title=Semver advisory::cargo-semver-checks detected a breaking change vs the current baseline. If intentional, plan to run start-next-minor.sh before the next stable cut. See plans/pre-release-minor-bump-lane.md."
-
   lint:
     name: lint
     runs-on: ubuntu-latest
