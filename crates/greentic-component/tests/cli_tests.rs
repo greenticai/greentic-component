@@ -252,6 +252,7 @@ fn scaffold_makefile_uses_greentic_dev_commands() {
 }
 
 #[test]
+#[ignore = "requires cargo-component on PATH; runs in nightly CI with full tooling"]
 fn build_logs_resolved_component_world_version() {
     let temp = tempfile::TempDir::new().unwrap();
     let root = temp.path().join("build-log-world");
