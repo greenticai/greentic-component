@@ -14,7 +14,7 @@ on:
   schedule:
     # 05:23 UTC — staggered to avoid 00/05/15/30/45 hot-spots and the
     # 05:17 slot used by greentic-types' nightly-semver.
-    - cron: "23 5 * * *"
+    - cron: "46 3 * * *"
   workflow_dispatch:
     inputs:
       baseline-rev:
