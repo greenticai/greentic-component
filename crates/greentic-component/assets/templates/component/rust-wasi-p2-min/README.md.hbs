@@ -7,7 +7,7 @@ Legacy compatibility notes: `docs/vision/legacy.md` in the `greentic-component` 
 
 ## Requirements
 
-- Rust 1.91+
+- Rust 1.95+
 - `wasm32-wasip2` target (`rustup target add wasm32-wasip2`)
 - `cargo-component` (`cargo install cargo-component --locked`)
 

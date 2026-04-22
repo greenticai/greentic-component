@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RUST_VERSION: "1.91.0"
+  RUST_VERSION: "1.95.0"
 
 on:
   schedule:
@@ -40,9 +40,16 @@ jobs:
           targets: |
             wasm32-wasip2
             x86_64-unknown-linux-gnu
-      - name: Install required CLI tools with cargo-binstall
+      - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@main
-        with:
-          packages: greentic-dev cargo-component
+      - name: Install greentic-dev and cargo-component
+        run: |
+          set -euo pipefail
+          export PATH="$GITHUB_WORKSPACE/.cargo/bin:$PATH"
+          cargo binstall --no-confirm greentic-dev cargo-component
+          greentic-dev --version
+          cargo-component --version
       - name: Validate coverage policy
-        run: greentic-dev coverage
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.cargo/bin:$PATH"
+          greentic-dev coverage
