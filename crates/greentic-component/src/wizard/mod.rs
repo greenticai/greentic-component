@@ -570,7 +570,7 @@ fn qa_mode(mode: WizardMode) -> QaMode {
 
 fn render_rust_toolchain_toml() -> String {
     r#"[toolchain]
-channel = "1.91.0"
+channel = "1.95.0"
 components = ["clippy", "rustfmt"]
 targets = ["wasm32-wasip2", "x86_64-unknown-linux-gnu"]
 profile = "minimal"
@@ -599,7 +599,7 @@ name = "{name}"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-rust-version = "1.91"
+rust-version = "1.95"
 description = "Greentic component {name}"
 build = "build.rs"
 

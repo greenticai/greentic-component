@@ -6,9 +6,6 @@ license = "MIT"
 rust-version = "1.91"
 description = "Greentic component demo_component"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [package.metadata.greentic]
 abi_version = "0.6.0"
 
@@ -18,8 +15,25 @@ package = "greentic:component"
 [package.metadata.component.target]
 world = "greentic:component/component-v0-v6-v0@0.6.0"
 
+[lib]
+crate-type = [
+    "cdylib",
+    "rlib",
+]
+
 [dependencies]
-greentic-types = "0.4"
-greentic-interfaces-guest = { version = "0.4", default-features = false, features = ["component-v0-6"] }
-serde = { version = "1", features = ["derive"] }
+greentic-types = ">=0.5.0-0, <0.6.0-0"
 serde_json = "1"
+
+[dependencies.greentic-interfaces-guest]
+version = ">=0.5.0-0, <0.6.0-0"
+default-features = false
+features = [
+    "component-v0-6",
+]
+
+[dependencies.serde]
+version = "1"
+features = [
+    "derive",
+]

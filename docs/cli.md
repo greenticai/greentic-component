@@ -66,6 +66,7 @@ Global:
 - Purpose: invoke a component locally with an in-memory state-store and secrets harness.
 - Usage: `greentic-component test --wasm ./component.wasm --op render --input ./input.json [--state inmem] [--pretty] [--state-dump] [--manifest path] [--output out.json] [--trace-out ./trace.json]`.
 - Behavior: uses `greentic:state/store@1.0.0` in-memory storage scoped by tenant + flow/session prefix; secrets are loaded from `.env`, JSON, or `--secret` flags when declared in the manifest. State/secrets calls are denied when capabilities are not declared. Failures emit JSON with a stable `code`.
+- Boundary note: this command validates the component invocation surface. It does not simulate host-side flow mapping, so `in_map`, `out_map`, and `err_map` are not extra component-manifest fields you need to provide here.
 - Options:
 - `--world <world>` overrides the component world (default: `greentic:component/component@0.6.0`).
 - `--manifest <path>` overrides the manifest location (defaults to next to the wasm).
@@ -97,6 +98,7 @@ Global:
 - Purpose: regenerate `dev_flows.default/custom` from manifest + input schema using YGTc v2 shape.
 - Usage: `greentic-component flow update [--manifest path] [--no-infer-config] [--no-write-schema] [--force-write-schema] [--no-validate]`.
 - Behavior: picks the operation via `default_operation` (or only op), uses node_id = manifest.name, operation-keyed node with `input` and routing to `NEXT_NODE_PLACEHOLDER`; fails if required fields lack defaults or if `mode/kind` is `tool`.
+- Mapping note: regenerated `dev_flows` are host-side orchestration artifacts. They use the component's schemas as inputs, but they do not change `describe()`, require new manifest fields, or redefine the component ABI.
 - Tips: run after editing schemas/operations; leave `--no-write-schema` off when you want inferred schemas persisted.
 
 ## store fetch

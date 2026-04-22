@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::{Result, anyhow};
 use greentic_interfaces::runner_host_v1::{self, RunnerHost};
-use greentic_interfaces_host::component::v0_5::{self, ControlHost};
+use greentic_interfaces_host::component_v0_6::greentic::component::control::Host as ControlHost;
 use greentic_interfaces_wasmtime::host_helpers::v1::secrets_store::{
     SecretsError, SecretsStoreHost, add_secrets_store_to_linker,
 };
@@ -13,6 +13,7 @@ use greentic_interfaces_wasmtime::host_helpers::v1::state_store::{
 };
 use reqwest::blocking::Client as HttpClient;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use wasmtime::StoreContextMut;
 use wasmtime::component::Linker;
 use wasmtime::{Engine, ResourceLimiter};
 use wasmtime_wasi::clocks::{HostMonotonicClock, HostWallClock};
@@ -114,7 +115,7 @@ pub fn build_linker(engine: &Engine) -> Result<Linker<HostState>> {
     let mut linker = Linker::<HostState>::new(engine);
     runner_host_v1::add_to_linker(&mut linker, |state: &mut HostState| &mut state.runner)
         .map_err(|err| anyhow!("failed to add runner host linker: {err}"))?;
-    v0_5::add_control_to_linker(&mut linker, |state: &mut HostState| &mut state.control)
+    add_control_to_linker_v0_6(&mut linker, |state: &mut HostState| &mut state.control)
         .map_err(|err| anyhow!("failed to add control linker: {err}"))?;
     add_state_store_to_linker(&mut linker, |state: &mut HostState| &mut state.state)
         .map_err(|err| anyhow!("failed to add state-store linker: {err}"))?;
@@ -133,6 +134,39 @@ impl ControlHost for ControlHostImpl {
     }
 
     fn yield_now(&mut self) {}
+}
+
+fn add_control_to_linker_v0_6<T>(
+    linker: &mut Linker<T>,
+    get_host: impl Fn(&mut T) -> &mut (dyn ControlHost + Send + Sync + 'static)
+    + Send
+    + Sync
+    + Copy
+    + 'static,
+) -> wasmtime::Result<()>
+where
+    T: Send + 'static,
+{
+    let mut inst = linker.instance("greentic:component/control@0.6.0")?;
+
+    inst.func_wrap(
+        "should-cancel",
+        move |mut caller: StoreContextMut<'_, T>, (): ()| {
+            let host = get_host(caller.data_mut());
+            Ok((host.should_cancel(),))
+        },
+    )?;
+
+    inst.func_wrap(
+        "yield-now",
+        move |mut caller: StoreContextMut<'_, T>, (): ()| {
+            let host = get_host(caller.data_mut());
+            host.yield_now();
+            Ok(())
+        },
+    )?;
+
+    Ok(())
 }
 
 pub struct RunnerHostImpl {

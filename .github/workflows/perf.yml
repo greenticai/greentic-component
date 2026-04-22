@@ -7,12 +7,16 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RUST_VERSION: "1.91.0"
+  RUST_VERSION: "1.95.0"
 
 on:
+  # Moved off pull_request onto a nightly schedule per
+  # plans/binary-bifurcation.md Phase A.4 lighter-PR-CI goal.
+  schedule:
+    # 04:43 UTC — staggered against sibling Wave 1 nightly jobs.
+    - cron: "35 3 * * *"
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:
