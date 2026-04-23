@@ -1,3 +1,4 @@
+pub mod human;
 pub mod reader;
 pub mod report;
 
