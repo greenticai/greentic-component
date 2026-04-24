@@ -6,7 +6,7 @@ use clap::{Arg, ArgAction, CommandFactory, FromArgMatches, Parser, Subcommand};
 #[cfg(feature = "store")]
 use crate::cmd::store::StoreCommand;
 use crate::cmd::{
-    self, build::BuildArgs, doctor::DoctorArgs, flow::FlowCommand, hash::HashArgs,
+    self, build::BuildArgs, doctor::DoctorArgs, flow::FlowCommand, hash::HashArgs, info::InfoArgs,
     inspect::InspectArgs, new::NewArgs, templates::TemplatesArgs, test::TestArgs,
     wizard::WizardCliArgs,
 };
@@ -39,6 +39,8 @@ enum Commands {
     Doctor(DoctorArgs),
     /// Inspect manifests and describe payloads
     Inspect(InspectArgs),
+    /// Describe a compiled component .wasm: exports, imports, capabilities, size.
+    Info(InfoArgs),
     /// Recompute manifest hashes
     Hash(HashArgs),
     /// Build component wasm + update config flows
@@ -89,6 +91,7 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
+        Commands::Info(args) => cmd::info::run(&args),
         Commands::Hash(args) => cmd::hash::run(args),
         Commands::Build(args) => cmd::build::run(args),
         Commands::Test(args) => cmd::test::run(*args),
