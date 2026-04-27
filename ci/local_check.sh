@@ -634,8 +634,14 @@ if [ "$LOCAL_CHECK_SKIP_PACKAGE" = "1" ]; then
 else
     if [ "$LOCAL_CHECK_ONLINE" = "1" ] && [ "$CRATES_IO_AVAILABLE" = "1" ]; then
         for crate in "${publish_crates[@]}"; do
-            run_cmd "cargo package (locked) -p $crate" \
-                cargo package --allow-dirty -p "$crate" --locked
+            if ! cargo package --allow-dirty -p "$crate" --locked; then
+                if [ "$LOCAL_VERSION_UPGRADE" = "1" ]; then
+                    echo "[warn] cargo package (locked) -p $crate failed, ignoring due to LOCAL_VERSION_UPGRADE=1"
+                else
+                    echo "[fail] cargo package (locked) -p $crate"
+                    record_failure "cargo package (locked) -p $crate"
+                fi
+            fi
         done
     else
         skip_step "cargo package (locked)" "${CRATES_IO_REASON:-network unavailable}"
