@@ -80,6 +80,7 @@ jobs:
           LOCAL_CHECK_SKIP_TEST_ALL=1 \
           LOCAL_CHECK_SKIP_SCHEMA=1 \
           LOCAL_CHECK_PUBLISH_MODE=dry-run \
+          LOCAL_VERSION_UPGRADE=1 \
           bash ci/local_check.sh
 
   binstall-release:
