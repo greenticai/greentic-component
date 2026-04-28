@@ -22,6 +22,7 @@ include = [
 ]
 
 [lib]
+name = "greentic_component"
 path = "src/lib.rs"
 
 [features]
