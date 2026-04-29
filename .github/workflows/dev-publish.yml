@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,11 +24,23 @@ jobs:
     uses: greenticai/.github/.github/workflows/dev-prepare.yml@main
     with:
       wasm-target: true
+      require-pre-release: true
+
+  dev-binaries-greentic-component:
+    needs: dev-prepare
+    uses: greenticai/.github/.github/workflows/dev-release-binaries.yml@main
+    with:
+      package: greentic-component
+      version: ${{ needs.dev-prepare.outputs.binary-version }}
 
   dev-publish:
-    needs: [dev-prepare]
+    needs: [dev-prepare, dev-binaries-greentic-component]
     uses: greenticai/.github/.github/workflows/dev-publish.yml@main
     with:
       version: ${{ needs.dev-prepare.outputs.version }}
       crates: "greentic-component-manifest greentic-component-store greentic-component-runtime greentic-component"
+      binary-version: ${{ needs.dev-prepare.outputs.binary-version }}
+      binary-crates: "greentic-component"
+      dual-role-binary-crates: "greentic-component"
+      require-pre-release: true
     secrets: inherit
