@@ -199,7 +199,7 @@ features = [
 ]
 
 [workspace.dependencies.wasmtime]
-version = "43"
+version = "45"
 default-features = false
 features = [
     "component-model",
@@ -209,4 +209,4 @@ features = [
 ]
 
 [workspace.dependencies.wasmtime-wasi]
-version = "43"
+version = "45"
