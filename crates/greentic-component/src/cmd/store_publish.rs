@@ -1,5 +1,5 @@
 //! `greentic-component store publish` — produce the Greentic Store's describe-v2
-//! for a component and (eventually) upload it as a `ComponentExtension`.
+//! for a component and upload it as a `ComponentExtension`.
 //!
 //! The store search (`find_in_store(kind="component")`) indexes an extension's
 //! `describe.json`. Components carry no extension-shaped describe, so this
@@ -14,8 +14,9 @@
 //! - `compat.min_*` are permissive stubs; `contract_version` is read from the
 //!   WIT world (`…@x.y.z`).
 //!
-//! This slice builds + emits the describe-v2 (`--dry-run`). Packaging the
-//! `.gtxpack` and the multipart upload land in the next slice.
+//! `--dry-run` prints the describe-v2; otherwise the component is packed into a
+//! `.gtxpack` (`describe.json` + `component.wasm`) and uploaded to the store's
+//! `POST /api/v1/extensions` (multipart, bearer auth).
 
 use std::path::PathBuf;
 
@@ -233,22 +234,73 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         return Ok(());
     }
 
-    // Upload requires endpoint + credentials; validate them so the failure is
-    // about the not-yet-wired upload, not a missing flag.
-    let _store_url = args
+    let store_url = args
         .store_url
         .clone()
         .or_else(|| std::env::var("GREENTIC_STORE_URL").ok())
         .ok_or_else(|| anyhow!("--store-url or GREENTIC_STORE_URL is required to publish"))?;
-    let _token = args
+    let token = args
         .token
         .clone()
         .or_else(|| std::env::var("GREENTIC_STORE_TOKEN").ok())
         .ok_or_else(|| anyhow!("--token or GREENTIC_STORE_TOKEN is required to publish"))?;
-    bail!(
-        "store publish upload is not yet wired; re-run with --dry-run to emit the describe-v2 \
-         (gtxpack packaging + multipart upload land in the next slice)"
-    );
+
+    // Pack `{describe.json, component.wasm}` into a .gtxpack. The store cross-
+    // checks the archive's describe.json against the `metadata.describe` we send
+    // and re-signs it, so both must be byte-identical — serialize once.
+    let describe_bytes = serde_json::to_vec(&describe)?;
+    let gtxpack = build_gtxpack(&describe_bytes, &wasm).context("build .gtxpack")?;
+    let artifact_sha256 = hex::encode(Sha256::digest(&gtxpack));
+
+    let metadata = serde_json::to_string(&json!({
+        "describe": describe,
+        "artifactSha256": artifact_sha256,
+    }))?;
+
+    let url = format!("{}/api/v1/extensions", store_url.trim_end_matches('/'));
+    let artifact = reqwest::blocking::multipart::Part::bytes(gtxpack)
+        .file_name(format!("{component_id}.gtxpack"))
+        .mime_str("application/zip")?;
+    let form = reqwest::blocking::multipart::Form::new()
+        .text("metadata", metadata)
+        .part("artifact", artifact);
+
+    let resp = reqwest::blocking::Client::new()
+        .post(&url)
+        .bearer_auth(&token)
+        .multipart(form)
+        .send()
+        .with_context(|| format!("POST {url}"))?;
+    let status = resp.status();
+    let body = resp.text().unwrap_or_default();
+    if !status.is_success() {
+        bail!("store publish failed: HTTP {status}: {body}");
+    }
+    println!("published {store_id} {version} ({artifact_sha256}) to {url}");
+    Ok(())
+}
+
+/// Pack a component into a `.gtxpack` (ZIP) with `describe.json` at the root and
+/// the component wasm at `component.wasm`. The store requires `describe.json` at
+/// the archive root.
+fn build_gtxpack(describe_json: &[u8], wasm: &[u8]) -> Result<Vec<u8>> {
+    use std::io::{Cursor, Write};
+    use zip::write::SimpleFileOptions;
+
+    let mut buf = Vec::new();
+    {
+        let mut zw = zip::ZipWriter::new(Cursor::new(&mut buf));
+        let opts =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        zw.start_file("describe.json", opts)
+            .context("write describe.json")?;
+        zw.write_all(describe_json)?;
+        zw.start_file("component.wasm", opts)
+            .context("write component.wasm")?;
+        zw.write_all(wasm)?;
+        zw.finish().context("finalize .gtxpack")?;
+    }
+    Ok(buf)
 }
 
 #[cfg(test)]
@@ -314,6 +366,28 @@ mod tests {
         let comp = &d["runtime"]["components"]["component-http"];
         assert_eq!(comp["sha256"], "ab".repeat(32));
         assert_eq!(comp["world"], "greentic:component@0.6.0");
+    }
+
+    #[test]
+    fn gtxpack_round_trips_describe_and_wasm() {
+        use std::io::Read;
+        let describe = br#"{"kind":"ComponentExtension"}"#;
+        let wasm = b"\0asm-fake-bytes";
+        let pack = build_gtxpack(describe, wasm).unwrap();
+
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(pack)).unwrap();
+        let mut got_describe = Vec::new();
+        zip.by_name("describe.json")
+            .unwrap()
+            .read_to_end(&mut got_describe)
+            .unwrap();
+        let mut got_wasm = Vec::new();
+        zip.by_name("component.wasm")
+            .unwrap()
+            .read_to_end(&mut got_wasm)
+            .unwrap();
+        assert_eq!(got_describe, describe);
+        assert_eq!(got_wasm, wasm);
     }
 
     #[test]

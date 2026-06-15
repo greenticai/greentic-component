@@ -53,7 +53,7 @@ cli = [
     "dep:sys-locale",
     "dep:unic-langid",
 ]
-store = ["dep:greentic-distributor-client"]
+store = ["dep:greentic-distributor-client", "dep:reqwest", "dep:zip"]
 fuzz = ["dep:proptest"]
 
 [dependencies]
@@ -74,8 +74,9 @@ oci-distribution = { workspace = true, optional = true }
 once_cell = { workspace = true }
 pathdiff = { workspace = true }
 regex = { workspace = true }
-reqwest = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true, features = ["multipart"] }
 proptest = { workspace = true, optional = true }
+zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
 schemars = { workspace = true, optional = true }
 semver = { workspace = true }
 serde = { workspace = true }
