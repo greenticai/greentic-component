@@ -13,6 +13,8 @@ use greentic_distributor_client::{CachePolicy, DistClient, DistOptions, ResolveP
 pub enum StoreCommand {
     /// Fetch a component from a source and write the wasm bytes to disk
     Fetch(StoreFetchArgs),
+    /// Publish a component to the Greentic Store as a ComponentExtension
+    Publish(crate::cmd::store_publish::StorePublishArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -31,6 +33,7 @@ pub struct StoreFetchArgs {
 pub fn run(command: StoreCommand) -> Result<()> {
     match command {
         StoreCommand::Fetch(args) => fetch(args),
+        StoreCommand::Publish(args) => crate::cmd::store_publish::run(args),
     }
 }
 
