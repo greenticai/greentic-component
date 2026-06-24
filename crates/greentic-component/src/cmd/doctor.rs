@@ -1752,6 +1752,7 @@ mod tests {
         ComponentDescribe {
             info,
             provided_capabilities: Vec::new(),
+            outcomes: Vec::new(),
             required_capabilities: Vec::new(),
             metadata: BTreeMap::new(),
             operations: vec![operation],
@@ -1806,6 +1807,7 @@ mod tests {
         ComponentDescribe {
             info,
             provided_capabilities: Vec::new(),
+            outcomes: Vec::new(),
             required_capabilities: Vec::new(),
             metadata: BTreeMap::new(),
             operations: vec![operation],

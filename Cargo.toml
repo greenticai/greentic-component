@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "1.1.0-dev.0"
+version = "1.2.0-research.0"
 license = "MIT"
 rust-version = "1.95"
 
@@ -27,10 +27,10 @@ dashmap = "6"
 directories = "6"
 displaydoc = "0.2"
 futures = "0.3"
-greentic-interfaces-host = ">=1.1.0-dev, <1.2.0-0"
-greentic-interfaces-wasmtime = ">=1.1.0-dev, <1.2.0-0"
-greentic-types = ">=1.1.0-dev, <1.2.0-0"
-greentic-qa-lib = ">=1.1.0-dev, <1.2.0-0"
+greentic-interfaces-host = "=1.2.0-research.0"
+greentic-interfaces-wasmtime = "=1.2.0-research.0"
+greentic-types = "=1.2.0-research.1"
+greentic-qa-lib = "=1.2.0-research.0"
 handlebars = "6"
 hex = "0.4"
 ignore = "0.4"
@@ -68,22 +68,22 @@ features = [
 ]
 
 [workspace.dependencies.greentic-component-manifest]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = "=1.2.0-research.0"
 path = "crates/component-manifest"
 
 [workspace.dependencies.greentic-component-store]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = "=1.2.0-research.0"
 path = "crates/greentic-component-store"
 
 [workspace.dependencies.greentic-interfaces-guest]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = "=1.2.0-research.0"
 default-features = false
 features = [
     "component-v0-6",
 ]
 
 [workspace.dependencies.greentic-interfaces]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = "=1.2.0-research.0"
 default-features = false
 features = [
     "bindings-rust",
@@ -122,7 +122,7 @@ features = [
 ]
 
 [workspace.dependencies.greentic-distributor-client]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = "=1.2.0-research.0"
 default-features = false
 features = [
     "dist-client",
@@ -199,7 +199,7 @@ features = [
 ]
 
 [workspace.dependencies.wasmtime]
-version = "43"
+version = "45"
 default-features = false
 features = [
     "component-model",
@@ -209,4 +209,4 @@ features = [
 ]
 
 [workspace.dependencies.wasmtime-wasi]
-version = "43"
+version = "45"
