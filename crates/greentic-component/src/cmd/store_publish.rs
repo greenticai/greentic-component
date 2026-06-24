@@ -78,6 +78,9 @@ pub(crate) struct DescribeInputs<'a> {
     pub world: &'a str,
     pub wasm_sha256_hex: &'a str,
     pub operation_names: &'a [String],
+    /// Declared required-secret keys (from the component manifest). Rendered,
+    /// sorted + deduped, into `runtime.permissions.secrets`.
+    pub secret_keys: &'a [String],
 }
 
 /// Map a component to the store's describe-v2 (`kind=ComponentExtension`).
@@ -87,6 +90,13 @@ pub(crate) fn build_component_describe_v2(i: &DescribeInputs) -> Value {
         .iter()
         .map(|op| json!({ "id": capability_id(i.component_id, op), "version": i.version }))
         .collect();
+
+    let secret_keys: Vec<&str> = {
+        let mut keys: Vec<&str> = i.secret_keys.iter().map(String::as_str).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        keys
+    };
 
     json!({
         "apiVersion": "greentic.ai/v2",
@@ -106,7 +116,11 @@ pub(crate) fn build_component_describe_v2(i: &DescribeInputs) -> Value {
         },
         "capabilities": { "offered": offered, "required": [] },
         "runtime": {
-            "permissions": {},
+            "permissions": if secret_keys.is_empty() {
+                json!({})
+            } else {
+                json!({ "secrets": secret_keys })
+            },
             "components": {
                 i.component_id: { "sha256": i.wasm_sha256_hex, "world": i.world }
             }
@@ -216,6 +230,12 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         );
     }
 
+    let secret_keys: Vec<String> = manifest
+        .secret_requirements
+        .iter()
+        .map(|sr| sr.key.as_str().to_string())
+        .collect();
+
     let describe = build_component_describe_v2(&DescribeInputs {
         store_id: &store_id,
         component_id: &component_id,
@@ -227,6 +247,7 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         world: manifest.world.as_str(),
         wasm_sha256_hex: &wasm_sha256_hex,
         operation_names: &operation_names,
+        secret_keys: &secret_keys,
     });
 
     if args.dry_run {
@@ -319,6 +340,7 @@ mod tests {
             world: "greentic:component@0.6.0",
             wasm_sha256_hex: &"ab".repeat(32),
             operation_names: &["run".to_string(), "Health Check".to_string()],
+            secret_keys: &[],
         })
     }
 
@@ -404,5 +426,37 @@ mod tests {
     fn sanitize_guarantees_leading_alpha() {
         assert_eq!(sanitize_segment("9lives"), "c9lives");
         assert_eq!(sanitize_segment("Foo Bar"), "foo-bar");
+    }
+
+    #[test]
+    fn permissions_lists_secrets_sorted_and_deduped() {
+        let d = build_component_describe_v2(&DescribeInputs {
+            store_id: "greentic.component-http",
+            component_id: "component-http",
+            name: "HTTP Client",
+            version: "0.1.0",
+            summary: "Make HTTP requests",
+            author: "greentic",
+            license: "Apache-2.0",
+            world: "greentic:component@0.6.0",
+            wasm_sha256_hex: &"ab".repeat(32),
+            operation_names: &["run".to_string()],
+            secret_keys: &[
+                "B_TOKEN".to_string(),
+                "A_TOKEN".to_string(),
+                "A_TOKEN".to_string(),
+            ],
+        });
+        assert_eq!(
+            d["runtime"]["permissions"]["secrets"],
+            serde_json::json!(["A_TOKEN", "B_TOKEN"])
+        );
+    }
+
+    #[test]
+    fn permissions_empty_object_when_no_secrets() {
+        // `sample()` passes `secret_keys: &[]`.
+        let d = sample();
+        assert_eq!(d["runtime"]["permissions"], serde_json::json!({}));
     }
 }
