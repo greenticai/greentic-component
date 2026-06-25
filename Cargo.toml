@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "1.2.0-research.1"
+version = "1.2.0-research.2"
 license = "MIT"
 rust-version = "1.95"
 
@@ -57,7 +57,12 @@ url = "2"
 walkdir = "2"
 wasm-encoder = "0"
 wasm-metadata = "0"
-wasmparser = "0"
+# Pin to the 0.248 line that matches wit-component/wit-parser 0.247 and where
+# `abi.rs` (`ComponentExternName.0` tuple field) compiles. A bare "0" floats this
+# direct edge up to a consumer's newer wasmparser (e.g. wasmtime 45 → 0.251, whose
+# `ComponentExternName` replaced the tuple field with named fields), breaking the
+# build when greentic-component is used as a dependency. See greentic-designer S4.
+wasmparser = "0.248"
 wit-component = "0.247"
 wit-parser = "0.247"
 
@@ -68,11 +73,11 @@ features = [
 ]
 
 [workspace.dependencies.greentic-component-manifest]
-version = "=1.2.0-research.1"
+version = "=1.2.0-research.2"
 path = "crates/component-manifest"
 
 [workspace.dependencies.greentic-component-store]
-version = "=1.2.0-research.1"
+version = "=1.2.0-research.2"
 path = "crates/greentic-component-store"
 
 [workspace.dependencies.greentic-interfaces-guest]
