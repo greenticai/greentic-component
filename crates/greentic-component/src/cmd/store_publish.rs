@@ -15,8 +15,10 @@
 //!   WIT world (`…@x.y.z`).
 //!
 //! `--dry-run` prints the describe-v2; otherwise the component is packed into a
-//! `.gtxpack` (`describe.json` + `component.wasm`) and uploaded to the store's
-//! `POST /api/v1/extensions` (multipart, bearer auth).
+//! `.gtxpack` (`describe.json` + `component.wasm` + a packc-owned `component.json`
+//! sidecar pointing at the embedded wasm so the `ext://<id>#component` resolver
+//! can find it) and uploaded to the store's `POST /api/v1/extensions` (multipart,
+//! bearer auth). The sidecar is embedded in the artifact only.
 
 use std::path::PathBuf;
 
@@ -27,6 +29,11 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::manifest::parse_manifest;
+
+/// ZIP entry name of the runtime component wasm inside the `.gtxpack`. Used for
+/// both the archive entry and the `component.json` sidecar `asset` so the two
+/// cannot drift.
+const COMPONENT_WASM_ENTRY: &str = "component.wasm";
 
 #[derive(Args, Debug, Clone)]
 pub struct StorePublishArgs {
@@ -276,11 +283,16 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         .or_else(|| std::env::var("GREENTIC_STORE_TOKEN").ok())
         .ok_or_else(|| anyhow!("--token or GREENTIC_STORE_TOKEN is required to publish"))?;
 
-    // Pack `{describe.json, component.wasm}` into a .gtxpack. The store cross-
-    // checks the archive's describe.json against the `metadata.describe` we send
-    // and re-signs it, so both must be byte-identical — serialize once.
+    // Pack `{describe.json, component.wasm, component.json}` into a .gtxpack. The
+    // store cross-checks the archive's describe.json against the `metadata.describe`
+    // we send and re-signs it, so both must be byte-identical — serialize once.
     let describe_bytes = serde_json::to_vec(&describe)?;
-    let gtxpack = build_gtxpack(&describe_bytes, &wasm).context("build .gtxpack")?;
+    // packc-owned sidecar pointing at the embedded `component.wasm`, so the
+    // `ext://<id>#component` resolver can locate the runtime component. Embedded
+    // in the artifact only — it is not part of the upload metadata.
+    let component_json = build_component_sidecar(&store_id, &wasm_sha256_hex);
+    let gtxpack =
+        build_gtxpack(&describe_bytes, &wasm, &component_json).context("build .gtxpack")?;
     let artifact_sha256 = hex::encode(Sha256::digest(&gtxpack));
 
     let metadata = serde_json::to_string(&json!({
@@ -311,10 +323,28 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
     Ok(())
 }
 
-/// Pack a component into a `.gtxpack` (ZIP) with `describe.json` at the root and
-/// the component wasm at `component.wasm`. The store requires `describe.json` at
-/// the archive root.
-fn build_gtxpack(describe_json: &[u8], wasm: &[u8]) -> Result<Vec<u8>> {
+/// Build the packc-owned `component.json` sidecar bytes for the embedded
+/// `component.wasm`. The `asset` always equals [`COMPONENT_WASM_ENTRY`] so it
+/// cannot drift from the actual ZIP entry; `digest` is `sha256:<hex>` over the
+/// asset bytes (the same hash the store records).
+fn build_component_sidecar(store_id: &str, wasm_sha256_hex: &str) -> Vec<u8> {
+    let sidecar = json!({
+        "component": {
+            "id": store_id,
+            "asset": COMPONENT_WASM_ENTRY,
+            "digest": format!("sha256:{wasm_sha256_hex}"),
+        }
+    });
+    // Serialization of a fixed `json!` object is infallible in practice; fall
+    // back to an empty `{}` rather than panicking on a publish path.
+    serde_json::to_vec(&sidecar).unwrap_or_else(|_| b"{}".to_vec())
+}
+
+/// Pack a component into a `.gtxpack` (ZIP) with `describe.json` at the root, the
+/// component wasm at `component.wasm`, and the packc-owned `component.json`
+/// sidecar. The store requires `describe.json` at the archive root; the resolver
+/// reads `component.json`.
+fn build_gtxpack(describe_json: &[u8], wasm: &[u8], component_json: &[u8]) -> Result<Vec<u8>> {
     use std::io::{Cursor, Write};
     use zip::write::SimpleFileOptions;
 
@@ -326,9 +356,12 @@ fn build_gtxpack(describe_json: &[u8], wasm: &[u8]) -> Result<Vec<u8>> {
         zw.start_file("describe.json", opts)
             .context("write describe.json")?;
         zw.write_all(describe_json)?;
-        zw.start_file("component.wasm", opts)
+        zw.start_file(COMPONENT_WASM_ENTRY, opts)
             .context("write component.wasm")?;
         zw.write_all(wasm)?;
+        zw.start_file("component.json", opts)
+            .context("write component.json")?;
+        zw.write_all(component_json)?;
         zw.finish().context("finalize .gtxpack")?;
     }
     Ok(buf)
@@ -405,7 +438,8 @@ mod tests {
         use std::io::Read;
         let describe = br#"{"kind":"ComponentExtension"}"#;
         let wasm = b"\0asm-fake-bytes";
-        let pack = build_gtxpack(describe, wasm).unwrap();
+        let component_json = br#"{"component":{}}"#;
+        let pack = build_gtxpack(describe, wasm, component_json).unwrap();
 
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(pack)).unwrap();
         let mut got_describe = Vec::new();
@@ -414,12 +448,46 @@ mod tests {
             .read_to_end(&mut got_describe)
             .unwrap();
         let mut got_wasm = Vec::new();
-        zip.by_name("component.wasm")
+        zip.by_name(COMPONENT_WASM_ENTRY)
             .unwrap()
             .read_to_end(&mut got_wasm)
             .unwrap();
         assert_eq!(got_describe, describe);
         assert_eq!(got_wasm, wasm);
+    }
+
+    #[test]
+    fn gtxpack_embeds_component_json_sidecar() {
+        use std::io::Read;
+        let describe = br#"{"kind":"ComponentExtension"}"#;
+        let wasm = b"\0asm-fake-bytes";
+        let store_id = "greentic.component-http";
+        let wasm_sha256_hex = hex::encode(Sha256::digest(wasm));
+        let component_json = build_component_sidecar(store_id, &wasm_sha256_hex);
+        let pack = build_gtxpack(describe, wasm, &component_json).unwrap();
+
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(pack)).unwrap();
+
+        // Read the embedded component.wasm bytes back out so the digest check
+        // proves the sidecar matches the *actual* embedded asset (no drift).
+        let mut embedded_wasm = Vec::new();
+        zip.by_name(COMPONENT_WASM_ENTRY)
+            .expect("component.wasm entry")
+            .read_to_end(&mut embedded_wasm)
+            .unwrap();
+        let expected_digest = format!("sha256:{}", hex::encode(Sha256::digest(&embedded_wasm)));
+
+        let mut got_sidecar = Vec::new();
+        zip.by_name("component.json")
+            .expect("component.json entry")
+            .read_to_end(&mut got_sidecar)
+            .unwrap();
+        let sidecar: Value = serde_json::from_slice(&got_sidecar).unwrap();
+
+        assert_eq!(sidecar["component"]["id"], store_id);
+        assert_eq!(sidecar["component"]["asset"], "component.wasm");
+        assert_eq!(sidecar["component"]["asset"], COMPONENT_WASM_ENTRY);
+        assert_eq!(sidecar["component"]["digest"], expected_digest);
     }
 
     #[test]
