@@ -22,6 +22,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Args;
+use greentic_types::SecretRequirement;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -78,9 +79,11 @@ pub(crate) struct DescribeInputs<'a> {
     pub world: &'a str,
     pub wasm_sha256_hex: &'a str,
     pub operation_names: &'a [String],
-    /// Declared required-secret keys (from the component manifest). Rendered,
-    /// sorted + deduped, into `runtime.permissions.secrets`.
-    pub secret_keys: &'a [String],
+    /// Full secret requirements declared by the component manifest. Rendered
+    /// verbatim into the canonical top-level `requiredSecrets` array (omitted
+    /// when empty). These are read-requirement declarations, NOT permission
+    /// grants, so they are never written into `runtime.permissions.secrets`.
+    pub secret_requirements: &'a [SecretRequirement],
 }
 
 /// Map a component to the store's describe-v2 (`kind=ComponentExtension`).
@@ -91,14 +94,7 @@ pub(crate) fn build_component_describe_v2(i: &DescribeInputs) -> Value {
         .map(|op| json!({ "id": capability_id(i.component_id, op), "version": i.version }))
         .collect();
 
-    let secret_keys: Vec<&str> = {
-        let mut keys: Vec<&str> = i.secret_keys.iter().map(String::as_str).collect();
-        keys.sort_unstable();
-        keys.dedup();
-        keys
-    };
-
-    json!({
+    let mut describe = json!({
         "apiVersion": "greentic.ai/v2",
         "kind": "ComponentExtension",
         "compat": {
@@ -116,17 +112,37 @@ pub(crate) fn build_component_describe_v2(i: &DescribeInputs) -> Value {
         },
         "capabilities": { "offered": offered, "required": [] },
         "runtime": {
-            "permissions": if secret_keys.is_empty() {
-                json!({})
-            } else {
-                json!({ "secrets": secret_keys })
-            },
+            // `permissions` carries read-permission GRANTS only; declared
+            // secret requirements live in the top-level `requiredSecrets`
+            // array below, never here.
+            "permissions": {},
             "components": {
                 i.component_id: { "sha256": i.wasm_sha256_hex, "world": i.world }
             }
         },
         "contributions": {}
-    })
+    });
+
+    // Canonical `requiredSecrets`: the full `SecretRequirement` objects from the
+    // manifest, serialized verbatim (camelCase per greentic-types). Omitted when
+    // there are no declared secrets.
+    if !i.secret_requirements.is_empty() {
+        // `to_value` of a plain serde-derived struct is infallible in practice;
+        // skip any entry that somehow fails rather than panicking on a publish path.
+        let required_secrets: Vec<Value> = i
+            .secret_requirements
+            .iter()
+            .filter_map(|req| serde_json::to_value(req).ok())
+            .collect();
+        if let Value::Object(map) = &mut describe {
+            map.insert(
+                "requiredSecrets".to_string(),
+                Value::Array(required_secrets),
+            );
+        }
+    }
+
+    describe
 }
 
 /// Build a capRef id of the form `component:<id>/<operation>` that satisfies the
@@ -230,12 +246,6 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         );
     }
 
-    let secret_keys: Vec<String> = manifest
-        .secret_requirements
-        .iter()
-        .map(|sr| sr.key.as_str().to_string())
-        .collect();
-
     let describe = build_component_describe_v2(&DescribeInputs {
         store_id: &store_id,
         component_id: &component_id,
@@ -247,7 +257,7 @@ pub fn run(args: StorePublishArgs) -> Result<()> {
         world: manifest.world.as_str(),
         wasm_sha256_hex: &wasm_sha256_hex,
         operation_names: &operation_names,
-        secret_keys: &secret_keys,
+        secret_requirements: &manifest.secret_requirements,
     });
 
     if args.dry_run {
@@ -340,7 +350,7 @@ mod tests {
             world: "greentic:component@0.6.0",
             wasm_sha256_hex: &"ab".repeat(32),
             operation_names: &["run".to_string(), "Health Check".to_string()],
-            secret_keys: &[],
+            secret_requirements: &[],
         })
     }
 
@@ -428,8 +438,32 @@ mod tests {
         assert_eq!(sanitize_segment("Foo Bar"), "foo-bar");
     }
 
+    // ── Phase 2 (S1+S2): requiredSecrets at top-level, NOT in permissions ──────
+
+    /// Build a `SecretRequirement` via deserialization (the struct is
+    /// `#[non_exhaustive]`, so foreign crates cannot use a struct literal).
+    fn make_req(
+        key: &str,
+        required: bool,
+        description: Option<&str>,
+    ) -> greentic_types::SecretRequirement {
+        let mut obj = serde_json::Map::new();
+        obj.insert("key".into(), json!(key));
+        obj.insert("required".into(), json!(required));
+        if let Some(desc) = description {
+            obj.insert("description".into(), json!(desc));
+        }
+        serde_json::from_value(Value::Object(obj)).expect("valid SecretRequirement")
+    }
+
     #[test]
-    fn permissions_lists_secrets_sorted_and_deduped() {
+    fn required_secrets_emitted_as_top_level_array() {
+        // A manifest with two secret requirements must produce a top-level
+        // `requiredSecrets` array containing full SecretRequirement objects.
+        let reqs = vec![
+            make_req("API_KEY", true, Some("The API key")),
+            make_req("OPTIONAL_TOKEN", false, None),
+        ];
         let d = build_component_describe_v2(&DescribeInputs {
             store_id: "greentic.component-http",
             component_id: "component-http",
@@ -441,22 +475,63 @@ mod tests {
             world: "greentic:component@0.6.0",
             wasm_sha256_hex: &"ab".repeat(32),
             operation_names: &["run".to_string()],
-            secret_keys: &[
-                "B_TOKEN".to_string(),
-                "A_TOKEN".to_string(),
-                "A_TOKEN".to_string(),
-            ],
+            secret_requirements: &reqs,
         });
-        assert_eq!(
-            d["runtime"]["permissions"]["secrets"],
-            serde_json::json!(["A_TOKEN", "B_TOKEN"])
-        );
+        let arr = d["requiredSecrets"]
+            .as_array()
+            .expect("requiredSecrets must be an array");
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["key"], "API_KEY");
+        assert_eq!(arr[0]["required"], true);
+        assert_eq!(arr[0]["description"], "The API key");
+        assert_eq!(arr[1]["key"], "OPTIONAL_TOKEN");
+        assert_eq!(arr[1]["required"], false);
+        assert!(arr[1].get("description").is_none() || arr[1]["description"].is_null());
     }
 
     #[test]
-    fn permissions_empty_object_when_no_secrets() {
-        // `sample()` passes `secret_keys: &[]`.
-        let d = sample();
+    fn permissions_secrets_not_polluted_when_secrets_present() {
+        // secret-keys MUST NOT appear in runtime.permissions.secrets.
+        let reqs = vec![make_req("API_KEY", true, None)];
+        let d = build_component_describe_v2(&DescribeInputs {
+            store_id: "greentic.component-http",
+            component_id: "component-http",
+            name: "HTTP Client",
+            version: "0.1.0",
+            summary: "Make HTTP requests",
+            author: "greentic",
+            license: "Apache-2.0",
+            world: "greentic:component@0.6.0",
+            wasm_sha256_hex: &"ab".repeat(32),
+            operation_names: &["run".to_string()],
+            secret_requirements: &reqs,
+        });
+        // permissions must be `{}` — no "secrets" key inside it.
+        assert_eq!(d["runtime"]["permissions"], serde_json::json!({}));
+    }
+
+    #[test]
+    fn no_required_secrets_key_when_empty() {
+        // When there are no secret requirements, `requiredSecrets` must be absent.
+        let d = build_component_describe_v2(&DescribeInputs {
+            store_id: "greentic.component-http",
+            component_id: "component-http",
+            name: "HTTP Client",
+            version: "0.1.0",
+            summary: "Make HTTP requests",
+            author: "greentic",
+            license: "Apache-2.0",
+            world: "greentic:component@0.6.0",
+            wasm_sha256_hex: &"ab".repeat(32),
+            operation_names: &["run".to_string()],
+            secret_requirements: &[],
+        });
+        assert!(
+            d.get("requiredSecrets").is_none(),
+            "requiredSecrets should be absent when empty, got: {}",
+            d["requiredSecrets"]
+        );
+        // permissions unchanged.
         assert_eq!(d["runtime"]["permissions"], serde_json::json!({}));
     }
 }
