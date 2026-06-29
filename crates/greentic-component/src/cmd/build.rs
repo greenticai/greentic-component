@@ -212,10 +212,9 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
             if let Some(flags) = resolved_wasm_rustflags() {
                 cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
             }
+            cmd.arg("component").arg("build");
             maybe_add_offline_flag(&mut cmd);
             let status = cmd
-                .arg("component")
-                .arg("build")
                 .arg("--target")
                 .arg("wasm32-wasip2")
                 .arg("--release")
@@ -249,9 +248,9 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
     if let Some(flags) = resolved_wasm_rustflags() {
         cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
     }
+    cmd.arg("build");
     maybe_add_offline_flag(&mut cmd);
     let status = cmd
-        .arg("build")
         .arg("--target")
         .arg("wasm32-wasip2")
         .arg("--release")

@@ -231,9 +231,10 @@ fn scaffold_rust_wasi_template() {
         status.success(),
         "scaffolded project should pass host tests"
     );
-    // The scaffold intentionally emits `greentic-interfaces-guest = "0.4"` so
-    // it will pick up the new canonical QA/i18n exports once published. Until
-    // that crates.io release lands, keep this smoke test on host-only checks.
+    // The scaffold emits the dev-lane pre-release range
+    // (`>=1.1.0-dev, <1.2.0-0`) which resolves to the published
+    // `1.1.0-dev.<run_id>` artifacts. Keep this smoke test on host-only
+    // checks until the wasm/cargo-component path is wired into CI.
     if cargo_component_available()
         && wasm_target_available()
         && cratesio_canonical_aux_exports_available()

@@ -1,13 +1,12 @@
 ---
 source: crates/greentic-component/tests/wizard_provider_tests.rs
-assertion_line: 120
 expression: snap
 ---
 {
   "plan_version": 1,
   "generator": "greentic-component/wizard-provider",
   "template_version": "component-scaffold-v0.6.0",
-  "template_digest_blake3": "ef5977c28c16f9f90704ea2b6e96cfdb021e8fc86d27ef5ffa4754c07c461d4d",
+  "template_digest_blake3": "1bd60e0fd05a325e697d61f56280c8e303fa1b4cbcb1c569fb4bce3c216fe076",
   "requested_abi_version": "0.6.0",
   "step_count": 2,
   "steps": [
@@ -20,8 +19,8 @@ expression: snap
     {
       "kind": "write_files",
       "path": "Cargo.toml,Makefile,README.md,assets/i18n/en.json,assets/i18n/locales.json,build.rs,component.manifest.json,rust-toolchain.toml,schemas/component.schema.json,src/i18n.rs,src/i18n_bundle.rs,src/lib.rs,src/qa.rs,tools/i18n.sh",
-      "size": 41875,
-      "blake3": "f80cab8e4a63a00f9c0a42b4e8b48e30a05797ea9bb81003d59c85dcb2f992ba"
+      "size": 41929,
+      "blake3": "6c73c1802839608d94d268bd538f0da89e7cdf5af19adbf5e76aeb5fa7400051"
     }
   ]
 }
