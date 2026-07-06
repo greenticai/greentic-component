@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "1.1.0"
+version = "1.1.1-dev.0"
 license = "MIT"
 rust-version = "1.95"
 
@@ -73,11 +73,11 @@ features = [
 ]
 
 [workspace.dependencies.greentic-component-manifest]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.1.1-dev, <1.2.0-0"
 path = "crates/component-manifest"
 
 [workspace.dependencies.greentic-component-store]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.1.1-dev, <1.2.0-0"
 path = "crates/greentic-component-store"
 
 [workspace.dependencies.greentic-interfaces-guest]

@@ -1564,7 +1564,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-component"
-version = "1.1.0"
+version = "1.1.1-dev.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1627,7 +1627,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-component-manifest"
-version = "1.1.0"
+version = "1.1.1-dev.0"
 dependencies = [
  "anyhow",
  "greentic-types",
@@ -1644,7 +1644,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-component-runtime"
-version = "1.1.0"
+version = "1.1.1-dev.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1672,7 +1672,7 @@ dependencies = [
 
 [[package]]
 name = "greentic-component-store"
-version = "1.1.0"
+version = "1.1.1-dev.0"
 dependencies = [
  "anyhow",
  "async-trait",
