@@ -1757,7 +1757,6 @@ mod tests {
             metadata: BTreeMap::new(),
             operations: vec![operation],
             config_schema,
-            outcomes: Vec::new(),
         }
     }
 
@@ -1813,7 +1812,6 @@ mod tests {
             metadata: BTreeMap::new(),
             operations: vec![operation],
             config_schema,
-            outcomes: Vec::new(),
         }
     }
 
