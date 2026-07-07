@@ -39,14 +39,14 @@ impl DependencyMode {
     }
 }
 
-// Target the published `1.2.0-research.*` release lane (the lane this repo
+// Target the published `1.3.0-research.*` release lane (the lane this repo
 // itself depends on). The previous `>=1.1.0-dev, <1.2.0-0` range pinned the
 // ephemeral `1.1.0-dev.<run_id>` CI snapshots, which are garbage-collected from
-// the registry and no longer resolve. The `<1.3.0-0` upper bound admits every
-// `1.2.0-research.*` prerelease while excluding the next minor lane.
-const GREENTIC_TYPES_VERSION: &str = ">=1.2.0-research, <1.3.0-0";
-const GREENTIC_INTERFACES_GUEST_VERSION: &str = ">=1.2.0-research, <1.3.0-0";
-const GREENTIC_INTERFACES_VERSION: &str = ">=1.2.0-research, <1.3.0-0";
+// the registry and no longer resolve. The `<1.4.0-0` upper bound admits every
+// `1.3.0-research.*` prerelease while excluding the next minor lane.
+const GREENTIC_TYPES_VERSION: &str = ">=1.3.0-research, <1.4.0-0";
+const GREENTIC_INTERFACES_GUEST_VERSION: &str = ">=1.3.0-research, <1.4.0-0";
+const GREENTIC_INTERFACES_VERSION: &str = ">=1.3.0-research, <1.4.0-0";
 
 #[derive(Debug, Clone)]
 pub struct DependencyTemplates {

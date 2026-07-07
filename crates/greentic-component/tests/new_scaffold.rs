@@ -232,8 +232,8 @@ fn scaffold_rust_wasi_template() {
         "scaffolded project should pass host tests"
     );
     // The scaffold emits the research-lane pre-release range
-    // (`>=1.2.0-research, <1.3.0-0`) which resolves to the published
-    // `1.2.0-research.*` artifacts. Keep this smoke test on host-only
+    // (`>=1.3.0-research, <1.4.0-0`) which resolves to the published
+    // `1.3.0-research.*` artifacts. Keep this smoke test on host-only
     // checks until the wasm/cargo-component path is wired into CI.
     if cargo_component_available()
         && wasm_target_available()
