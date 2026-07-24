@@ -132,3 +132,13 @@ required-features = ["abi"]
 name = "perf"
 harness = false
 required-features = ["cli"]
+
+[package.metadata.binstall]
+pkg-url = "{repo}/releases/download/v{version}/{name}-v{version}-{target}.{archive-format}"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
