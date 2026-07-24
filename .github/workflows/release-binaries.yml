@@ -1,0 +1,26 @@
+name: Release Binaries
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref_type == 'tag'
+    uses: greenticai/.github/.github/workflows/release-binaries.yml@main
+    with:
+      package: greentic-component
+      binary: greentic-component
+      windows-archive-format: zip
+      extra-files: |
+        README.md
+    secrets: inherit
