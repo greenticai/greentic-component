@@ -11,12 +11,6 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      publish:
-        description: "Publish crates and release artifacts"
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   ci:
@@ -83,94 +77,3 @@ jobs:
           LOCAL_VERSION_UPGRADE=1 \
           bash ci/local_check.sh
 
-  binstall-release:
-    name: binstall release
-    needs: [ci, wit-guard]
-    if: github.ref == 'refs/heads/main' || inputs.publish == true
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            bin_suffix: ""
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            bin_suffix: ""
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            bin_suffix: ""
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            bin_suffix: ""
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            bin_suffix: ".exe"
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            bin_suffix: ".exe"
-    env:
-      RUST_VERSION: "1.95.0"
-      CARGO_TERM_COLOR: always
-      CARGO_NET_RETRY: 5
-      CARGO_HTTP_TIMEOUT: 120
-      CARGO_BUILD_JOBS: "1"
-      CARGO_INCREMENTAL: "0"
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      CARGO_PROFILE_TEST_DEBUG: "0"
-      TARGET_DIR: ${{ matrix.target == 'x86_64-unknown-linux-gnu' && 'target/linux' || format('target/{0}', matrix.target) }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Rust environment
-        uses: ./.github/actions/rust-setup
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
-          target-dir: ${{ env.TARGET_DIR }}
-          toolchain: ${{ env.RUST_VERSION }}
-          targets: ${{ matrix.target }}
-      - name: Ensure target installed
-        run: rustup target add ${{ matrix.target }}
-      - name: Build release binaries
-        run: |
-          cargo build --release --target ${{ matrix.target }} \
-            -p greentic-component --features cli --bins
-      - name: Package release archive
-        id: package
-        run: |
-          set -euo pipefail
-          VERSION=$(cargo metadata --no-deps --format-version 1 \
-            | python3 -c "import json,sys; data=json.load(sys.stdin); print(next(p['version'] for p in data['packages'] if p['name']=='greentic-component'))")
-          if [ -z "${VERSION:-}" ]; then
-            echo "Failed to determine greentic-component version" >&2
-            exit 1
-          fi
-          TARGET="${{ matrix.target }}"
-          BUILD_ROOT="${CARGO_TARGET_DIR:-target}"
-          PKG_BASE="greentic-component-v${VERSION}-${TARGET}"
-          STAGING="dist/${PKG_BASE}"
-          mkdir -p "${STAGING}"
-          for bin in greentic-component component-doctor component-hash component-inspect; do
-            src="${BUILD_ROOT}/${TARGET}/release/${bin}${{ matrix.bin_suffix }}"
-            if [ ! -f "$src" ]; then
-              echo "Missing binary: $src" >&2
-              exit 1
-            fi
-            cp "$src" "${STAGING}/${bin}${{ matrix.bin_suffix }}"
-          done
-          tar -C dist -czf "dist/${PKG_BASE}.tgz" "${PKG_BASE}"
-          echo "asset=dist/${PKG_BASE}.tgz" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-      - name: Upload release archive
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v${{ steps.package.outputs.version }}
-          ASSET: ${{ steps.package.outputs.asset }}
-        run: |
-          set -euo pipefail
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --notes "" --title "$TAG"
-          gh release upload "$TAG" "$ASSET" --clobber
