@@ -235,6 +235,8 @@ fn initialize_git_repo(
 }
 
 fn detect_existing_worktree(git: &str, path: &Path) -> Result<bool, GitProbeError> {
+    // `git` is resolved once from PATH; fixed arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let output = Command::new(git)
         .arg("rev-parse")
         .arg("--is-inside-work-tree")
@@ -250,6 +252,8 @@ fn detect_existing_worktree(git: &str, path: &Path) -> Result<bool, GitProbeErro
 }
 
 fn git_init(git: &str, path: &Path) -> Result<(), GitInitError> {
+    // `git` is resolved once from PATH; fixed arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let output = Command::new(git).arg("init").current_dir(path).output();
     match output {
         Ok(out) if out.status.success() => Ok(()),
@@ -260,6 +264,8 @@ fn git_init(git: &str, path: &Path) -> Result<(), GitInitError> {
 }
 
 fn git_add_all(git: &str, path: &Path) -> Result<(), String> {
+    // `git` is resolved once from PATH; fixed arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let output = Command::new(git)
         .arg("add")
         .arg("--all")
@@ -284,6 +290,8 @@ fn git_add_all(git: &str, path: &Path) -> Result<(), String> {
 }
 
 fn git_commit_initial(git: &str, path: &Path, template: &str) -> Result<String, String> {
+    // `git` is resolved once from PATH; arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let mut cmd = Command::new(git);
     cmd.arg("commit")
         .arg("-m")
@@ -311,6 +319,8 @@ fn git_commit_initial(git: &str, path: &Path, template: &str) -> Result<String, 
 }
 
 fn read_head_hash(git: &str, path: &Path) -> Result<String, String> {
+    // `git` is resolved once from PATH; fixed arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let output = Command::new(git)
         .arg("rev-parse")
         .arg("HEAD")

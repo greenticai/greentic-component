@@ -86,6 +86,7 @@ pub struct AnswersPayload {
 #[derive(Debug, Clone)]
 pub struct WizardRequest {
     pub name: String,
+    pub organization: String,
     pub abi_version: String,
     pub mode: WizardMode,
     pub target: PathBuf,
@@ -231,6 +232,7 @@ pub fn apply_scaffold(request: WizardRequest, dry_run: bool) -> Result<ApplyResu
         .unwrap_or_else(|| "handle_message".to_string());
     let context = WizardContext {
         name: request.name,
+        organization: request.organization,
         abi_version: request.abi_version.clone(),
         prefill_mode: request.mode,
         prefill_answers_cbor,
@@ -337,6 +339,7 @@ pub fn load_answers_payload(path: &Path) -> Result<AnswersPayload> {
 
 struct WizardContext {
     name: String,
+    organization: String,
     abi_version: String,
     prefill_mode: WizardMode,
     prefill_answers_cbor: Option<Vec<u8>>,
@@ -827,7 +830,7 @@ fn render_manifest_json(context: &WizardContext) -> String {
 
     let mut manifest = json!({
         "$schema": "https://greenticai.github.io/greentic-component/schemas/v1/component.manifest.schema.json",
-        "id": format!("com.example.{}", context.name),
+        "id": format!("{}.{}", context.organization, context.name),
         "name": context.name,
         "version": "0.1.0",
         "world": "greentic:component/component@0.6.0",
@@ -902,7 +905,7 @@ pub mod qa;
 
 const COMPONENT_NAME: &str = "{name}";
 #[cfg(target_arch = "wasm32")]
-const COMPONENT_ORG: &str = "com.example";
+const COMPONENT_ORG: &str = "{organization}";
 #[cfg(target_arch = "wasm32")]
 const COMPONENT_VERSION: &str = "0.1.0";
 
@@ -1302,6 +1305,7 @@ fn run_component_cbor(operation: &str, input: Vec<u8>) -> Vec<u8> {{
 }}
 "#,
         name = context.name,
+        organization = context.organization,
         user_describe_ops = user_describe_ops
     )
 }

@@ -132,7 +132,10 @@ mod tests {
 
         let normalized =
             normalize_or_canonicalize(root.path(), Path::new("component.wasm")).unwrap();
-        assert_eq!(normalized, wasm);
+        assert_eq!(
+            normalized,
+            wasm.canonicalize().expect("canonical wasm path")
+        );
     }
 
     #[test]

@@ -208,6 +208,8 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
                 cargo_bin.display(),
                 manifest_dir.display()
             );
+            // The executable is the resolved Cargo binary; arguments are passed directly without a shell.
+            // foxguard: ignore[rs/no-command-injection]
             let mut cmd = Command::new(cargo_bin);
             if let Some(flags) = resolved_wasm_rustflags() {
                 cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
@@ -244,6 +246,8 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
         cargo_bin.display(),
         manifest_dir.display()
     );
+    // The executable is the resolved Cargo binary; arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let mut cmd = Command::new(cargo_bin);
     if let Some(flags) = resolved_wasm_rustflags() {
         cmd.env("RUSTFLAGS", sanitize_wasm_rustflags(&flags));
@@ -268,6 +272,8 @@ fn build_wasm(manifest_dir: &Path, cargo_bin: &Path, manifest: &JsonValue) -> Re
 }
 
 fn cargo_component_available(cargo_bin: &Path) -> bool {
+    // The executable is the resolved Cargo binary; arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     Command::new(cargo_bin)
         .arg("component")
         .arg("--version")

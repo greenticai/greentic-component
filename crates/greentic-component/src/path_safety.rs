@@ -84,7 +84,13 @@ mod tests {
         let resolved = normalize_under_root(root.path(), Path::new("safe/new/file.txt"))
             .expect("missing leaf path inside root should be allowed");
 
-        assert_eq!(resolved, nested.join("new/file.txt"));
+        assert_eq!(
+            resolved,
+            nested
+                .canonicalize()
+                .expect("canonical nested directory")
+                .join("new/file.txt")
+        );
     }
 
     #[test]
