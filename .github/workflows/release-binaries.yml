@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,11 +15,90 @@ concurrency:
 jobs:
   release:
     if: github.ref_type == 'tag'
-    uses: greenticai/.github/.github/workflows/release-binaries.yml@main
-    with:
-      package: greentic-component
-      binary: greentic-component
-      windows-archive-format: zip
-      extra-files: |
-        README.md
-    secrets: inherit
+    name: build-${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            format: tgz
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            format: tgz
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            format: tgz
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            format: tgz
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            format: zip
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            format: zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95.0"
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-binaries-${{ matrix.target }}
+
+      - name: Verify tag matches workspace version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          manifest_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          test "$version" = "$manifest_version"
+
+      - name: Build every published binary
+        shell: bash
+        run: |
+          cargo build --release --locked \
+            --target "${{ matrix.target }}" \
+            --package greentic-component \
+            --bins
+
+      - name: Package cargo-binstall archive
+        shell: bash
+        run: |
+          bash ci/package_release_binaries.sh \
+            "${{ matrix.target }}" \
+            "${GITHUB_REF_NAME#v}" \
+            "${{ matrix.format }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  attach:
+    name: Attach binaries to GitHub Release
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-binaries-*
+          merge-multiple: true
+          path: .dist-staging
+
+      - name: Ensure release exists and upload archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" .dist-staging/* --clobber
