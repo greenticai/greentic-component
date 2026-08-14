@@ -44,9 +44,12 @@
 - Config schema authoring now has a shared scaffold path too:
   - `greentic-component new --config-field ...` and `greentic-component wizard --mode create` `config_fields` answers both write the same config shape into manifest `config_schema`, `schemas/component.schema.json`, and generated Rust `config_schema()`.
   - Supported scaffold field types are intentionally narrow (`string`, `bool`, `integer`, `number`) so the manifest JSON and exported `SchemaIr` stay aligned.
+- Answer-driven wizard creation accepts an optional reverse-DNS `organization`; legacy answer documents omit it and retain the historical `com.example` default.
+- `ci/local_check.sh` selects a native Rust host toolchain, including Apple Silicon detection when the invoking process is running under Rosetta.
 
 ## 4. Broken, Failing, or Conflicting Areas
-- No repo-wide failures are currently known from the checked surfaces; `cargo test -p greentic-component` and `ci/local_check.sh` passed after the latest authoring/runtime-capability updates.
+- No repo-wide build/test failures are currently known; `ci/local_check.sh` and the coverage policy pass on the native Apple Silicon toolchain.
+- `greentic-dev security` still reports pre-existing FoxGuard findings until they are baselined or individually triaged; GitHub-hosted checks require the host keyring-backed `gh` session.
 
 ## 5. Notes for Future Work
 - If crates.io remains unreachable, publishing/packaging steps will continue to skip/fail; rerun when network is available.

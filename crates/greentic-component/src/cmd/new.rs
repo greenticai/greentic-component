@@ -471,6 +471,8 @@ fn run_compile_check(path: &Path, skip: bool) -> Result<CompileCheckReport> {
         return Ok(CompileCheckReport::skipped(COMMAND_DISPLAY));
     }
     let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+    // Cargo supplies this executable path; arguments are passed directly without a shell.
+    // foxguard: ignore[rs/no-command-injection]
     let mut cmd = Command::new(cargo);
     cmd.arg("check").arg("--target").arg("wasm32-wasip2");
     cmd.current_dir(path);

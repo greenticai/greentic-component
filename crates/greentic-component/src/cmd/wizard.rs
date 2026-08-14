@@ -19,7 +19,7 @@ use crate::scaffold::runtime_capabilities::{
     RuntimeCapabilitiesInput, parse_filesystem_mode, parse_filesystem_mount, parse_secret_format,
     parse_telemetry_attributes, parse_telemetry_scope,
 };
-use crate::scaffold::validate::{ComponentName, ValidationError, normalize_version};
+use crate::scaffold::validate::{ComponentName, OrgNamespace, ValidationError, normalize_version};
 use crate::wizard::{self, AnswersPayload, WizardPlanEnvelope, WizardPlanMetadata, WizardStep};
 
 const WIZARD_RUN_SCHEMA: &str = "component-wizard-run/v1";
@@ -544,6 +544,14 @@ fn build_create_plan(
         .unwrap_or("component");
     let component_name = ComponentName::parse(component_name)?.into_string();
 
+    // Answer documents created before `organization` existed remain valid and
+    // retain the historical generated component ID.
+    let organization = fields
+        .and_then(|f| f.get("organization"))
+        .and_then(JsonValue::as_str)
+        .unwrap_or("com.example");
+    let organization = OrgNamespace::parse(organization)?.into_string();
+
     let abi_version = fields
         .and_then(|f| f.get("abi_version"))
         .and_then(JsonValue::as_str)
@@ -610,6 +618,7 @@ fn build_create_plan(
 
     let request = wizard::WizardRequest {
         name: component_name,
+        organization,
         abi_version,
         mode: wizard::WizardMode::Default,
         target: output_dir,
@@ -1838,6 +1847,13 @@ fn create_questions(args: &WizardArgs, include_advanced: bool) -> Vec<JsonValue>
 
     questions.extend([
         json!({
+            "id": "organization",
+            "type": "string",
+            "title": "Component organization (reverse-DNS)",
+            "required": false,
+            "default": "com.example"
+        }),
+        json!({
             "id": "abi_version",
             "type": "string",
             "title": tr("cli.wizard.prompt.abi_version"),
@@ -3002,6 +3018,17 @@ mod tests {
         assert_eq!(
             schema.pointer("/properties/answers/properties/fields/properties/component_name/type"),
             Some(&JsonValue::String("string".to_string()))
+        );
+        assert_eq!(
+            schema.pointer("/properties/answers/properties/fields/properties/organization/type"),
+            Some(&JsonValue::String("string".to_string()))
+        );
+        assert!(
+            !schema
+                .pointer("/properties/answers/properties/fields/required")
+                .and_then(JsonValue::as_array)
+                .expect("required fields")
+                .contains(&JsonValue::String("organization".to_string()))
         );
         assert_eq!(
             schema.pointer("/properties/answers/properties/fields/properties/output_dir/type"),

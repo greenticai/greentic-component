@@ -409,8 +409,14 @@ mod tests {
             .expect("workspace lookup")
             .expect("fixture should resolve");
 
-        assert_eq!(handle.manifest_path, manifest_path);
-        assert_eq!(handle.wasm_path, wasm_path);
+        assert_eq!(
+            handle.manifest_path,
+            manifest_path.canonicalize().expect("canonical manifest")
+        );
+        assert_eq!(
+            handle.wasm_path,
+            wasm_path.canonicalize().expect("canonical wasm")
+        );
 
         std::env::set_current_dir(original_cwd).expect("restore cwd");
     }

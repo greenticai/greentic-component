@@ -220,7 +220,7 @@ fn extract_export_names(bytes: &[u8]) -> Result<Vec<String>, AbiError> {
                 for export in section {
                     let export = export.map_err(|err| AbiError::Metadata(err.into()))?;
                     if let ComponentExternalKind::Func = export.kind {
-                        names.push(export.name.0.to_string());
+                        names.push(export.name.name.to_string());
                     }
                 }
             }
