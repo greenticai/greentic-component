@@ -5,6 +5,7 @@ For THIS REPOSITORY, you must ALWAYS:
 1. Maintain `.codex/repo_overview.md` using the “Repo Overview Maintenance” routine BEFORE starting any new PR and AFTER finishing it.
 2. Run `ci/local_check.sh` at the end of your work and ensure it passes, or explain precisely why it cannot be made to pass as part of this PR.
 3. Prefer using existing Greentic repos/crates (interfaces, types, secrets, oauth, messaging, events, etc.) instead of reinventing types, interfaces, or behaviour locally.
+4. For GitHub publishing and security commands, verify and use the host keyring-backed `gh` session. If sandboxed `gh` cannot see the keyring or reach `api.github.com`, rerun the command outside the sandbox instead of treating authentication as absent. Never print or persist the token.
 
 Treat these as built-in prerequisites and finalisation steps for ALL work in this repo.
 
@@ -54,6 +55,12 @@ Whenever I ask you to implement a change, feature, refactor, or bugfix (i.e. PR-
    - In your final PR summary, explicitly mention:
      - That the repo overview was refreshed.
      - That `ci/local_check.sh` was run and its outcome (pass / fail with reasons).
+
+4. PUBLISHING
+   - Run `gh auth status` outside the sandbox when necessary so the macOS keyring-backed login is available.
+   - Use local `git` for branch creation, explicit staging, commits, and pushes over HTTPS.
+   - Push with tracking (`git push -u origin <branch>`), then create draft PRs with `gh pr create`.
+   - Never copy the GitHub token into environment files, repository files, logs, or command arguments.
 
 ---
 
