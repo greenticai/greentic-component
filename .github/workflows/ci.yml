@@ -76,4 +76,16 @@ jobs:
           LOCAL_CHECK_PUBLISH_MODE=dry-run \
           LOCAL_VERSION_UPGRADE=1 \
           bash ci/local_check.sh
-
+      - name: Verify cargo-binstall archive layout
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
+          RELEASE_BIN_DIR="$TARGET_DIR/release" \
+            bash ci/package_release_binaries.sh x86_64-unknown-linux-gnu "$version" tgz
+          archive="dist/greentic-component-v${version}-x86_64-unknown-linux-gnu.tgz"
+          archive_listing="$(tar -tzf "$archive")"
+          for bin in greentic-component component-doctor component-hash component-inspect; do
+            grep -Fxq \
+              "greentic-component-v${version}-x86_64-unknown-linux-gnu/${bin}" \
+              <<< "$archive_listing"
+          done
