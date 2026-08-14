@@ -83,7 +83,9 @@ jobs:
           RELEASE_BIN_DIR="$TARGET_DIR/release" \
             bash ci/package_release_binaries.sh x86_64-unknown-linux-gnu "$version" tgz
           archive="dist/greentic-component-v${version}-x86_64-unknown-linux-gnu.tgz"
+          archive_listing="$(tar -tzf "$archive")"
           for bin in greentic-component component-doctor component-hash component-inspect; do
-            tar -tzf "$archive" | grep -qx \
-              "greentic-component-v${version}-x86_64-unknown-linux-gnu/${bin}"
+            grep -Fxq \
+              "greentic-component-v${version}-x86_64-unknown-linux-gnu/${bin}" \
+              <<< "$archive_listing"
           done
