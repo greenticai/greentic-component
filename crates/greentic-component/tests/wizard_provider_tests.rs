@@ -31,6 +31,7 @@ struct StepSnapshot {
 fn scaffold_plan_snapshot_is_deterministic() {
     let request = WizardRequest {
         name: "demo-component".to_string(),
+        organization: "com.example".to_string(),
         abi_version: "0.6.0".to_string(),
         mode: greentic_component::wizard::WizardMode::Default,
         target: PathBuf::from("/tmp/wizard-provider-plan/demo-component"),
@@ -126,6 +127,7 @@ fn execute_plan_writes_expected_files() {
     let target = temp.path().join("exec-demo");
     let request = WizardRequest {
         name: "exec-demo".to_string(),
+        organization: "ai.greentic.aws-workspace".to_string(),
         abi_version: "0.6.0".to_string(),
         mode: greentic_component::wizard::WizardMode::Default,
         target: target.clone(),
@@ -147,6 +149,11 @@ fn execute_plan_writes_expected_files() {
     assert!(target.join("assets/i18n/en.json").exists());
     assert!(target.join("assets/i18n/locales.json").exists());
     assert!(target.join("tools/i18n.sh").exists());
+    let manifest =
+        std::fs::read_to_string(target.join("component.manifest.json")).expect("manifest");
+    assert!(manifest.contains(r#""id": "ai.greentic.aws-workspace.exec-demo""#));
+    let lib = std::fs::read_to_string(target.join("src/lib.rs")).expect("src/lib.rs");
+    assert!(lib.contains(r#"const COMPONENT_ORG: &str = "ai.greentic.aws-workspace";"#));
     let i18n_tool =
         std::fs::read_to_string(target.join("tools/i18n.sh")).expect("read tools/i18n.sh");
     assert!(

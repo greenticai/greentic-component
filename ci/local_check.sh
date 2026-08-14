@@ -179,11 +179,37 @@ hard_need rustc
 hard_need cargo
 hard_need rustup
 
-if ! rustup toolchain list | awk '{print $1}' | grep -Fxq "$RUST_VERSION"; then
-    step "Installing Rust toolchain $RUST_VERSION"
-    rustup toolchain install "$RUST_VERSION" --profile minimal
+rust_host_triple() {
+    local os
+    local arch
+    os=$(uname -s)
+    arch=$(uname -m)
+    case "$os:$arch" in
+        Darwin:arm64) echo "aarch64-apple-darwin" ;;
+        Darwin:x86_64)
+            # An x86_64 rustup process can report the emulated architecture on
+            # Apple Silicon. Prefer the native host whenever the hardware says
+            # arm64 is available.
+            if [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" = "1" ]; then
+                echo "aarch64-apple-darwin"
+            else
+                echo "x86_64-apple-darwin"
+            fi
+            ;;
+        Linux:aarch64 | Linux:arm64) echo "aarch64-unknown-linux-gnu" ;;
+        Linux:x86_64) echo "x86_64-unknown-linux-gnu" ;;
+        *) rustc -vV | awk '/^host:/ { print $2 }' ;;
+    esac
+}
+
+RUST_HOST=${RUST_HOST:-$(rust_host_triple)}
+RUST_TOOLCHAIN=${RUST_TOOLCHAIN:-$RUST_VERSION-$RUST_HOST}
+
+if ! rustup toolchain list | awk '{print $1}' | grep -Fxq "$RUST_TOOLCHAIN"; then
+    step "Installing Rust toolchain $RUST_TOOLCHAIN"
+    rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
 fi
-export RUSTUP_TOOLCHAIN="$RUST_VERSION"
+export RUSTUP_TOOLCHAIN="$RUST_TOOLCHAIN"
 
 ensure_rust_target wasm32-wasip2
 ensure_rust_target x86_64-unknown-linux-gnu
@@ -200,7 +226,9 @@ ensure_rust_component clippy
 
 step "Tool versions"
 echo "expected rust toolchain: $RUST_VERSION"
+echo "expected rust host: $RUST_HOST"
 rustc --version
+rustc -vV | awk '/^host:/ { print "active rust host: " $2 }'
 cargo --version
 need jq && jq --version || true
 need curl && curl --version || true
