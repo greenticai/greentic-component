@@ -96,6 +96,7 @@ jobs:
       - name: Ensure release exists and upload archives
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
