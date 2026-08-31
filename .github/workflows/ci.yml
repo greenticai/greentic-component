@@ -89,3 +89,28 @@ jobs:
               "greentic-component-v${version}-x86_64-unknown-linux-gnu/${bin}" \
               <<< "$archive_listing"
           done
+
+          # The ZIP container, which only the Windows release legs produce and
+          # which nothing here covered until 2026-08-31. `tar -a -cf x.zip`
+          # under GNU tar writes an uncompressed TAR named .zip — so every
+          # *-pc-windows-msvc.zip this repo published was unopenable, and the
+          # first thing to notice was a downstream e2e three weeks later.
+          #
+          # The target is deliberately the Linux one: the bug is in producing
+          # the container, not in which binaries go inside it, so this needs no
+          # Windows runner and no .exe stubs to catch the regression.
+          RELEASE_BIN_DIR="$TARGET_DIR/release" \
+            bash ci/package_release_binaries.sh x86_64-unknown-linux-gnu "$version" zip
+          zip_archive="dist/greentic-component-v${version}-x86_64-unknown-linux-gnu.zip"
+          # Assert the bytes, not just that unzip is willing to try.
+          magic="$(od -An -tx1 -N4 "$zip_archive" | tr -d ' \n')"
+          case "$magic" in
+            504b0304*|504b0506*) ;;
+            *) echo "$zip_archive is not a zip (magic: $magic)" >&2; exit 1 ;;
+          esac
+          zip_listing="$(unzip -Z1 "$zip_archive")"
+          for bin in greentic-component component-doctor component-hash component-inspect; do
+            grep -Fxq \
+              "greentic-component-v${version}-x86_64-unknown-linux-gnu/${bin}" \
+              <<< "$zip_listing"
+          done
