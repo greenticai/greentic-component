@@ -79,7 +79,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-binaries-${{ matrix.target }}
-          path: dist/*
+          # Archives and checksums only. `dist/*` also matched the packaging
+          # script's STAGING DIRECTORY (dist/<stem>/), which then reappeared in
+          # .dist-staging/ and made `gh release upload` fail with
+          # "read ...: is a directory" — on the very first entry, alphabetically
+          # ahead of its own .tgz, so the release got its checksums and none of
+          # its archives. That is how v1.1.4 published to crates.io with an
+          # empty release, and v1.1.3's attach job failed the same way.
+          path: |
+            dist/*.tgz
+            dist/*.zip
+            dist/*.sha256
           if-no-files-found: error
 
   attach:
@@ -102,4 +112,15 @@ jobs:
           set -euo pipefail
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"
-          gh release upload "$GITHUB_REF_NAME" .dist-staging/* --clobber
+          # Pass regular files explicitly. The path filter above is the fix;
+          # this is the belt: one directory reaching this glob again would
+          # abort the whole upload partway, leaving a half-attached release
+          # that still looks published.
+          mapfile -t assets < <(find .dist-staging -maxdepth 1 -type f | sort)
+          if [[ ${#assets[@]} -eq 0 ]]; then
+            echo "no release assets staged" >&2
+            exit 1
+          fi
+          printf 'uploading %d assets:\n' "${#assets[@]}"
+          printf '  %s\n' "${assets[@]}"
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
