@@ -217,10 +217,3 @@ features = [
 
 [workspace.dependencies.wasmtime-wasi]
 version = "45"
-
-# greentic-start#595: distributor-client 1.3.0-research.4 (and the secrets
-# 1.3.0-research.3 it requires) are not published while crates.io publishing
-# is locked, so they are consumed by git revision.
-[patch.crates-io]
-greentic-distributor-client = { git = "https://github.com/greenticai/greentic-distributor-client", rev = "d594bb896c9722f439bf3c0cb98a3b85afb9b540" }
-greentic-secrets-lib = { git = "https://github.com/greenticai/greentic-secrets", rev = "633934c31a4d0413885bbced87acbc29a03c7b28" }
