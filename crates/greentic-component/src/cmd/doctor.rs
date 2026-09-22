@@ -1752,11 +1752,11 @@ mod tests {
         ComponentDescribe {
             info,
             provided_capabilities: Vec::new(),
+            outcomes: Vec::new(),
             required_capabilities: Vec::new(),
             metadata: BTreeMap::new(),
             operations: vec![operation],
             config_schema,
-            outcomes: Vec::new(),
         }
     }
 
@@ -1807,11 +1807,11 @@ mod tests {
         ComponentDescribe {
             info,
             provided_capabilities: Vec::new(),
+            outcomes: Vec::new(),
             required_capabilities: Vec::new(),
             metadata: BTreeMap::new(),
             operations: vec![operation],
             config_schema,
-            outcomes: Vec::new(),
         }
     }
 
