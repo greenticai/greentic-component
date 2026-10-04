@@ -6,7 +6,8 @@ use greentic_interfaces::runner_host_v1::{self, RunnerHost};
 use greentic_interfaces_host::component::v0_6::exports::greentic::component::node;
 use greentic_interfaces_host::component_v0_6::greentic::component::control::Host as ControlHost;
 use greentic_interfaces_wasmtime::host_helpers::v1::state_store::{
-    OpAck, StateStoreError, StateStoreHost, TenantCtx as WitTenantCtx, add_state_store_to_linker,
+    OpAck, OpAckV1_1, StateStoreError, StateStoreErrorV1_1, StateStoreHost, StateStoreHostV1_1,
+    TenantCtx as WitTenantCtx, TenantCtxV1_1, add_state_store_compat_to_linker,
 };
 use greentic_types::TenantCtx;
 use greentic_types::cbor::canonical;
@@ -193,7 +194,8 @@ pub fn build_linker(engine: &Engine, _policy: &HostPolicy) -> Result<Linker<Host
     let mut linker = Linker::<HostState>::new(engine);
     runner_host_v1::add_to_linker(&mut linker, |state: &mut HostState| &mut state.runner)?;
     add_control_to_linker_v0_6(&mut linker, |state: &mut HostState| &mut state.control)?;
-    add_state_store_to_linker(&mut linker, |state: &mut HostState| state)?;
+    // Registers both state-store@1.0.0 and @1.1.0 from the same host state.
+    add_state_store_compat_to_linker(&mut linker, |state: &mut HostState| state)?;
     p2::add_to_linker_sync(&mut linker)?;
     Ok(linker)
 }
@@ -294,6 +296,69 @@ impl StateStoreHost for HostState {
         let mut guard = self.state_store.lock().expect("state store mutex poisoned");
         guard.remove(&key);
         Ok(OpAck::Ok)
+    }
+}
+
+impl StateStoreHostV1_1 for HostState {
+    fn read(
+        &mut self,
+        key: String,
+        _ctx: Option<TenantCtxV1_1>,
+    ) -> Result<Vec<u8>, StateStoreErrorV1_1> {
+        StateStoreHost::read(self, key, None).map_err(into_v1_1_error)
+    }
+
+    fn write(
+        &mut self,
+        key: String,
+        bytes: Vec<u8>,
+        _ctx: Option<TenantCtxV1_1>,
+    ) -> Result<OpAckV1_1, StateStoreErrorV1_1> {
+        StateStoreHost::write(self, key, bytes, None)
+            .map(|OpAck::Ok| OpAckV1_1::Ok)
+            .map_err(into_v1_1_error)
+    }
+
+    fn delete(
+        &mut self,
+        key: String,
+        _ctx: Option<TenantCtxV1_1>,
+    ) -> Result<OpAckV1_1, StateStoreErrorV1_1> {
+        StateStoreHost::delete(self, key, None)
+            .map(|OpAck::Ok| OpAckV1_1::Ok)
+            .map_err(into_v1_1_error)
+    }
+
+    /// Returns `true` when the key was created by this call, `false` when it
+    /// already existed (the existing value is left untouched).
+    fn write_if_absent(
+        &mut self,
+        key: String,
+        bytes: Vec<u8>,
+        _ctx: Option<TenantCtxV1_1>,
+    ) -> Result<bool, StateStoreErrorV1_1> {
+        if !self.policy.allow_state_write {
+            return Err(StateStoreErrorV1_1 {
+                code: "state.write.denied".into(),
+                message: "state store writes are disabled by policy".into(),
+            });
+        }
+        let mut guard = self.state_store.lock().map_err(|_| StateStoreErrorV1_1 {
+            code: "state.write.poisoned".into(),
+            message: "state store mutex poisoned".into(),
+        })?;
+        if guard.contains_key(&key) {
+            return Ok(false);
+        }
+        guard.insert(key, canonicalize_cbor_or_passthrough(&bytes));
+        Ok(true)
+    }
+}
+
+fn into_v1_1_error(err: StateStoreError) -> StateStoreErrorV1_1 {
+    StateStoreErrorV1_1 {
+        code: err.code,
+        message: err.message,
     }
 }
 
@@ -425,6 +490,33 @@ mod tests {
             .expect("http fetch");
         let body = response.expect("http ok");
         assert_eq!(body, b"hello");
+    }
+
+    #[test]
+    fn state_store_write_if_absent_claims_once() {
+        let mut host = host_state(false, true, true, false);
+        let first = StateStoreHostV1_1::write_if_absent(&mut host, "k".into(), b"a".to_vec(), None);
+        assert!(matches!(first, Ok(true)));
+        let second =
+            StateStoreHostV1_1::write_if_absent(&mut host, "k".into(), b"b".to_vec(), None);
+        assert!(matches!(second, Ok(false)));
+        let read = StateStoreHostV1_1::read(&mut host, "k".into(), None).expect("read");
+        assert_eq!(read, b"a");
+    }
+
+    #[test]
+    fn state_store_write_if_absent_denied_by_policy() {
+        let mut host = host_state(false, true, false, false);
+        let result = StateStoreHostV1_1::write_if_absent(&mut host, "k".into(), vec![1], None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn linker_registers_both_state_store_versions() {
+        let engine = Engine::default();
+        let mut linker = build_linker(&engine, &HostPolicy::default()).expect("linker");
+        assert!(linker.instance("greentic:state/state-store@1.1.0").is_err());
+        assert!(linker.instance("greentic:state/state-store@1.0.0").is_err());
     }
 
     #[test]
