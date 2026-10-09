@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "1.1.5"
+version = "1.2.0"
 license = "MIT"
 rust-version = "1.95"
 
@@ -27,10 +27,10 @@ dashmap = "6"
 directories = "6"
 displaydoc = "0.2"
 futures = "0.3"
-greentic-interfaces-host = ">=1.1.0-dev, <1.2.0-0"
-greentic-interfaces-wasmtime = ">=1.1.0-dev, <1.2.0-0"
-greentic-types = ">=1.1.0-dev, <1.2.0-0"
-greentic-qa-lib = ">=1.1.0-dev, <1.2.0-0"
+greentic-interfaces-host = ">=1.2.0-0, <1.3.0-0"
+greentic-interfaces-wasmtime = ">=1.2.0-0, <1.3.0-0"
+greentic-types = ">=1.2.0-0, <1.3.0-0"
+greentic-qa-lib = ">=1.2.0-0, <1.3.0-0"
 handlebars = "6"
 hex = "0.4"
 ignore = "0.4"
@@ -55,13 +55,27 @@ tracing-subscriber = "0.3"
 unic-langid = "0.9"
 url = "2"
 walkdir = "2"
-wasm-encoder = "0"
-wasm-metadata = "0"
-# Pin to the 0.248 line that matches wit-component/wit-parser 0.247 and where
-# `abi.rs` (`ComponentExternName.0` tuple field) compiles. A bare "0" floats this
-# direct edge up to a consumer's newer wasmparser (e.g. wasmtime 45 → 0.251, whose
-# `ComponentExternName` replaced the tuple field with named fields), breaking the
-# build when greentic-component is used as a dependency. See greentic-designer S4.
+# The wasm-tools family, all five held to ONE line.
+#
+# 0.256 is required, not preferred: `abi.rs` reads `export.name.name`, the named
+# field that replaced the `ComponentExternName.0` tuple in 0.251. Lowering any of
+# the three below is refused by the compiler, measured on this tree:
+#   error[E0609]: no field `name` on type `ComponentExportName<'_>`
+#   note: available field is: `0`
+# The comment that used to sit here described exactly the opposite pin (0.248 /
+# 0.247), because a90dfb4 moved the field access and the versions together and
+# left the note behind.
+#
+# `wasm-encoder` and `wasm-metadata` were a bare "0", and that is the part this
+# change fixes: an unbounded 0.x requirement resolves to whatever a consumer's
+# lock already holds, so this crate straddled two lines at once. Measured in
+# greentic-designer's lock, this crate alone named wasm-encoder 0.253 +
+# wasm-metadata 0.253 BESIDE wasmparser / wit-component / wit-parser 0.256 — and
+# wasmparser 0.253 was in that graph for no other reason than the 0.253
+# wasm-metadata this edge pulled. Naming the line drops those three crates from
+# every consumer's build.
+wasm-encoder = "0.256"
+wasm-metadata = "0.256"
 wasmparser = "0.256"
 wit-component = "0.256"
 wit-parser = "0.256"
@@ -73,22 +87,22 @@ features = [
 ]
 
 [workspace.dependencies.greentic-component-manifest]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-0, <1.3.0-0"
 path = "crates/component-manifest"
 
 [workspace.dependencies.greentic-component-store]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-0, <1.3.0-0"
 path = "crates/greentic-component-store"
 
 [workspace.dependencies.greentic-interfaces-guest]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-0, <1.3.0-0"
 default-features = false
 features = [
     "component-v0-6",
 ]
 
 [workspace.dependencies.greentic-interfaces]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-0, <1.3.0-0"
 default-features = false
 features = [
     "bindings-rust",
@@ -127,7 +141,7 @@ features = [
 ]
 
 [workspace.dependencies.greentic-distributor-client]
-version = ">=1.1.0-dev, <1.2.0-0"
+version = ">=1.2.0-0, <1.3.0-0"
 default-features = false
 features = [
     "dist-client",

@@ -21,6 +21,8 @@ pub mod path_safety;
 #[cfg(feature = "prepare")]
 pub mod prepare;
 pub mod provenance;
+#[cfg(all(feature = "store", feature = "describe"))]
+pub mod resolve;
 pub mod schema;
 pub mod schema_quality;
 pub mod security;

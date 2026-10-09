@@ -6,7 +6,7 @@ expression: snap
   "plan_version": 1,
   "generator": "greentic-component/wizard-provider",
   "template_version": "component-scaffold-v0.6.0",
-  "template_digest_blake3": "1bd60e0fd05a325e697d61f56280c8e303fa1b4cbcb1c569fb4bce3c216fe076",
+  "template_digest_blake3": "c6f839f5100f4901249405efe970618bd324a1b46a7c16517bc54f35e27057b7",
   "requested_abi_version": "0.6.0",
   "step_count": 2,
   "steps": [
@@ -20,7 +20,7 @@ expression: snap
       "kind": "write_files",
       "path": "Cargo.toml,Makefile,README.md,assets/i18n/en.json,assets/i18n/locales.json,build.rs,component.manifest.json,rust-toolchain.toml,schemas/component.schema.json,src/i18n.rs,src/i18n_bundle.rs,src/lib.rs,src/qa.rs,tools/i18n.sh",
       "size": 41929,
-      "blake3": "6c73c1802839608d94d268bd538f0da89e7cdf5af19adbf5e76aeb5fa7400051"
+      "blake3": "66d3f6704243d072ae48d15d760433d931ee19d403c3b3066654b5ca51ddbd39"
     }
   ]
 }

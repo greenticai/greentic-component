@@ -11,6 +11,8 @@ pub mod path;
 pub mod post;
 #[cfg(feature = "store")]
 pub mod store;
+#[cfg(feature = "store")]
+pub mod store_publish;
 pub mod templates;
 pub mod test;
 pub mod wizard;
